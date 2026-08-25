@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { translateTagLabel } from "../utils/tagTranslation";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 /**
@@ -37,17 +39,26 @@ function InventoryListItem({
   rightTopText,
   rightBottomText,
 }) {
+  const { t } = useTranslation();
   const rowRef = useRef(null);
 
   const isExpired = !!item?._expired;
   const isAlmost = !!item?._almostExpired;
 
   const computedMeta = useMemo(() => {
-    const t = [item?._stateLabel, item?._storageLabel].filter(Boolean).join(" • ");
-    return t;
+    const meta = [
+      translateTagLabel(item?._stateLabel, "state"),
+      translateTagLabel(item?._storageLabel, "storage"),
+    ]
+      .filter(Boolean)
+      .join(" • ");
+    return meta;
   }, [item?._stateLabel, item?._storageLabel]);
 
-  const computedRightTop = useMemo(() => item?._foodTypeLabel || "", [item?._foodTypeLabel]);
+  const computedRightTop = useMemo(
+    () => translateTagLabel(item?._foodTypeLabel, "food_type"),
+    [item?._foodTypeLabel]
+  );
 
   const computedRightBottom = useMemo(() => String(item?.quantity ?? ""), [item?.quantity]);
 
@@ -62,22 +73,33 @@ function InventoryListItem({
 
     if (isExpired) {
       const when = formatLocalDate(item?._expiresAtMs);
-      return when ? `Expired on ${when}` : "Expired";
+      return when ? t("inventoryItem.expiredOn", { date: when }) : t("tags.urgency.expired");
     }
     if (isAlmost) {
       const when = formatLocalDate(item?._expiresAtMs);
       const d = item?._daysUntilExpire;
-      if (d === 0) return `Expires today${when ? ` (${when})` : ""}`;
-      if (d === 1) return `Expires tomorrow${when ? ` (${when})` : ""}`;
-      if (typeof d === "number") return when ? `Expires in ${d} days (${when})` : `Expires in ${d} days`;
-      return when ? `Expires soon (${when})` : "Expires soon";
+      if (d === 0)
+        return when
+          ? t("inventoryItem.expiresTodayDate", { date: when })
+          : t("inventoryItem.expiresToday");
+      if (d === 1)
+        return when
+          ? t("inventoryItem.expiresTomorrowDate", { date: when })
+          : t("inventoryItem.expiresTomorrow");
+      if (typeof d === "number")
+        return when
+          ? t("inventoryItem.expiresInDays_other", { count: d, date: when })
+          : t("inventoryItem.expiresInDaysNoDate_other", { count: d });
+      return when
+        ? t("inventoryItem.expiresSoon", { date: when })
+        : t("inventoryItem.expiresSoonNoDate");
     }
 
     // fallback: show "Added today" style using createdAt if available
     const createdAtIso = item?.createdAt;
-    const t = createdAtIso ? new Date(createdAtIso).getTime() : 0;
-    if (!t) return "Added";
-    const created = new Date(t);
+    const createdMs = createdAtIso ? new Date(createdAtIso).getTime() : 0;
+    if (!createdMs) return t("inventoryItem.added");
+    const created = new Date(createdMs);
     const now = new Date();
 
     const createdDate = new Date(created.getFullYear(), created.getMonth(), created.getDate());
@@ -86,10 +108,10 @@ function InventoryListItem({
     const diffMs = todayDate - createdDate;
     const days = Math.max(0, Math.round(diffMs / 86400000));
 
-    if (days === 0) return "Added today";
-    if (days === 1) return "In inventory for 1 day";
-    return `In inventory for ${days} days`;
-  }, [subtitleText, isExpired, isAlmost, item?._expiresAtMs, item?._daysUntilExpire, item?.createdAt]);
+    if (days === 0) return t("inventoryItem.addedToday");
+    if (days === 1) return t("inventoryItem.inInventory_one", { count: 1 });
+    return t("inventoryItem.inInventory_other", { count: days });
+  }, [subtitleText, isExpired, isAlmost, item?._expiresAtMs, item?._daysUntilExpire, item?.createdAt, t]);
 
   const bg = isExpired ? theme?.dangerBackground : isAlmost ? theme?.warningBackground : theme?.card;
   const border = isExpired ? theme?.danger : isAlmost ? theme?.warning : theme?.border;
@@ -127,9 +149,15 @@ function InventoryListItem({
         onPress={handlePress}
         style={[styles.card, { backgroundColor: bg, borderColor: border }]}
         accessibilityRole={editMode ? "checkbox" : "button"}
-        accessibilityLabel={`${item?.name || "Item"}. ${computedSubtitle}. Quantity ${computedRightBottom || "not specified"}.`}
+        accessibilityLabel={t("inventoryItem.a11yItem", {
+          name: item?.name || t("inventoryItem.item"),
+          subtitle: computedSubtitle,
+          count: computedRightBottom || t("inventoryItem.notSpecified"),
+        })}
         accessibilityState={editMode ? { checked: selected } : undefined}
-        accessibilityHint={editMode ? "Toggles this item selection." : "Opens item actions."}
+        accessibilityHint={
+          editMode ? t("inventoryItem.togglesSelection") : t("inventoryItem.opensActions")
+        }
       >
         {editMode && (
           <TouchableOpacity
@@ -137,7 +165,9 @@ function InventoryListItem({
             activeOpacity={0.8}
             style={styles.checkboxHit}
             accessibilityRole="checkbox"
-            accessibilityLabel={`Select ${item?.name || "item"}`}
+            accessibilityLabel={t("inventoryItem.a11ySelect", {
+              name: item?.name || t("inventoryItem.item"),
+            })}
             accessibilityState={{ checked: selected }}
           >
             <Ionicons

@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import i18next from "i18next";
 import { AppState, Platform } from "react-native";
 import { API_BASE_URL } from "../api/backendConfig";
 import {
@@ -457,7 +458,10 @@ export function AccountSessionProvider({ authUser = null, children }) {
             if (!response.ok) {
               throw createBackendResponseError(payload, {
                 status: response.status,
-                fallbackMessage: `Apple subscription request failed (${response.status}).`,
+                fallbackMessage: i18next.t(
+                  "subscriptions.requestFailed",
+                  { status: response.status }
+                ),
               });
             }
             if (
@@ -583,7 +587,10 @@ export function AccountSessionProvider({ authUser = null, children }) {
               }
               throw createBackendResponseError(responsePayload, {
                 status: response.status,
-                fallbackMessage: `Could not load account access (${response.status}).`,
+                fallbackMessage: i18next.t(
+                  "errors.couldNotLoadAccountAccess",
+                  { status: response.status }
+                ),
               });
             }
 

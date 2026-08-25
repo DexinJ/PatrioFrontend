@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import i18next from "i18next";
 import { Platform } from "react-native";
 import {
   addAppleSubscriptionStatusListener,
@@ -120,7 +121,7 @@ export function AppleSubscriptionProvider({
           subscriptionRequestGenerationRef.current === requestGeneration
         ) {
           setError(
-            nextError?.message || "Could not check the Apple subscription."
+            nextError?.message || i18next.t("subscriptions.couldNotCheck")
           );
           setSubscription((current) => ({
             ...current,
@@ -205,7 +206,8 @@ export function AppleSubscriptionProvider({
             if (mountedRef.current) {
               setProducts([]);
               setProductsError(
-                nextError?.message || "Could not load Apple subscription plans."
+                nextError?.message ||
+                  i18next.t("subscriptions.couldNotLoadPlans")
               );
             }
           }
@@ -232,7 +234,7 @@ export function AppleSubscriptionProvider({
   const purchaseProduct = useCallback(
     async (productId, appAccountToken) => {
       if (!enabled) {
-        throw new Error("Apple subscriptions are available only on iOS.");
+        throw new Error(i18next.t("subscriptions.iosOnly"));
       }
       const result = await purchaseAppleSubscription(productId, appAccountToken);
       applySubscriptionSnapshot(result?.snapshot);
@@ -242,9 +244,9 @@ export function AppleSubscriptionProvider({
   );
 
   const restorePurchases = useCallback(async () => {
-    if (!enabled) {
-      throw new Error("Apple subscriptions are available only on iOS.");
-    }
+      if (!enabled) {
+        throw new Error(i18next.t("subscriptions.iosOnly"));
+      }
     const result = await restoreAppleSubscriptions(
       configuredProductIdsRef.current
     );

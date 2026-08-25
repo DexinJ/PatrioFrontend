@@ -1,0 +1,5910 @@
+[
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 26,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Welcome to Fridge Manager"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 27,
+    "kind": "obj-prop",
+    "prop": "body",
+    "text": "Track what you own, avoid waste, and plan meals smarter."
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 31,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Your fridge, organized"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 32,
+    "kind": "obj-prop",
+    "prop": "body",
+    "text": "Add items, track expiration, and see what to eat first."
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 36,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Shopping list, organized"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 37,
+    "kind": "obj-prop",
+    "prop": "body",
+    "text": "Move items from shopping → fridge in one tap."
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 41,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Smart tags & warnings"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 42,
+    "kind": "obj-prop",
+    "prop": "body",
+    "text": "We suggest storage, urgency, and food type so nothing goes bad unnoticed."
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 46,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Create your account"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 47,
+    "kind": "obj-prop",
+    "prop": "body",
+    "text": "Keep your lists and settings private to this device and account."
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 132,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Back"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 264,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Tip: You can change settings anytime."
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 298,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Create account"
+  },
+  {
+    "file": "app/(auth)/onboarding.js",
+    "line": 311,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Log in"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 51,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Missing info"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 51,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Enter email and password."
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 61,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Login failed"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 79,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Google sign-in failed"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 103,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Apple sign-in failed"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 118,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Log in"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 122,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Email"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 128,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "you@example.com"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 141,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Password"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 175,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Log in"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 180,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Or continue with"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 197,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Continue with Google"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 202,
+    "kind": "prop",
+    "prop": "name",
+    "text": "logo-google"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 220,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Continue with Apple"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 226,
+    "kind": "prop",
+    "prop": "name",
+    "text": "logo-apple"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 244,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Facebook (coming soon)"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 247,
+    "kind": "prop",
+    "prop": "name",
+    "text": "logo-facebook"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 255,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "New here?"
+  },
+  {
+    "file": "app/(auth)/sign-in.js",
+    "line": 260,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Create an account"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 53,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/users"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 65,
+    "kind": "obj-prop",
+    "prop": "timeoutMessage",
+    "text": "Account setup timed out. Please try again."
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 78,
+    "kind": "template",
+    "prop": null,
+    "text": "Backend save failed: {{resp.status}} {{value}}"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 151,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Missing info"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 151,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Fill out all fields."
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 154,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Username"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 154,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Username must be 2–20 characters."
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 157,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Passwords don’t match"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 157,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Please retype your password."
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 160,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Weak password"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 160,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Password must be at least 6 characters."
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 232,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Sign up failed"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 244,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Google not configured"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 244,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 319,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Google sign-in failed"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 363,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}{{value}}"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 419,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Apple sign-in failed"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 435,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Create account"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 439,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Username"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 444,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "e.g. johndoe"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 457,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Email"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 463,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "you@example.com"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 476,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Password"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 494,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Confirm password"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 528,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Create account"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 533,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Or continue with"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 550,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Continue with Google"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 555,
+    "kind": "prop",
+    "prop": "name",
+    "text": "logo-google"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 573,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Continue with Apple"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 579,
+    "kind": "prop",
+    "prop": "name",
+    "text": "logo-apple"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 597,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Facebook (coming soon)"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 599,
+    "kind": "prop",
+    "prop": "name",
+    "text": "logo-facebook"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 604,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Already have an account?"
+  },
+  {
+    "file": "app/(auth)/sign-up.js",
+    "line": 614,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Log in"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 56,
+    "kind": "prop",
+    "prop": "name",
+    "text": "chatbubbles-outline"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 60,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Start a new chat"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 63,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Ask Pantrio about meals, your fridge, or your shopping list."
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 69,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Start a new chat"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 75,
+    "kind": "prop",
+    "prop": "name",
+    "text": "add"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 78,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "New chat"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 212,
+    "kind": "template",
+    "prop": null,
+    "text": "Saved your recipe preferences:\n{{summary}}"
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 288,
+    "kind": "template",
+    "prop": null,
+    "text": "✅ Added {{added}} item(s) to fridge."
+  },
+  {
+    "file": "app/(tabs)/chat.js",
+    "line": 289,
+    "kind": "template",
+    "prop": null,
+    "text": "\n⚠️ Skipped: {{value}}"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 19,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Added"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 20,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Name"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 21,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Urgency"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 22,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Storage"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 23,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Food type"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 106,
+    "kind": "prop",
+    "prop": "title",
+    "text": "🧊 My Fridge"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 159,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "All"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 160,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Fridge"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 161,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Freezer"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 162,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Pantry"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 255,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "EXPIRED"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 256,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "EXPIRING SOON"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 307,
+    "kind": "template",
+    "prop": null,
+    "text": "- {{value}}{{name}}"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 307,
+    "kind": "template",
+    "prop": null,
+    "text": "{{qty}} "
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 316,
+    "kind": "template",
+    "prop": null,
+    "text": "Find recipes using: {{value}}{{value}}"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 320,
+    "kind": "template",
+    "prop": null,
+    "text": " +{{value}} more"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 325,
+    "kind": "template",
+    "prop": null,
+    "text": "\nRecommend 5 quick recipes using as many of these selected fridge items as practical:\n{{ingredientLines}}\n\nFor each recipe:\n- Linked title\n- Why it fits these ingredients and saved preferences\n- Verified time and calories per serving when available\n- Missing ingredients\n- 2–4 short steps\n- 1–2 optional add-ins (common staples)\n"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 353,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Recipes"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 368,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Shop list"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 368,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Added {{items.length}} item(s) to shopping list."
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 368,
+    "kind": "template",
+    "prop": null,
+    "text": "Added {{items.length}} item(s) to shopping list."
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 377,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Delete items"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 377,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Delete {{items.length}} item(s)?"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 377,
+    "kind": "template",
+    "prop": null,
+    "text": "Delete {{items.length}} item(s)?"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 378,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 380,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Delete"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 407,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Recipes"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 416,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Shop list"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 425,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Edit"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 435,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Delete"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 449,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Recipes"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 455,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Shop list"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 461,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Edit"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 464,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Edit"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 464,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Select exactly 1 item to edit."
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 473,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Delete"
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 526,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Search items..."
+  },
+  {
+    "file": "app/(tabs)/fridge.js",
+    "line": 600,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Sort by"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 31,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "All items are fresh 🎉"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 37,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "{{expiringCount}} item{{value}} expiring soon"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 44,
+    "kind": "template",
+    "prop": null,
+    "text": "{{expiredCount}} expired and {{expiringCount}} expiring soon"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 45,
+    "kind": "template",
+    "prop": null,
+    "text": "{{expiredCount}} expired item{{value}}"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 55,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "👋 Welcome back,"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 58,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Here’s what’s happening in your fridge:"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 65,
+    "kind": "prop",
+    "prop": "name",
+    "text": "cube-outline"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 66,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Items in Fridge"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 97,
+    "kind": "prop",
+    "prop": "name",
+    "text": "cart-outline"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 98,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "on Shopping List"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 105,
+    "kind": "prop",
+    "prop": "name",
+    "text": "add-circle-outline"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 106,
+    "kind": "jsx-expr",
+    "prop": null,
+    "text": "Add Item"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 110,
+    "kind": "prop",
+    "prop": "name",
+    "text": "chatbubble-ellipses-outline"
+  },
+  {
+    "file": "app/(tabs)/index.js",
+    "line": 111,
+    "kind": "jsx-expr",
+    "prop": null,
+    "text": "Open Chat"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 45,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Added"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 46,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Name"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 47,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Category"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 329,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Delete item"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 329,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Delete \"{{value}}\"?"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 329,
+    "kind": "template",
+    "prop": null,
+    "text": "Delete \"{{value}}\"?"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 330,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 332,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Delete"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 350,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Delete items"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 350,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Delete {{safeIds.length}} item(s)?"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 350,
+    "kind": "template",
+    "prop": null,
+    "text": "Delete {{safeIds.length}} item(s)?"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 351,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 353,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Delete"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 540,
+    "kind": "prop",
+    "prop": "title",
+    "text": "🛒 Shopping List"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 666,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Search items..."
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 719,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Item Name"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 733,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Quantity"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 743,
+    "kind": "prop",
+    "prop": "name",
+    "text": "add"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 750,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "✅ Done Shopping"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 761,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Edit item"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 763,
+    "kind": "prop",
+    "prop": "name",
+    "text": "close"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 767,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Name"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 773,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Item name"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 782,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Quantity"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 788,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Quantity"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 797,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Category"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 825,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Uncategorized"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 845,
+    "kind": "prop",
+    "prop": "name",
+    "text": "trash"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 846,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Delete"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 852,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 856,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Save"
+  },
+  {
+    "file": "app/(tabs)/list.js",
+    "line": 876,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Sort by"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 79,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "OpenAI"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 80,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "OpenRouter"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 81,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Groq"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 82,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Together AI"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 116,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Account"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 117,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Plan & Usage"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 120,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Preferences"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 125,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Privacy & Data"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 128,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "AI Provider"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 132,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Any"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 133,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Light"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 134,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Balanced"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 135,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Hearty"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 344,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}} {{normalizedUnit}}{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 529,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}} plan"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 550,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Reset recipe preferences?"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 550,
+    "kind": "alert",
+    "prop": "message",
+    "text": "This clears cuisines, dietary needs, ingredient preferences, nutrition targets, and learned recipe signals on this device."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 554,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 556,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Reset Preferences"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 584,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Custom ({{normalizedUrl}})"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 664,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Turn on Apple Intelligence?"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 664,
+    "kind": "alert",
+    "prop": "message",
+    "text": "{{availability.reason}}\n\nOpen Settings, then go to Apple Intelligence & Siri to turn it on."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 666,
+    "kind": "template",
+    "prop": null,
+    "text": "{{availability.reason}}\n\nOpen Settings, then go to Apple Intelligence & Siri to turn it on."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 668,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Not now"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 670,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Open Settings"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 676,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Apple Intelligence unavailable"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 694,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Invalid URL"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 699,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Missing details"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 699,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Enter both a model name and API key."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 712,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Saved"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 712,
+    "kind": "alert",
+    "prop": "message",
+    "text": "This provider's API key and model name were saved securely."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 718,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Save failed"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 735,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Invalid URL"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 742,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Missing details"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 742,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Enter both a model name and API key before testing the connection."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 752,
+    "kind": "template",
+    "prop": null,
+    "text": "{{baseUrl}}/chat/completions"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 771,
+    "kind": "obj-prop",
+    "prop": "timeoutMessage",
+    "text": "The AI provider connection test timed out."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 785,
+    "kind": "template",
+    "prop": null,
+    "text": "The provider rejected the request ({{response.status}})."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 800,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Connection successful"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 800,
+    "kind": "alert",
+    "prop": "message",
+    "text": "{{providerHost}} accepted this API key and model. No settings were changed."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 802,
+    "kind": "template",
+    "prop": null,
+    "text": "{{providerHost}} accepted this API key and model. No settings were changed."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 806,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Connection failed"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 826,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Cleanup incomplete"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 826,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Some local data could not be cleared. Pantrio will retry automatically."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 833,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Cleanup incomplete"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 853,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Notifications are off"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 853,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Allow notifications in your device settings before enabling Pantrio reminders."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 857,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Not now"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 859,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Open Settings"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 872,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Could not enable reminders"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 887,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/users/me"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 896,
+    "kind": "obj-prop",
+    "prop": "timeoutMessage",
+    "text": "Updating the username timed out. Please try again."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 901,
+    "kind": "template",
+    "prop": null,
+    "text": "Failed to update name ({{resp.status}})"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 916,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Name required"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 916,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Please enter a username."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 943,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Update failed"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 953,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Log out"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 953,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Are you sure you want to log out?"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 955,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 959,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Log out"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1003,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Could not open subscriptions"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1015,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Could not open {{title}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1016,
+    "kind": "template",
+    "prop": null,
+    "text": "Could not open {{title}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1017,
+    "kind": "template",
+    "prop": null,
+    "text": "Open the {{title}} in your web browser."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1030,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Purchase pending"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1030,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Apple is waiting for approval or payment confirmation. Pantrio will update automatically when the transaction completes."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1037,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Subscription active"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1037,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Apple verified the purchase and Pantrio refreshed your account access."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1046,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Purchase not completed"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1060,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Purchases restored"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1060,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Pantrio verified the Apple purchase for this account."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1065,
+    "kind": "alert",
+    "prop": "title",
+    "text": "No purchases found"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1065,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Apple did not return an active Pantrio subscription for this account."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1074,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Restore failed"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1090,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Refresh failed"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1147,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Delete account?"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1147,
+    "kind": "alert",
+    "prop": "message",
+    "text": "This permanently deletes your Pantrio account and clears your fridge items, shopping list, chat history, and settings from this device. This cannot be undone.\n\nDeleting your Pantrio account does not cancel an Apple subscription. Manage or cancel it separately in Apple Subscriptions."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1151,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1153,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Continue"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1168,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Could not confirm sign-in"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1235,
+    "kind": "template",
+    "prop": null,
+    "text": "{{color}}18"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1267,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "Opens {{cat.title}} settings"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1267,
+    "kind": "template",
+    "prop": null,
+    "text": "Opens {{cat.title}} settings"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1278,
+    "kind": "prop",
+    "prop": "name",
+    "text": "chevron-forward"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1358,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Urgency thresholds (days remaining)"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1363,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Expired: 0 days"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1374,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "(Automatically when expiration date is in the past)"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1380,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Eat first:"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1381,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "days"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1403,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Use soon:"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1404,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "days"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1426,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Lasts a while:"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1427,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "days"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1451,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Long keeper:"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1452,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "days"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1489,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Edit username, currently {{username}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1489,
+    "kind": "template",
+    "prop": null,
+    "text": "Edit username, currently {{username}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1493,
+    "kind": "prop",
+    "prop": "name",
+    "text": "person-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1499,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Username"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1509,
+    "kind": "prop",
+    "prop": "name",
+    "text": "create-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1513,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Edit"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1522,
+    "kind": "prop",
+    "prop": "name",
+    "text": "mail-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1528,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Sign-in details"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1531,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "The identity connected to this Pantrio account"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1538,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Email"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1545,
+    "kind": "template",
+    "prop": null,
+    "text": "\n{{signedInEmailNote}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1549,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Sign-in methods"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1568,
+    "kind": "prop",
+    "prop": "name",
+    "text": "card-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1574,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Current plan"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1577,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Subscription access and daily AI usage"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1616,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Daily AI allowance"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1621,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}} of {{value}} tokens left"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1627,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Resets"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1632,
+    "kind": "template",
+    "prop": null,
+    "text": " ({{quota.timezone}})"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1655,
+    "kind": "prop",
+    "prop": "name",
+    "text": "alert-circle-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1678,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Manage Apple Subscription"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1700,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Paid access is enabled after Pantrio verifies the Apple transaction for this account."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1711,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Technical subscription details"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1716,
+    "kind": "prop",
+    "prop": "name",
+    "text": "information-circle-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1722,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Technical details"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1725,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Verification, StoreKit status, and model"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1767,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Access verification"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1780,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "AI model"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1791,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Apple product"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1802,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Renewal"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1830,
+    "kind": "prop",
+    "prop": "name",
+    "text": "alert-circle-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1843,
+    "kind": "prop",
+    "prop": "name",
+    "text": "cloud-offline-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1876,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Available subscription plans"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1879,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "View or change plans"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1889,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Available plans"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1916,
+    "kind": "template",
+    "prop": null,
+    "text": "{{plan.displayPrice}} every {{periodLabel}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1943,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Current"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1955,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Automatically renews at"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1956,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "every"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1957,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "unless canceled at least 24 hours before the current period ends. Payment is charged to your Apple Account at confirmation."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1969,
+    "kind": "template",
+    "prop": null,
+    "text": "Change to {{plan.displayName}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1970,
+    "kind": "template",
+    "prop": null,
+    "text": "Subscribe to {{plan.displayName}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1981,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "This product is not currently available from Apple."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 1992,
+    "kind": "prop",
+    "prop": "name",
+    "text": "alert-circle-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2011,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Terms of Use"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2025,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Privacy Policy"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2031,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Purchases are linked with an anonymous account token. Pantrio never receives your Apple Account email or password."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2047,
+    "kind": "prop",
+    "prop": "name",
+    "text": "log-out-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2053,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Session"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2056,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Sign out of Pantrio on this device"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2062,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Log out"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2080,
+    "kind": "prop",
+    "prop": "name",
+    "text": "trash-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2086,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Delete account"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2089,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Permanently delete account and app data"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2120,
+    "kind": "prop",
+    "prop": "name",
+    "text": "log-in-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2126,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Pantrio account"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2129,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Sign in to sync and manage your account"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2135,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Log In/Sign Up"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2158,
+    "kind": "prop",
+    "prop": "name",
+    "text": "person-outline"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2164,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Edit username"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2167,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Choose how your name appears in Pantrio"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2173,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Username"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2178,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Your name"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2198,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2222,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Confirm your password"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2225,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Re-enter your password before permanently deleting this account."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2229,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Password"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2234,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Password"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2264,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2287,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Appearance"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2289,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Use System Theme"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2294,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Use system theme"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2313,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Dark Mode"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2315,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Controlled by your device while System Theme is on."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2322,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Dark mode"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2337,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "ChatGPT-style chat"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2338,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Compact chat window with an inline composer."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2344,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "ChatGPT-style chat"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2358,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Font Size:"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2363,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "App font size"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2368,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "{{displayedFontSize}} point font"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2386,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Recipe suggestions"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2390,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Your recipe profile"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2393,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Pantrio uses these saved defaults when recommending recipes. Separate multiple entries with commas. A request in chat can temporarily override soft preferences."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2401,
+    "kind": "template",
+    "prop": null,
+    "text": "preferred-cuisines:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2404,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Preferred cuisines"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2410,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Thai, Japanese, American"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2416,
+    "kind": "template",
+    "prop": null,
+    "text": "dietary-patterns:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2419,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Dietary patterns"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2425,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Vegetarian, gluten-free"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2431,
+    "kind": "template",
+    "prop": null,
+    "text": "disliked-cuisines:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2434,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Cuisines to avoid"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2440,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Very spicy Sichuan, fast food"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2446,
+    "kind": "template",
+    "prop": null,
+    "text": "allergens:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2449,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Allergens"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2455,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Peanut, shellfish"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2461,
+    "kind": "template",
+    "prop": null,
+    "text": "excluded-ingredients:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2464,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Always exclude ingredients"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2470,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Cilantro, alcohol"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2476,
+    "kind": "template",
+    "prop": null,
+    "text": "disliked-ingredients:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2479,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Disliked ingredients"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2485,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Olives, blue cheese"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2491,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Meal style"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2492,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "A soft default. Exact calorie limits below remain hard limits."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2512,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "{{option.label}} meal preference"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2512,
+    "kind": "template",
+    "prop": null,
+    "text": "{{option.label}} meal preference"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2532,
+    "kind": "template",
+    "prop": null,
+    "text": "max-calories:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2535,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Maximum calories per serving"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2541,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "No maximum"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2548,
+    "kind": "template",
+    "prop": null,
+    "text": "max-prep:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2551,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Maximum recipe time"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2557,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "No maximum"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2564,
+    "kind": "template",
+    "prop": null,
+    "text": "default-servings:{{value}}"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2567,
+    "kind": "prop",
+    "prop": "label",
+    "text": "Default servings"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2573,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "2"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2584,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "You can clear saved and learned recipe preferences without changing fridge items or other app settings."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2589,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Reset Recipe Preferences"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2596,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Notifications"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2598,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Daily Reminders"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2603,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Daily reminders"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2621,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Expiration reminders"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2625,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Expiration Alerts"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2630,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Expiration alerts"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2650,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Notify"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2651,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "days before"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2655,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Days before expiration to notify"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2660,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "{{remindDays}} days before expiration"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2679,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Custom urgency thresholds"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2690,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Custom urgency thresholds"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2710,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Advanced expiration thresholds"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2714,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Advanced expiration thresholds"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2717,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Choose when items are labeled Eat first, Use soon, or longer lasting."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2737,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Preset: Eat first 2d · Use soon 7d · Lasts a while 30d · Long keeper 180d"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2751,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Incognito Mode"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2752,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Keeps new chat messages off this device. Leaving Incognito clears the private conversation."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2759,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Incognito mode"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2776,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Stored data"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2777,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "These actions affect only data saved for this account on this device. They do not delete your Pantrio account."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2783,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Reset Data on This Device"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2785,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Reset data on this device?"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2785,
+    "kind": "alert",
+    "prop": "message",
+    "text": "This clears fridge items, the shopping list, chat history, settings, reminders, and saved custom-AI credentials for this account on this device. Your Pantrio account is not deleted. This cannot be undone."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2790,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2794,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Reset Device Data"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2806,
+    "kind": "prop",
+    "prop": "title",
+    "text": "Clear Chat Messages"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2808,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Clear chat messages?"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2808,
+    "kind": "alert",
+    "prop": "message",
+    "text": "This clears chat messages, the chat summary, and chat attachments for this account on this device. This cannot be undone."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2813,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Cancel"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2817,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Clear"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2842,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Select AI"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2843,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Choose the AI Pantrio uses for chat and food planning."
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2850,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Pantrio Cloud AI"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2855,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Apple Intelligence"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2861,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "My own AI API"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2918,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "API provider"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2926,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Choose an API provider"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2937,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "API URL"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2947,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "https://api.example.com/v1"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2951,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Model"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2959,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "gpt-4o-mini"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2963,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "API key"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2972,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Your provider API key"
+  },
+  {
+    "file": "app/(tabs)/settings.js",
+    "line": 2995,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Each provider keeps its own model name and key in the secure device keychain. Saving stores the fields above. Testing sends one short request to this provider but does not change saved settings."
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 34,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Open conversations"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 41,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "New chat"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 120,
+    "kind": "prop",
+    "prop": "name",
+    "text": "cloud-offline-outline"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 129,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Account access could not be verified"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 147,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Retry account verification"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 162,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Retry"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 171,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Log out of this account"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 184,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Log out"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 266,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Loading account data"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 283,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Local data recovery required"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 286,
+    "kind": "prop",
+    "prop": "name",
+    "text": "warning-outline"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 298,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Local data needs attention"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 309,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Pantrio could not safely load or finish clearing local data. Your stored data has not been replaced. Retry to recover access."
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 320,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Retry loading local data"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 332,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Retry"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 340,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Log out of this account"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 362,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Log out"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 396,
+    "kind": "prop",
+    "prop": "name",
+    "text": "index"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 399,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Home"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 401,
+    "kind": "prop",
+    "prop": "name",
+    "text": "home-outline"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 406,
+    "kind": "prop",
+    "prop": "name",
+    "text": "chat"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 409,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Chat"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 411,
+    "kind": "prop",
+    "prop": "name",
+    "text": "chatbubble-outline"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 416,
+    "kind": "prop",
+    "prop": "name",
+    "text": "fridge"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 418,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Fridge"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 420,
+    "kind": "prop",
+    "prop": "name",
+    "text": "cube-outline"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 425,
+    "kind": "prop",
+    "prop": "name",
+    "text": "list"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 427,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Shopping List"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 429,
+    "kind": "prop",
+    "prop": "name",
+    "text": "cart-outline"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 434,
+    "kind": "prop",
+    "prop": "name",
+    "text": "settings"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 436,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Settings"
+  },
+  {
+    "file": "app/(tabs)/_layout.js",
+    "line": 438,
+    "kind": "prop",
+    "prop": "name",
+    "text": "settings-outline"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 63,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Pantrio ran into a problem"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 64,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Your saved data is still on this device. Try loading the app again."
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 72,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Try again"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 86,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "We could not verify your account"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 98,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Retry"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 113,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "Permanently removes the pending account's data from this device"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 117,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Clear device data & sign out"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 139,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Deleting account"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 143,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Deleting your account…"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 157,
+    "kind": "prop",
+    "prop": "name",
+    "text": "(auth)"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 160,
+    "kind": "prop",
+    "prop": "name",
+    "text": "(tabs)"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 167,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Checking sign-in status"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 193,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Clear this account's device data?"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 193,
+    "kind": "alert",
+    "prop": "message",
+    "text": "This permanently removes the pending account's fridge items, shopping list, chat history, settings, reminders, and saved custom-AI credentials from this device. It does not prove that server deletion completed."
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 197,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Keep Data"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 199,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "Clear Device Data"
+  },
+  {
+    "file": "app/_layout.js",
+    "line": 203,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Cleanup incomplete"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 24,
+    "kind": "template",
+    "prop": null,
+    "text": "{{minutes}}m ago"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 27,
+    "kind": "template",
+    "prop": null,
+    "text": "{{hours}}h ago"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 30,
+    "kind": "template",
+    "prop": null,
+    "text": "{{days}}d ago"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 56,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Open conversation {{value}}"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 56,
+    "kind": "template",
+    "prop": null,
+    "text": "Open conversation {{value}}"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 78,
+    "kind": "prop",
+    "prop": "name",
+    "text": "checkmark-circle"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 95,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Close conversations"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 108,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Chats"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 114,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "New chat"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 117,
+    "kind": "prop",
+    "prop": "name",
+    "text": "add"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 124,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Start a new chat"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 130,
+    "kind": "prop",
+    "prop": "name",
+    "text": "create-outline"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 131,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "New chat"
+  },
+  {
+    "file": "components/ConversationListModal.js",
+    "line": 137,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "No conversations yet."
+  },
+  {
+    "file": "components/FilterTabsRow.js",
+    "line": 39,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "{{t.label}}{{value}}"
+  },
+  {
+    "file": "components/FilterTabsRow.js",
+    "line": 39,
+    "kind": "template",
+    "prop": null,
+    "text": "{{t.label}}{{value}}"
+  },
+  {
+    "file": "components/FilterTabsRow.js",
+    "line": 39,
+    "kind": "template",
+    "prop": null,
+    "text": ", {{t.count}} items"
+  },
+  {
+    "file": "components/FilterTabsRow.js",
+    "line": 50,
+    "kind": "template",
+    "prop": null,
+    "text": " {{t.count}}"
+  },
+  {
+    "file": "components/Header.js",
+    "line": 222,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Go back"
+  },
+  {
+    "file": "components/Header.js",
+    "line": 224,
+    "kind": "prop",
+    "prop": "name",
+    "text": "arrow-back"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 65,
+    "kind": "template",
+    "prop": null,
+    "text": "Expired on {{when}}"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 70,
+    "kind": "template",
+    "prop": null,
+    "text": "Expires today{{value}}"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 70,
+    "kind": "template",
+    "prop": null,
+    "text": " ({{when}})"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 71,
+    "kind": "template",
+    "prop": null,
+    "text": "Expires tomorrow{{value}}"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 71,
+    "kind": "template",
+    "prop": null,
+    "text": " ({{when}})"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 72,
+    "kind": "template",
+    "prop": null,
+    "text": "Expires in {{d}} days ({{when}})"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 72,
+    "kind": "template",
+    "prop": null,
+    "text": "Expires in {{d}} days"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 73,
+    "kind": "template",
+    "prop": null,
+    "text": "Expires soon ({{when}})"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 91,
+    "kind": "template",
+    "prop": null,
+    "text": "In inventory for {{days}} days"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 130,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "{{value}}. {{computedSubtitle}}. Quantity {{value}}."
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 130,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}. {{computedSubtitle}}. Quantity {{value}}."
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 140,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Select {{value}}"
+  },
+  {
+    "file": "components/InventoryListItem.js",
+    "line": 140,
+    "kind": "template",
+    "prop": null,
+    "text": "Select {{value}}"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 164,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "None"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 287,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Days until expire"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 287,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Enter a valid number of days from 1 to {{value}}."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 289,
+    "kind": "template",
+    "prop": null,
+    "text": "Enter a valid number of days from 1 to {{value}}."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 298,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Days until expire"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 298,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Enter a valid expiration range."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 309,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Expiration date"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 309,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Pick a date or enter one (YYYY-MM-DD or MM/DD/YYYY)."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 313,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Expiration date"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 313,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Enter a valid date (YYYY-MM-DD or MM/DD/YYYY)."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 333,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Name and quantity are required."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 414,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Item Name"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 434,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Quantity"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 443,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Expiration"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 449,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Days"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 450,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Date"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 451,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Machine"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 523,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "Expiration date (YYYY-MM-DD or MM/DD/YYYY)"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 555,
+    "kind": "prop",
+    "prop": "name",
+    "text": "calendar"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 556,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Pick a date"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 601,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Done"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 610,
+    "kind": "prop",
+    "prop": "name",
+    "text": "information-circle"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 620,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Machine estimation will be filled automatically. This is a best-effort guess and may be inaccurate—always use your senses and safe-handling guidelines."
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 627,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Storage (required)"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 651,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Urgency (required)"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 675,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Food type (required)"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 700,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "State (optional)"
+  },
+  {
+    "file": "components/ItemFormModal.js",
+    "line": 736,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Cancel"
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 112,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Could not open link"
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 177,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Load preview for {{value}}"
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 177,
+    "kind": "template",
+    "prop": null,
+    "text": "Load preview for {{value}}"
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 178,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "This contacts the linked website."
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 189,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Open {{value}}"
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 189,
+    "kind": "template",
+    "prop": null,
+    "text": "Open {{value}}"
+  },
+  {
+    "file": "components/LinkPreviewCard.js",
+    "line": 191,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Open link"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 75,
+    "kind": "template",
+    "prop": null,
+    "text": "heading{{value}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 87,
+    "kind": "template",
+    "prop": null,
+    "text": "{{keyPrefix}}-{{index}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 143,
+    "kind": "template",
+    "prop": null,
+    "text": "run-{{elementKey}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 165,
+    "kind": "template",
+    "prop": null,
+    "text": "item-{{runItemKey}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 173,
+    "kind": "template",
+    "prop": null,
+    "text": "item-{{runItemKey}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 176,
+    "kind": "template",
+    "prop": null,
+    "text": "heading{{block.level}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 186,
+    "kind": "template",
+    "prop": null,
+    "text": "code-{{elementKey}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 197,
+    "kind": "template",
+    "prop": null,
+    "text": "hr-{{elementKey}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 204,
+    "kind": "template",
+    "prop": null,
+    "text": "quote-{{elementKey}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 241,
+    "kind": "template",
+    "prop": null,
+    "text": "{{index}}-{{segment.value}}"
+  },
+  {
+    "file": "components/MarkdownText.js",
+    "line": 247,
+    "kind": "template",
+    "prop": null,
+    "text": "markdown-{{index}}"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 137,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Could not open link"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 154,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Open attached image"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 274,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Load preview for {{value}}"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 274,
+    "kind": "template",
+    "prop": null,
+    "text": "Load preview for {{value}}"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 275,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "This contacts the linked website."
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 286,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Open {{value}}"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 286,
+    "kind": "template",
+    "prop": null,
+    "text": "Open {{value}}"
+  },
+  {
+    "file": "components/MessageBubble.js",
+    "line": 288,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Open link"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 212,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Microphone permission required"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 212,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Please allow microphone access to use voice messages."
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 273,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Recording error"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 273,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Pantrio could not start recording. Please try again."
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 330,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Voice message error"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 383,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/transcriptions"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 411,
+    "kind": "obj-prop",
+    "prop": "fallbackMessage",
+    "text": "Transcription failed with status {{response.status}}."
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 438,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Voice Transcription"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 561,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Chat message"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 562,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "Type a message, then tap Send. Press Enter for a new line."
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 612,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "Press and hold to record, then release to place the transcript in the message field."
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 648,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Close voice input"
+  },
+  {
+    "file": "components/MessageInput.js",
+    "line": 655,
+    "kind": "prop",
+    "prop": "name",
+    "text": "close-outline"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 63,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "I found"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 64,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "item(s):"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 71,
+    "kind": "template",
+    "prop": null,
+    "text": " — {{value}}"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 77,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "more…"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 129,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}} min"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 131,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}: {{displayValue}}"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 275,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Fridge"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 276,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Freezer"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 277,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Pantry"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 283,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Eat first"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 284,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Use soon"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 285,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Lasts a while"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 286,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Long keeper"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 292,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Produce"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 293,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Dairy"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 294,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Meat"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 295,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Seafood"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 296,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Prepared"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 297,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Condiments"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 298,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Beverages"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 299,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Snacks"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 300,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Bakery"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 301,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Frozen"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 307,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "None"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 308,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Opened"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 309,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Unopened"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 310,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Raw"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 311,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Cooked"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 312,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Cut"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 313,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Whole"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 501,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "selected"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 506,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Close"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 525,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}-{{idx}}"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 582,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Qty"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 588,
+    "kind": "prop",
+    "prop": "placeholder",
+    "text": "1"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 601,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Storage (required)"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 606,
+    "kind": "prop",
+    "prop": "modalTitle",
+    "text": "Select storage"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 607,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-storage"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 610,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-storage"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 613,
+    "kind": "prop",
+    "prop": "searchPlaceholder",
+    "text": "Search storage..."
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 618,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Urgency (required)"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 623,
+    "kind": "prop",
+    "prop": "modalTitle",
+    "text": "Select urgency"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 624,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-urgency"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 627,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-urgency"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 630,
+    "kind": "prop",
+    "prop": "searchPlaceholder",
+    "text": "Search urgency..."
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 635,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Food type (required)"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 640,
+    "kind": "prop",
+    "prop": "modalTitle",
+    "text": "Select food type"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 641,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-food_type"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 644,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-food_type"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 647,
+    "kind": "prop",
+    "prop": "searchPlaceholder",
+    "text": "Search food types..."
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 652,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "State (optional)"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 657,
+    "kind": "prop",
+    "prop": "modalTitle",
+    "text": "Select state"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 658,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-state"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 661,
+    "kind": "template",
+    "prop": null,
+    "text": "{{idx}}-state"
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 664,
+    "kind": "prop",
+    "prop": "searchPlaceholder",
+    "text": "Search state..."
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 702,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Confirm ("
+  },
+  {
+    "file": "components/MessageList.js",
+    "line": 827,
+    "kind": "template",
+    "prop": null,
+    "text": "message-{{index}}-{{value}}-{{value}}"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 78,
+    "kind": "template",
+    "prop": null,
+    "text": "data:image/jpeg;base64,{{result.base64}}"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 98,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Camera permission required"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 98,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Camera permissions are required."
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 124,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Image"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 145,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Photo permission required"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 145,
+    "kind": "alert",
+    "prop": "message",
+    "text": "Media library permissions are required."
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 174,
+    "kind": "alert",
+    "prop": "title",
+    "text": "Image"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 203,
+    "kind": "prop",
+    "prop": "name",
+    "text": "add"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 229,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Take a photo"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 232,
+    "kind": "prop",
+    "prop": "name",
+    "text": "camera"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 233,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Take a Photo"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 250,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Choose a photo from the gallery"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 253,
+    "kind": "prop",
+    "prop": "name",
+    "text": "image"
+  },
+  {
+    "file": "components/PlusMenu.js",
+    "line": 254,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Pick from Gallery"
+  },
+  {
+    "file": "components/SearchAndSortBar.js",
+    "line": 45,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Change sort order"
+  },
+  {
+    "file": "components/SectionHeaderPill.js",
+    "line": 29,
+    "kind": "prop",
+    "prop": "name",
+    "text": "warning"
+  },
+  {
+    "file": "components/SelectionActionBar.js",
+    "line": 33,
+    "kind": "template",
+    "prop": null,
+    "text": "{{selectedCount}} selected"
+  },
+  {
+    "file": "components/SelectionActionBar.js",
+    "line": 44,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Select all items"
+  },
+  {
+    "file": "components/SelectionActionBar.js",
+    "line": 47,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Select all"
+  },
+  {
+    "file": "components/SelectionActionBar.js",
+    "line": 57,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Clear item selection"
+  },
+  {
+    "file": "components/SelectionActionBar.js",
+    "line": 59,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Clear"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 43,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Back"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 45,
+    "kind": "prop",
+    "prop": "name",
+    "text": "chevron-back"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 59,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Close sort options"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 61,
+    "kind": "prop",
+    "prop": "name",
+    "text": "close"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 79,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Sort by {{opt.label}}"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 79,
+    "kind": "template",
+    "prop": null,
+    "text": "Sort by {{opt.label}}"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 93,
+    "kind": "prop",
+    "prop": "name",
+    "text": "checkmark"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 108,
+    "kind": "prop",
+    "prop": "accessibilityLabel",
+    "text": "Sort direction: {{value}}"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 108,
+    "kind": "template",
+    "prop": null,
+    "text": "Sort direction: {{value}}"
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 109,
+    "kind": "prop",
+    "prop": "accessibilityHint",
+    "text": "Toggles between ascending and descending."
+  },
+  {
+    "file": "components/SortSheetModal.js",
+    "line": 111,
+    "kind": "jsx-text",
+    "prop": null,
+    "text": "Direction:"
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 194,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}:{{length}}"
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 347,
+    "kind": "template",
+    "prop": null,
+    "text": "Unsupported account teardown operation: {{operation}}"
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 446,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}{{path}}"
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 460,
+    "kind": "obj-prop",
+    "prop": "fallbackMessage",
+    "text": "Apple subscription request failed ({{response.status}})."
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 564,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/session"
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 586,
+    "kind": "obj-prop",
+    "prop": "fallbackMessage",
+    "text": "Could not load account access ({{response.status}})."
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 682,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}:{{value}}:{{value}}"
+  },
+  {
+    "file": "context/AccountSessionContext.js",
+    "line": 1191,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}:{{apple.appAccountToken}}:{{value}}"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 101,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "#333"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 103,
+    "kind": "obj-prop",
+    "prop": "textPlaceholder",
+    "text": "#888"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 108,
+    "kind": "obj-prop",
+    "prop": "actionButtonText",
+    "text": "#fff"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 110,
+    "kind": "obj-prop",
+    "prop": "inputText",
+    "text": "#000"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 118,
+    "kind": "obj-prop",
+    "prop": "shoppingCheckedText",
+    "text": "#777"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 125,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "#f5f5f5"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 127,
+    "kind": "obj-prop",
+    "prop": "textPlaceholder",
+    "text": "#888"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 132,
+    "kind": "obj-prop",
+    "prop": "actionButtonText",
+    "text": "#fff"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 134,
+    "kind": "obj-prop",
+    "prop": "inputText",
+    "text": "#fff"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 142,
+    "kind": "obj-prop",
+    "prop": "shoppingCheckedText",
+    "text": "#aaa"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 162,
+    "kind": "template",
+    "prop": null,
+    "text": "Stored {{label}} data must be an array."
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 289,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "freeUser"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 370,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Fridge"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 376,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Freezer"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 382,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Pantry"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 390,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Expired"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 396,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Eat first"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 402,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Use soon"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 408,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Lasts a while"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 414,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Long keeper"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 422,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Produce"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 428,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Dairy"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 434,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Meat"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 440,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Seafood"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 446,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Prepared"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 452,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Condiments"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 458,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Beverages"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 464,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Snacks"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 470,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Bakery"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 476,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Frozen"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 484,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Opened"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 490,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Unopened"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 496,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Raw"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 502,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Cooked"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 508,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Cut"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 514,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Whole"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 617,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "New chat"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 948,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Chat"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 1064,
+    "kind": "template",
+    "prop": null,
+    "text": "{{storageOwnerUid}}:{{value}}"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 1126,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "freeUser"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 1159,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/users/{{uid}}"
+  },
+  {
+    "file": "context/GlobalContext.js",
+    "line": 1167,
+    "kind": "obj-prop",
+    "prop": "timeoutMessage",
+    "text": "Loading the account profile timed out. Please try again."
+  },
+  {
+    "file": "utils/chatStoragePolicy.js",
+    "line": 20,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}\n[message truncated]"
+  },
+  {
+    "file": "utils/chatStoragePolicy.js",
+    "line": 60,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "[image]"
+  },
+  {
+    "file": "utils/chatStoragePolicy.js",
+    "line": 227,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "[image]"
+  },
+  {
+    "file": "utils/chatStoragePolicy.js",
+    "line": 237,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "[image]"
+  },
+  {
+    "file": "utils/dateInput.js",
+    "line": 69,
+    "kind": "template",
+    "prop": null,
+    "text": "{{y}}-{{m}}-{{da}}"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 7,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Produce"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 32,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Dairy"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 36,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Meat"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 39,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Seafood"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 40,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Bakery"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 41,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Snacks"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 42,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Beverages"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 43,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Condiments"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 44,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Frozen"
+  },
+  {
+    "file": "utils/foodTypeInference.js",
+    "line": 45,
+    "kind": "obj-prop",
+    "prop": "label",
+    "text": "Prepared"
+  },
+  {
+    "file": "utils/fridgeProposal.js",
+    "line": 50,
+    "kind": "template",
+    "prop": null,
+    "text": "fridge-proposal-{{randomUuid}}"
+  },
+  {
+    "file": "utils/fridgeProposal.js",
+    "line": 52,
+    "kind": "template",
+    "prop": null,
+    "text": "fridge-proposal-{{value}}-{{value}}"
+  },
+  {
+    "file": "utils/fridgeProposal.js",
+    "line": 79,
+    "kind": "template",
+    "prop": null,
+    "text": "id:{{actionId}}"
+  },
+  {
+    "file": "utils/fridgeProposal.js",
+    "line": 84,
+    "kind": "template",
+    "prop": null,
+    "text": "legacy:{{value}}"
+  },
+  {
+    "file": "utils/markdownFlow.js",
+    "line": 130,
+    "kind": "template",
+    "prop": null,
+    "text": "{{indent}}{{number}}. "
+  },
+  {
+    "file": "utils/markdownFlow.js",
+    "line": 130,
+    "kind": "template",
+    "prop": null,
+    "text": "{{indent}}• "
+  },
+  {
+    "file": "utils/recipePreferences.js",
+    "line": 272,
+    "kind": "template",
+    "prop": null,
+    "text": "{{visible}} (+{{value}} more)"
+  },
+  {
+    "file": "utils/recipePreferences.js",
+    "line": 281,
+    "kind": "template",
+    "prop": null,
+    "text": "{{PATCH_FIELD_LABELS.field}}: {{value}}"
+  },
+  {
+    "file": "utils/recipePreferences.js",
+    "line": 287,
+    "kind": "template",
+    "prop": null,
+    "text": "Meal style: {{label}}"
+  },
+  {
+    "file": "utils/recipePreferences.js",
+    "line": 293,
+    "kind": "template",
+    "prop": null,
+    "text": "Maximum calories: {{patch.maxCaloriesPerServing}} per serving"
+  },
+  {
+    "file": "utils/recipePreferences.js",
+    "line": 300,
+    "kind": "template",
+    "prop": null,
+    "text": "Maximum recipe time: {{patch.maxPrepMinutes}} minutes"
+  },
+  {
+    "file": "utils/recipePreferences.js",
+    "line": 304,
+    "kind": "template",
+    "prop": null,
+    "text": "Default servings: {{patch.defaultServings}}"
+  },
+  {
+    "file": "utils/reminderPolicy.js",
+    "line": 34,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}:{{value}}"
+  },
+  {
+    "file": "utils/reminderPolicy.js",
+    "line": 37,
+    "kind": "template",
+    "prop": null,
+    "text": "{{settingsSignature}}:{{itemSignature}}"
+  },
+  {
+    "file": "utils/voiceInput.js",
+    "line": 14,
+    "kind": "template",
+    "prop": null,
+    "text": "{{current}} {{spoken}}"
+  },
+  {
+    "file": "utils/voiceInput.js",
+    "line": 38,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "recording.m4a"
+  },
+  {
+    "file": "api/accountDeletionApi.js",
+    "line": 28,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}{{path}}"
+  },
+  {
+    "file": "api/accountDeletionApi.js",
+    "line": 47,
+    "kind": "template",
+    "prop": null,
+    "text": "/api/users/{{value}}"
+  },
+  {
+    "file": "api/accountDeletionApi.js",
+    "line": 58,
+    "kind": "template",
+    "prop": null,
+    "text": "/api/users/{{value}}/deletion-status"
+  },
+  {
+    "file": "api/accountLifecycleStorage.js",
+    "line": 14,
+    "kind": "template",
+    "prop": null,
+    "text": "{{prefix}}{{value}}"
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 26,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} must not be empty."
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 34,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} must be a valid absolute URL."
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 39,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} must use one of these protocols: {{value}}."
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 44,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} must not contain credentials."
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 48,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} must not contain a query string or fragment."
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 52,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} must not use a loopback host in production."
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 61,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}/chat"
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 69,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "EXPO_PUBLIC_API_BASE_URL"
+  },
+  {
+    "file": "api/backendConfig.js",
+    "line": 78,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "EXPO_PUBLIC_WS_URL"
+  },
+  {
+    "file": "api/buildSystemMessage.js",
+    "line": 7,
+    "kind": "template",
+    "prop": null,
+    "text": "{{item.name}} ({{item.quantity}})"
+  },
+  {
+    "file": "api/buildSystemMessage.js",
+    "line": 12,
+    "kind": "template",
+    "prop": null,
+    "text": "- Shopping List: {{shoppingSummary}}"
+  },
+  {
+    "file": "api/buildSystemMessage.js",
+    "line": 13,
+    "kind": "template",
+    "prop": null,
+    "text": "- User: {{value}}"
+  },
+  {
+    "file": "api/buildSystemMessage.js",
+    "line": 16,
+    "kind": "template",
+    "prop": null,
+    "text": "\nYou are an assistant in a fridge and shopping list app.\n\nScope:\n- Only handle fridge items, shopping lists, recipes, or app settings.\n- If the request is outside scope, say you cannot help with that.\n\nTools:\n- Use ONLY the tools provided.\n- If a request changes app state, you MUST call a tool.\n- When calling a tool, return ONLY the tool call and stop.\n- Never invent tool results.\n\nBehavior:\n- Be concise.\n- Format responses with Markdown when it improves readability:\n  - Start multi-part answers with a short heading (## or ###) for each major section.\n  - Bold the single most important takeaway.\n  - Prefer short bullet lists over long paragraphs; keep each bullet to one or two lines.\n  - Keep paragraphs under three lines.\n  - Avoid tables; the app renders them poorly. Use bullets instead.\n  - Use fenced code blocks for anything that is code, a command, or a list of exact values.\n- Do not expose hidden reasoning.\n- Ask ONE clarifying question only if required.\n- Confirm destructive actions before proceeding.\n- If a request is read-only and answerable from context, reply in text without tools.\n- After a tool result, briefly summarize what changed and suggest the next step if relevant.\n- Confirmation tools (proposeAddAllToFridge, proposeRecipePreferenceUpdate) only show a card for the user to confirm; they change nothing by themselves. After one runs, say the items or preferences are ready to review and ask the user to confirm on the card. Never claim the fridge was updated or preferences were saved until the user confirms.\n- If the latest user message includes a fridge image, detect its items, then call proposeAddAllToFridge exactly once. Never use that tool for recipes, recipe ingredients, meal ideas, or text-only ingredient lists.\n- Do not repeat the user's message.\n- Greetings should be handled once per session with no tool calls.\n- Confirm destructive or large-scope actions (for example, clear, reset, or delete all) before calling tools.\n\nRecipes:\n- For every recipe or meal-idea request, including requests for something light or a cuisine such as Asian or American, call recommendRecipes exactly once.\n- Saved preferences and the trusted fridge inventory are supplied to recommendRecipes by the app. Put only constraints stated for the current meal in the tool arguments.\n- A request such as \"something light tonight\" is a one-meal override; do not save it as a preference.\n- If the user says remember, save, always, or usually, or clearly states a durable allergy or dietary pattern, call proposeRecipePreferenceUpdate and let the user confirm before anything is saved. Do not save a constraint phrased only for this meal.\n- For preference proposals, use operation=merge to add values, operation=remove to remove named saved values, and operation=replace only when the user explicitly asks to replace or clear a field.\n- Never use webSearch or proposeAddAllToFridge for recipe recommendations.\n- Only use recipe links returned by recommendRecipes; never invent URLs, calories, or nutrition facts.\n- Return 3-6 recipes unless the user asks for fewer.\n- For each recipe: list the linked title, then one or two short lines below it with the calories (when the publisher provides them; append \"(est.)\" when the recipe data says the calories were AI-estimated) and the missing ingredients (or \"none\"). Do not explain why that recipe was picked and do not add extra commentary.\n- When suggesting multiple recipes, maximize coverage of available ingredients and avoid repeating the same main ingredient unless unavoidable.\n- After recommendRecipes returns, present its results without calling another tool. Only call a shopping-list tool later if the user explicitly asks to add missing items.\n\nContext:\n{{value}}\n"
+  },
+  {
+    "file": "api/chatAttachments.js",
+    "line": 4,
+    "kind": "template",
+    "prop": null,
+    "text": "{{FileSystem.documentDirectory}}pantrio-chat-attachments/"
+  },
+  {
+    "file": "api/chatAttachments.js",
+    "line": 13,
+    "kind": "template",
+    "prop": null,
+    "text": "{{ROOT_DIRECTORY}}{{value}}/"
+  },
+  {
+    "file": "api/chatAttachments.js",
+    "line": 35,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}-{{value}}.jpg"
+  },
+  {
+    "file": "api/chatAttachments.js",
+    "line": 36,
+    "kind": "template",
+    "prop": null,
+    "text": "{{directory}}{{filename}}"
+  },
+  {
+    "file": "api/chatAttachments.js",
+    "line": 62,
+    "kind": "template",
+    "prop": null,
+    "text": "{{directory}}{{filename}}"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 151,
+    "kind": "template",
+    "prop": null,
+    "text": "{{value}}{{value}}[image]"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 258,
+    "kind": "obj-prop",
+    "prop": "fallbackMessage",
+    "text": "The request could not be completed."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 471,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "{{currentText}}{{pendingDelta}}"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 481,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "The chat request was cancelled because the session ended."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 518,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "The chat connection closed unexpectedly."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 664,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "[Tool:{{name}}] completed"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 669,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "[fromTool:{{name}}] completed"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 785,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Sign in is required to get recipe recommendations."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 793,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/recipes/recommend"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 853,
+    "kind": "template",
+    "prop": null,
+    "text": "{{baseUrl}}/chat/completions"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 870,
+    "kind": "template",
+    "prop": null,
+    "text": "AI provider request failed ({{response.status}})."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 957,
+    "kind": "template",
+    "prop": null,
+    "text": "{{tool.name}}: {{tool.description}} Arguments JSON Schema: {{value}}"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 959,
+    "kind": "template",
+    "prop": null,
+    "text": "{{systemText}}\n\nYou can use the app tools listed below. Choose type \"tool\" whenever you need to read or change app data. Choose type \"final\" only when you can answer the user without another tool. Never claim that an action succeeded until its tool result says it succeeded. Use only an exact tool name from this list.\n\n{{toolDescriptions}}"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 972,
+    "kind": "template",
+    "prop": null,
+    "text": "{{instructions}}\n\nFor this recipe request, your next step must be the recommendRecipes tool."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 974,
+    "kind": "template",
+    "prop": null,
+    "text": "{{instructions}}\n\nThe requested isolated action is complete. Return a final answer now without calling another tool."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 977,
+    "kind": "template",
+    "prop": null,
+    "text": "{{message.role}}: {{message.content}}"
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 1214,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Sign in is required to use Pantrio AI."
+  },
+  {
+    "file": "api/gpt.js",
+    "line": 1262,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "The chat request timed out. Please try again."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 34,
+    "kind": "template",
+    "prop": null,
+    "text": "{{round}}:{{index}}:{{name}}"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 99,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "categories must be an object: { storage, urgency, food_type, state? }"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 110,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Missing required categories. Required: storage, urgency, food_type. Example: { storage:'Fridge', urgency:'Use soon', food_type:'Dairy' }"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 151,
+    "kind": "template",
+    "prop": null,
+    "text": " (categories: {{value}})"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 167,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Missing expiresAt. Please ask the user for an expiration date (e.g., '2026-02-01' or 'in 5 days')."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 186,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Missing item name."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 199,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "{{quantity}} {{n}} added to fridge (expires: {{value}}).{{value}}"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 207,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Missing item name."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 217,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "{{quantity}} {{n}} added to shopping list.{{value}}"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 226,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Missing item name."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 233,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "{{name}} removed from fridge."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 235,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "{{name}} not found in fridge."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 240,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Missing item name."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 247,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "{{name}} removed from shopping list."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 249,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "{{name}} not found in shopping list."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 309,
+    "kind": "obj-prop",
+    "prop": "text",
+    "text": "🧹 Streamlined {{value}} item(s) (normalized names/qty + ensured food_type tags)."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 386,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Confirm preference changes"
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 400,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "A confirmation card was shown to the user."
+  },
+  {
+    "file": "api/gptTools.js",
+    "line": 463,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "The add-to-fridge confirmation card is shown to the user. No items have been added to the fridge yet; the user must tap the card's button to confirm. Tell the user their items are ready to review and ask them to confirm on the card. Never say items were added or that the fridge was updated until the user confirms."
+  },
+  {
+    "file": "api/memoryManager.js",
+    "line": 88,
+    "kind": "template",
+    "prop": null,
+    "text": "Conversation memory from earlier messages:\n{{normalizedSummary}}"
+  },
+  {
+    "file": "api/memoryManager.js",
+    "line": 342,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/summarize"
+  },
+  {
+    "file": "api/memoryManager.js",
+    "line": 361,
+    "kind": "obj-prop",
+    "prop": "fallbackMessage",
+    "text": "Summarization failed with status {{response.status}}."
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 17,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "recommendRecipes"
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 18,
+    "kind": "obj-prop",
+    "prop": "description",
+    "text": "Find and rank real recipes using the user's trusted fridge inventory and saved recipe preferences. Use for recipe ideas, meal ideas, and 'what can I cook?' requests. Call once. Include only constraints stated for this meal; the app supplies saved defaults and fridge items separately."
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 23,
+    "kind": "obj-prop",
+    "prop": "description",
+    "text": "Cuisines requested for this meal."
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 52,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "proposeRecipePreferenceUpdate"
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 53,
+    "kind": "obj-prop",
+    "prop": "description",
+    "text": "Show a confirmation card for saving persistent recipe preferences. Use when the user asks to remember/save/always/usually prefer something, or clearly states a durable allergy or dietary pattern. This does not save by itself. Never use it for a one-meal constraint such as 'no peanuts tonight'."
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 60,
+    "kind": "obj-prop",
+    "prop": "description",
+    "text": "Use merge to add preferences (default), remove to delete named list values, and replace only when the user explicitly asks to replace or clear a field."
+  },
+  {
+    "file": "api/recipeAssistant.js",
+    "line": 140,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "recommendRecipes"
+  },
+  {
+    "file": "api/reminderScheduler.js",
+    "line": 36,
+    "kind": "template",
+    "prop": null,
+    "text": "Could not cancel {{failedCount}} scheduled Pantrio reminder{{value}}."
+  },
+  {
+    "file": "api/reminderScheduler.js",
+    "line": 84,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Pantrio fridge check"
+  },
+  {
+    "file": "api/reminderScheduler.js",
+    "line": 86,
+    "kind": "template",
+    "prop": null,
+    "text": "{{expiringCount}} item{{value}} nearing expiration."
+  },
+  {
+    "file": "api/reminderScheduler.js",
+    "line": 103,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "An item is nearing expiration"
+  },
+  {
+    "file": "api/reminderScheduler.js",
+    "line": 104,
+    "kind": "obj-prop",
+    "prop": "body",
+    "text": "Open Pantrio to review items expiring within {{value}} days."
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 17,
+    "kind": "obj-prop",
+    "prop": "chatSummary",
+    "text": "@chatSummary"
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 53,
+    "kind": "template",
+    "prop": null,
+    "text": "{{USER_STORAGE_PREFIX}}:"
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 70,
+    "kind": "template",
+    "prop": null,
+    "text": "{{USER_STORAGE_PREFIX}}:{{value}}"
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 77,
+    "kind": "obj-prop",
+    "prop": "chatSummary",
+    "text": "{{namespace}}:chatSummary"
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 91,
+    "kind": "template",
+    "prop": null,
+    "text": "pantrio.user.{{value}}.{{normalizedName}}"
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 257,
+    "kind": "template",
+    "prop": null,
+    "text": "{{LEGACY_STORAGE_QUARANTINE_PREFIX}}:"
+  },
+  {
+    "file": "api/storageKeys.js",
+    "line": 274,
+    "kind": "template",
+    "prop": null,
+    "text": "{{LEGACY_STORAGE_QUARANTINE_PREFIX}}:"
+  },
+  {
+    "file": "api/userDataPurge.js",
+    "line": 90,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "The pending data cleanup has not been confirmed yet."
+  },
+  {
+    "file": "auth/accountReauthentication.js",
+    "line": 58,
+    "kind": "obj-prop",
+    "prop": "cancelledMessage",
+    "text": "Google sign-in confirmation was cancelled."
+  },
+  {
+    "file": "auth/appleAuth.js",
+    "line": 56,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/auth/apple/link"
+  },
+  {
+    "file": "auth/appleAuth.js",
+    "line": 67,
+    "kind": "obj-prop",
+    "prop": "timeoutMessage",
+    "text": "Linking Sign in with Apple to your account timed out."
+  },
+  {
+    "file": "auth/appleAuth.js",
+    "line": 77,
+    "kind": "obj-prop",
+    "prop": "fallbackMessage",
+    "text": "Could not link Sign in with Apple to your account."
+  },
+  {
+    "file": "auth/googleAuth.js",
+    "line": 16,
+    "kind": "template",
+    "prop": null,
+    "text": "{{name}} is not configured. Add it to the selected Expo/EAS environment."
+  },
+  {
+    "file": "auth/secureFirebaseStorage.js",
+    "line": 20,
+    "kind": "template",
+    "prop": null,
+    "text": "{{SECURE_FIREBASE_KEY_PREFIX}}{{digest}}"
+  },
+  {
+    "file": "auth/secureFirebaseStorage.js",
+    "line": 43,
+    "kind": "template",
+    "prop": null,
+    "text": "{{baseKey}}.{{generation}}.{{index}}"
+  },
+  {
+    "file": "auth/secureFirebaseStorage.js",
+    "line": 76,
+    "kind": "template",
+    "prop": null,
+    "text": ".{1,{{SECURE_CHUNK_SIZE}}}"
+  },
+  {
+    "file": "auth/secureFirebaseStorage.js",
+    "line": 145,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "SecureStoreUnavailable"
+  },
+  {
+    "file": "auth/secureFirebaseStorage.js",
+    "line": 152,
+    "kind": "obj-prop",
+    "prop": "name",
+    "text": "SecureStoreUnavailable"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 83,
+    "kind": "template",
+    "prop": null,
+    "text": "{{API_BASE_URL}}/api/users/{{value}}"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 88,
+    "kind": "obj-prop",
+    "prop": "timeoutMessage",
+    "text": "Checking this account's server status timed out."
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 95,
+    "kind": "template",
+    "prop": null,
+    "text": "Could not verify this account with the server ({{response.status}})."
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 341,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Finish disconnecting Apple"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 346,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Apple access is still disconnecting"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 351,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Local cleanup needs another attempt"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 352,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Your account deletion was accepted and you were signed out, but some data on this device could not be removed. Pantrio will retry cleanup before allowing another account to open."
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 357,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Deletion is being reconciled"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 358,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Pantrio could not confirm the final server response, so it cleared local account data and signed you out. If you sign in again, Pantrio will check the deletion status before showing account data."
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 363,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Account deletion is finishing"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 364,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Your deletion request was accepted and local account data was cleared. The remaining server cleanup will continue automatically."
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 607,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Account deletion was not submitted"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 608,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "A previous deletion attempt did not reach the server. Your account is still active; retry deletion from Settings when you are ready."
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 1153,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Finish disconnecting Apple"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 1157,
+    "kind": "obj-prop",
+    "prop": "title",
+    "text": "Device data cleared"
+  },
+  {
+    "file": "auth/useAuth.js",
+    "line": 1158,
+    "kind": "obj-prop",
+    "prop": "message",
+    "text": "Pantrio cleared this account's data from the device and signed out, but could not confirm the server deletion. Sign in again later to verify or retry the account deletion."
+  }
+]

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useTranslation } from "react-i18next";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -23,6 +24,7 @@ import {
   parseDateInputToIso,
   startOfDayLocal,
 } from "../utils/dateInput";
+import { translateTagLabel } from "../utils/tagTranslation";
 
 const MAX_EXPIRATION_DAYS = 36_500;
 
@@ -41,12 +43,19 @@ export default function ItemFormModal({
   onCancel,
   onSubmit,
 
-  titleAdd = "Add New Item",
-  titleEdit = "Edit Item",
-  submitLabelAdd = "Add",
-  submitLabelEdit = "Save",
+  titleAdd,
+  titleEdit,
+  submitLabelAdd,
+  submitLabelEdit,
 }) {
+  const { t } = useTranslation();
   const isEdit = mode === "edit";
+  const resolvedTitle = isEdit
+    ? titleEdit || t("itemForm.titleEdit")
+    : titleAdd || t("itemForm.titleAdd");
+  const resolvedSubmitLabel = isEdit
+    ? submitLabelEdit || t("common.save")
+    : submitLabelAdd || t("common.add");
 
   const scrollRef = useRef(null);
 
@@ -160,8 +169,11 @@ export default function ItemFormModal({
     const byType = (type) => (Array.isArray(tags) ? tags : []).filter((t) => t?.type === type);
 
     const toItems = (arr, addNone = false) => {
-      const items = arr.map((t) => ({ label: t.label, value: t.label }));
-      if (addNone) items.unshift({ label: "None", value: "" });
+      const items = arr.map((tag) => ({
+        label: translateTagLabel(tag.label, tag.type),
+        value: tag.label,
+      }));
+      if (addNone) items.unshift({ label: t("tags.state.none"), value: "" });
       return items;
     };
 
@@ -171,7 +183,7 @@ export default function ItemFormModal({
       foodTypeItems: toItems(byType("food_type")),
       stateItems: toItems(byType("state"), true),
     };
-  }, [tags]);
+  }, [tags, t]);
 
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -285,8 +297,10 @@ export default function ItemFormModal({
           Math.round(days) > MAX_EXPIRATION_DAYS
         ) {
           Alert.alert(
-            "Days until expire",
-            `Enter a valid number of days from 1 to ${MAX_EXPIRATION_DAYS.toLocaleString()}.`
+            t("itemForm.daysUntilExpireTitle"),
+            t("itemForm.validDaysMessage", {
+              max: MAX_EXPIRATION_DAYS.toLocaleString(),
+            })
           );
           return { ok: false, expiresAt: null };
         }
@@ -295,7 +309,10 @@ export default function ItemFormModal({
         d.setDate(d.getDate() + Math.round(days));
         expiresAt = isoFromLocalDateOnly(d);
         if (!expiresAt) {
-          Alert.alert("Days until expire", "Enter a valid expiration range.");
+          Alert.alert(
+            t("itemForm.daysUntilExpireTitle"),
+            t("itemForm.validRangeMessage")
+          );
           return { ok: false, expiresAt: null };
         }
       } else {
@@ -306,11 +323,11 @@ export default function ItemFormModal({
     if (expMode === "date") {
       const iso = parseDateInputToIso(expDateText) || isoFromLocalDateOnly(expPickedDate);
       if (!expDateText?.trim() && !expPickedDate) {
-        Alert.alert("Expiration date", "Pick a date or enter one (YYYY-MM-DD or MM/DD/YYYY).");
+        Alert.alert(t("itemForm.dateTitle"), t("itemForm.dateMessage"));
         return { ok: false, expiresAt: null };
       }
       if (!iso) {
-        Alert.alert("Expiration date", "Enter a valid date (YYYY-MM-DD or MM/DD/YYYY).");
+        Alert.alert(t("itemForm.dateTitle"), t("itemForm.dateValidMessage"));
         return { ok: false, expiresAt: null };
       }
       expiresAt = iso;
@@ -330,7 +347,10 @@ export default function ItemFormModal({
     const q = String(quantity || "").trim() || (isEdit ? "" : "1");
 
     if (!n || !q) {
-      Alert.alert(isEdit ? "Edit item" : "Add item", "Name and quantity are required.");
+      Alert.alert(
+        isEdit ? t("itemForm.editItemTitle") : t("itemForm.addItemTitle"),
+        t("itemForm.nameQuantityRequired")
+      );
       return;
     }
 
@@ -397,7 +417,7 @@ export default function ItemFormModal({
               contentContainerStyle={{ paddingBottom: 12 }}
             >
               <Text style={[styles.title, { fontSize: fontSize * 1.2, color: theme?.textPrimary }]}>
-                {isEdit ? titleEdit : titleAdd}
+                {resolvedTitle}
               </Text>
 
               <TextInput
@@ -411,7 +431,7 @@ export default function ItemFormModal({
                     backgroundColor: theme?.inputBackground,
                   },
                 ]}
-                placeholder="Item Name"
+                placeholder={t("itemForm.itemNamePlaceholder")}
                 placeholderTextColor={theme?.textPlaceholder}
                 value={name}
                 onChangeText={setName}
@@ -431,7 +451,7 @@ export default function ItemFormModal({
                     backgroundColor: theme?.inputBackground,
                   },
                 ]}
-                placeholder="Quantity"
+                placeholder={t("itemForm.quantityPlaceholder")}
                 placeholderTextColor={theme?.textPlaceholder}
                 value={quantity}
                 onChangeText={setQuantity}
@@ -441,14 +461,14 @@ export default function ItemFormModal({
               />
 
               <Text style={[styles.label, { color: theme?.textSecondary, fontSize: fontSize * 0.9 }]}>
-                Expiration
+                {t("itemForm.expiration")}
               </Text>
 
               <View style={[styles.segment, { borderColor: theme?.border }]}>
                 {[
-                  { key: "days", label: "Days" },
-                  { key: "date", label: "Date" },
-                  { key: "machine", label: "Machine" },
+                  { key: "days", label: t("itemForm.days") },
+                  { key: "date", label: t("itemForm.date") },
+                  { key: "machine", label: t("itemForm.machine") },
                 ].map((opt, i, arr) => {
                   const selected = expMode === opt.key;
                   return (
@@ -497,7 +517,11 @@ export default function ItemFormModal({
                       backgroundColor: theme?.inputBackground,
                     },
                   ]}
-                  placeholder={isEdit ? "Days until expire (leave blank to clear)" : "Days until expire (e.g., 7)"}
+                  placeholder={
+                    isEdit
+                      ? t("itemForm.daysPlaceholderEdit")
+                      : t("itemForm.daysPlaceholderAdd")
+                  }
                   placeholderTextColor={theme?.textPlaceholder}
                   value={expDaysText}
                   onChangeText={(t) => setExpDaysText(t.replace(/[^\d]/g, ""))}
@@ -520,7 +544,7 @@ export default function ItemFormModal({
                         backgroundColor: theme?.inputBackground,
                       },
                     ]}
-                    placeholder="Expiration date (YYYY-MM-DD or MM/DD/YYYY)"
+                    placeholder={t("itemForm.expirationDatePlaceholder")}
                     placeholderTextColor={theme?.textPlaceholder}
                     value={expDateText}
                     onChangeText={setExpDateText}
@@ -554,7 +578,7 @@ export default function ItemFormModal({
                     >
                       <Ionicons name="calendar" size={18} color={theme?.textPrimary} />
                       <Text style={{ marginLeft: 8, fontSize, fontWeight: "800", color: theme?.textPrimary }}>
-                        Pick a date
+                        {t("itemForm.pickADate")}
                       </Text>
                       <View style={{ flex: 1 }} />
                       <Text style={{ fontSize: fontSize * 0.9, color: theme?.textSecondary, fontWeight: "700" }}>
@@ -598,7 +622,9 @@ export default function ItemFormModal({
                           setPickerVisible(false);
                         }}
                       >
-                        <Text style={{ color: "#fff", fontWeight: "900", fontSize }}>Done</Text>
+                        <Text style={{ color: "#fff", fontWeight: "900", fontSize }}>
+                          {t("common.done")}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </Popover>
@@ -618,14 +644,13 @@ export default function ItemFormModal({
                       lineHeight: fontSize * 1.15,
                     }}
                   >
-                    Machine estimation will be filled automatically. This is a best-effort guess and may be inaccurate—always
-                    use your senses and safe-handling guidelines.
+                    {t("itemForm.machineInfo")}
                   </Text>
                 </View>
               )}
 
               <Text style={[styles.label, { color: theme?.textSecondary, fontSize: fontSize * 0.9 }]}>
-                Storage (required)
+                {t("itemForm.storageRequired")}
               </Text>
 
               <DropDownPicker
@@ -649,7 +674,7 @@ export default function ItemFormModal({
               />
 
               <Text style={[styles.label, { color: theme?.textSecondary, fontSize: fontSize * 0.9 }]}>
-                Urgency (required)
+                {t("itemForm.urgencyRequired")}
               </Text>
 
               <DropDownPicker
@@ -673,7 +698,7 @@ export default function ItemFormModal({
               />
 
               <Text style={[styles.label, { color: theme?.textSecondary, fontSize: fontSize * 0.9 }]}>
-                Food type (required)
+                {t("itemForm.foodTypeRequired")}
               </Text>
 
               <DropDownPicker
@@ -698,7 +723,7 @@ export default function ItemFormModal({
               />
 
               <Text style={[styles.label, { color: theme?.textSecondary, fontSize: fontSize * 0.9 }]}>
-                State (optional)
+                {t("itemForm.stateOptional")}
               </Text>
 
               <DropDownPicker
@@ -733,7 +758,9 @@ export default function ItemFormModal({
                   onCancel?.();
                 }}
               >
-                <Text style={{ fontSize, color: theme?.textPrimary }}>Cancel</Text>
+                <Text style={{ fontSize, color: theme?.textPrimary }}>
+                  {t("common.cancel")}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -741,7 +768,7 @@ export default function ItemFormModal({
                 onPress={handleSubmit}
                 disabled={submitting}
               >
-                <Text style={{ fontSize, color: "#fff" }}>{isEdit ? submitLabelEdit : submitLabelAdd}</Text>
+                <Text style={{ fontSize, color: "#fff" }}>{resolvedSubmitLabel}</Text>
               </TouchableOpacity>
             </View>
           </View>

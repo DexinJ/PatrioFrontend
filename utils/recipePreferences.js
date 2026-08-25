@@ -1,3 +1,5 @@
+import i18next from "i18next";
+
 export const RECIPE_PREFERENCES_SCHEMA_VERSION = 1;
 
 export const RECIPE_ENERGY_PREFERENCES = Object.freeze([
@@ -20,12 +22,12 @@ const EXPLICIT_LIST_FIELDS = Object.freeze([
   "dislikedIngredients",
 ]);
 const PATCH_FIELD_LABELS = Object.freeze({
-  preferredCuisines: "Preferred cuisines",
-  dislikedCuisines: "Cuisines to show less often",
-  allergens: "Allergens",
-  dietaryPatterns: "Dietary patterns",
-  excludedIngredients: "Always exclude",
-  dislikedIngredients: "Ingredients to show less often",
+  preferredCuisines: "recipePreferences.labels.preferredCuisines",
+  dislikedCuisines: "recipePreferences.labels.dislikedCuisines",
+  allergens: "recipePreferences.labels.allergens",
+  dietaryPatterns: "recipePreferences.labels.dietaryPatterns",
+  excludedIngredients: "recipePreferences.labels.excludedIngredients",
+  dislikedIngredients: "recipePreferences.labels.dislikedIngredients",
 });
 
 const DEFAULT_EXPLICIT_PREFERENCES = Object.freeze({
@@ -267,9 +269,14 @@ export function applyRecipePreferenceProposal(
 }
 
 function formatPreferenceList(value) {
-  if (!value.length) return "None";
+  if (!value.length) return i18next.t("common.none");
   const visible = value.slice(0, 5).join(", ");
-  return value.length > 5 ? `${visible} (+${value.length - 5} more)` : visible;
+  return value.length > 5
+    ? i18next.t("recipePreferences.visibleMore", {
+        visible,
+        count: value.length - 5,
+      })
+    : visible;
 }
 
 export function formatRecipePreferencePatch(value) {
@@ -278,30 +285,42 @@ export function formatRecipePreferencePatch(value) {
 
   for (const field of EXPLICIT_LIST_FIELDS) {
     if (!Object.prototype.hasOwnProperty.call(patch, field)) continue;
-    lines.push(`${PATCH_FIELD_LABELS[field]}: ${formatPreferenceList(patch[field])}`);
+    lines.push(
+      `${i18next.t(PATCH_FIELD_LABELS[field])}: ${formatPreferenceList(
+        patch[field]
+      )}`
+    );
   }
   if (Object.prototype.hasOwnProperty.call(patch, "preferredEnergy")) {
     const label =
       patch.preferredEnergy.charAt(0).toUpperCase() +
       patch.preferredEnergy.slice(1);
-    lines.push(`Meal style: ${label}`);
+    lines.push(i18next.t("recipePreferences.mealStyleLine", { label }));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "maxCaloriesPerServing")) {
     lines.push(
       patch.maxCaloriesPerServing === null
-        ? "Maximum calories: No limit"
-        : `Maximum calories: ${patch.maxCaloriesPerServing} per serving`
+        ? i18next.t("recipePreferences.maxCaloriesNoLimit")
+        : i18next.t("recipePreferences.maxCaloriesLine", {
+            count: patch.maxCaloriesPerServing,
+          })
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, "maxPrepMinutes")) {
     lines.push(
       patch.maxPrepMinutes === null
-        ? "Maximum recipe time: No limit"
-        : `Maximum recipe time: ${patch.maxPrepMinutes} minutes`
+        ? i18next.t("recipePreferences.maxTimeNoLimit")
+        : i18next.t("recipePreferences.maxTimeLine", {
+            count: patch.maxPrepMinutes,
+          })
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, "defaultServings")) {
-    lines.push(`Default servings: ${patch.defaultServings}`);
+    lines.push(
+      i18next.t("recipePreferences.defaultServingsLine", {
+        count: patch.defaultServings,
+      })
+    );
   }
 
   return lines.join("\n");

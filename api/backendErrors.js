@@ -1,3 +1,5 @@
+import i18next from "i18next";
+
 export function parseBackendResponseText(responseText) {
   const text = String(responseText || "").trim();
 
@@ -12,7 +14,7 @@ export function parseBackendResponseText(responseText) {
 
 export function createBackendResponseError(
   payload,
-  { status, fallbackMessage = "The request failed." } = {}
+  { status, fallbackMessage = i18next.t("errors.requestFailed") } = {}
 ) {
   const nestedError =
     payload?.error && typeof payload.error === "object"

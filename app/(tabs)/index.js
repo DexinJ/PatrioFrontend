@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GlobalContext } from "../../context/GlobalContext";
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { fridgeItems, shoppingListItems, theme, settings } = useContext(GlobalContext);
 
@@ -28,21 +30,24 @@ export default function HomeScreen() {
         bg: theme.shoppingItemBackground, // green
         icon: "checkmark-circle-outline",
         iconColor: theme.actionButton,
-        text: "All items are fresh 🎉",
+        text: t("home.allItemsFresh"),
       },
       expiring: {
         bg: theme.warningBackground,
         icon: "alert-circle-outline",
         iconColor: theme.warning,
-        text: `${expiringCount} item${expiringCount > 1 ? "s" : ""} expiring soon`,
+        text: t("home.expiringSoon", { count: expiringCount }),
       },
       expired: {
         bg: theme.dangerBackground,
         icon: "warning-outline",
         iconColor: theme.danger,
         text: hasExpiring
-          ? `${expiredCount} expired and ${expiringCount} expiring soon`
-          : `${expiredCount} expired item${expiredCount > 1 ? "s" : ""}`,
+          ? t("home.expiredAndExpiring", {
+              expiredCount,
+              expiringCount,
+            })
+          : t("home.expired", { count: expiredCount }),
       },
     };
     
@@ -53,17 +58,19 @@ export default function HomeScreen() {
         <View style={{ flex: 1, alignItems: "center" }}>
           {/* Greeting */}
           <Text style={{ fontSize: fontSize * 1.4, fontWeight: "bold", marginBottom: 5, textAlign: "center", color: theme.textPrimary }}>
-            👋 Welcome back, {settings.user.name}!
+            {t("home.welcomeBackName", { name: settings.user.name })}
           </Text>
           <Text style={{ fontSize: fontSize, marginBottom: 20, textAlign: "center", color: theme.textSecondary }}>
-            Here’s what’s happening in your fridge:
+            {t("home.whatsHappening")}
           </Text>
       
           {/* Dashboard Cards */}
           <View style={{ width: "100%", marginBottom: 30 }}>
             <TouchableOpacity style={[styles.card, { backgroundColor: theme.card }]} onPress={() => router.push("/fridge")}>
               <Ionicons name="cube-outline" size={fontSize * 2} color={theme.actionButton} />
-              <Text style={[styles.cardText, { fontSize, color: theme.textPrimary }]}>{totalItems} Items in Fridge</Text>
+              <Text style={[styles.cardText, { fontSize, color: theme.textPrimary }]}>
+                {t("home.itemsInFridge", { count: totalItems })}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -95,7 +102,9 @@ export default function HomeScreen() {
 
             <TouchableOpacity style={[styles.card, { backgroundColor: theme.card }]} onPress={() => router.push("/list")}>
               <Ionicons name="cart-outline" size={fontSize * 2} color={theme.accent} />
-              <Text style={[styles.cardText, { fontSize, color: theme.textPrimary }]}>{totalShopping} on Shopping List</Text>
+              <Text style={[styles.cardText, { fontSize, color: theme.textPrimary }]}>
+                {t("home.onShoppingList", { count: totalShopping })}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -103,12 +112,12 @@ export default function HomeScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%" }}>
             <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.actionButton }]} onPress={() => router.push("/fridge")}>
               <Ionicons name="add-circle-outline" size={fontSize * 1.5} color="#fff" />
-              <Text style={[styles.actionText, { fontSize }]}>{`Add Item`}</Text>
+              <Text style={[styles.actionText, { fontSize }]}>{t("home.addItem")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.actionButton }]} onPress={() => router.push("/chat")}>
               <Ionicons name="chatbubble-ellipses-outline" size={fontSize * 1.5} color="#fff" />
-              <Text style={[styles.actionText, { fontSize }]}>{`Open Chat`}</Text>
+              <Text style={[styles.actionText, { fontSize }]}>{t("home.openChat")}</Text>
             </TouchableOpacity>
           </View>
         </View>

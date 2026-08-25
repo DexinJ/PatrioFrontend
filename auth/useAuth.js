@@ -1,5 +1,6 @@
 // src/auth/useAuth.js
 import { signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+import i18next from "i18next";
 import {
   createContext,
   useCallback,
@@ -59,9 +60,9 @@ const {
 } = require("../api/accountDeletionPolicy.cjs");
 
 const APPLE_MANUAL_SIGN_IN_REVOCATION_MESSAGE =
-  "Your Pantrio account was deleted, but Apple access could not be revoked automatically. In iOS Settings, open your Apple Account, then Sign-In & Security > Sign in with Apple > Pantrio, and choose Stop Using Sign in with Apple.";
+  i18next.t("account.manualAppleRevocationMessage");
 const APPLE_PENDING_SIGN_IN_REVOCATION_MESSAGE =
-  "Your Pantrio account deletion was accepted, and the server is retrying the Apple disconnection automatically. Because that retry may not finish, you can guarantee disconnection in iOS Settings under Apple Account > Sign-In & Security > Sign in with Apple > Pantrio by choosing Stop Using Sign in with Apple. This does not cancel an App Store subscription.";
+  i18next.t("account.pendingAppleRevocationMessage");
 
 const DELETED_FIREBASE_ERROR_CODES = new Set([
   "auth/invalid-user-token",
@@ -85,14 +86,16 @@ async function backendAccountExists(user) {
       headers: { Authorization: `Bearer ${token}` },
     },
     {
-      timeoutMessage: "Checking this account's server status timed out.",
+      timeoutMessage: i18next.t("errors.checkingAccountTimedOut"),
     }
   );
 
   if (response.status === 404 || response.status === 410) return false;
   if (!response.ok) {
     throw new Error(
-      `Could not verify this account with the server (${response.status}).`
+      i18next.t("errors.couldNotVerifyServer", {
+        status: response.status,
+      })
     );
   }
   return true;
@@ -338,31 +341,28 @@ export function AuthProvider({ children }) {
       let notice = null;
       if (manualAppleRevocation) {
         notice = {
-          title: "Finish disconnecting Apple",
+          title: i18next.t("account.finishDisconnectingApple"),
           message: APPLE_MANUAL_SIGN_IN_REVOCATION_MESSAGE,
         };
       } else if (pendingAppleRevocation) {
         notice = {
-          title: "Apple access is still disconnecting",
+          title: i18next.t("account.appleAccessStillDisconnecting"),
           message: APPLE_PENDING_SIGN_IN_REVOCATION_MESSAGE,
         };
       } else if (!visiblePurgeResult.ok) {
         notice = {
-          title: "Local cleanup needs another attempt",
-          message:
-            "Your account deletion was accepted and you were signed out, but some data on this device could not be removed. Pantrio will retry cleanup before allowing another account to open.",
+          title: i18next.t("account.localCleanupNeedsAnotherAttempt"),
+          message: i18next.t("account.localCleanupMessage"),
         };
       } else if (remoteKind === "unknown") {
         notice = {
-          title: "Deletion is being reconciled",
-          message:
-            "Pantrio could not confirm the final server response, so it cleared local account data and signed you out. If you sign in again, Pantrio will check the deletion status before showing account data.",
+          title: i18next.t("account.deletionBeingReconciled"),
+          message: i18next.t("account.deletionReconciledMessage"),
         };
       } else if (remoteKind === "processing") {
         notice = {
-          title: "Account deletion is finishing",
-          message:
-            "Your deletion request was accepted and local account data was cleared. The remaining server cleanup will continue automatically.",
+          title: i18next.t("account.accountDeletionFinishing"),
+          message: i18next.t("account.deletionFinishingMessage"),
         };
       }
 
@@ -604,9 +604,8 @@ export function AuthProvider({ children }) {
             pendingDeletionRecoveryUidRef.current = null;
             updateAccountDeletionState({ pending: false, phase: null });
             await storePostAuthNotice({
-              title: "Account deletion was not submitted",
-              message:
-                "A previous deletion attempt did not reach the server. Your account is still active; retry deletion from Settings when you are ready.",
+              title: i18next.t("account.deletionNotSubmitted"),
+              message: i18next.t("account.deletionNotSubmittedMessage"),
               audienceUid: nextUser.uid,
             });
           } else {
@@ -1150,13 +1149,12 @@ export function AuthProvider({ children }) {
         await storePostAuthNotice(
           appleMayStillBeLinked
             ? {
-                title: "Finish disconnecting Apple",
+                title: i18next.t("account.finishDisconnectingApple"),
                 message: APPLE_MANUAL_SIGN_IN_REVOCATION_MESSAGE,
               }
             : {
-                title: "Device data cleared",
-                message:
-                  "Pantrio cleared this account's data from the device and signed out, but could not confirm the server deletion. Sign in again later to verify or retry the account deletion.",
+                title: i18next.t("account.deviceDataCleared"),
+                message: i18next.t("account.deviceDataClearedMessage"),
               }
         );
       }

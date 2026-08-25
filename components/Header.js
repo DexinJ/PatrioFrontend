@@ -1,8 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlobalContext } from "../context/GlobalContext";
+
+// The old headers added all of this extra space below the content band, which
+// pushed the title and buttons up against the status bar. Splitting the same
+// total padding evenly above and below keeps each header's height identical
+// while vertically centering its content.
+const HEADER_BAND_EXTRA = 15;
+const HEADER_BAND_EXTRA_HALF = HEADER_BAND_EXTRA / 2;
+const ICON_HEADER_BAND_EXTRA = 12;
+const ICON_HEADER_BAND_EXTRA_HALF = ICON_HEADER_BAND_EXTRA / 2;
 
 export function PlainHeader({ title }) {
   const { theme } = useContext(GlobalContext);
@@ -13,7 +23,12 @@ export function PlainHeader({ title }) {
     <View
       style={[
         styles.plain_header,
-        { paddingTop: insets.top, backgroundColor: theme.card, borderBottomColor: theme.border },
+        {
+          paddingTop: insets.top + HEADER_BAND_EXTRA_HALF,
+          paddingBottom: HEADER_BAND_EXTRA_HALF,
+          backgroundColor: theme.card,
+          borderBottomColor: theme.border,
+        },
       ]}
     >
       <Text style={[styles.headerText, { fontSize: width * 0.05, color: theme.textPrimary }]}>
@@ -53,7 +68,8 @@ export function IconHeader({ title, leftItems = [], rightItems = [] }) {
       style={[
         styles.iconHeaderRow,
         {
-          paddingTop: insets.top,
+          paddingTop: insets.top + ICON_HEADER_BAND_EXTRA_HALF,
+          paddingBottom: ICON_HEADER_BAND_EXTRA_HALF,
           backgroundColor: theme.card,
           borderBottomColor: theme.border,
         },
@@ -108,7 +124,12 @@ export function HeaderWithButton({
     <View
       style={[
         styles.header,
-        { paddingTop: insets.top, backgroundColor: theme.card, borderBottomColor: theme.border },
+        {
+          paddingTop: insets.top + HEADER_BAND_EXTRA_HALF,
+          paddingBottom: HEADER_BAND_EXTRA_HALF,
+          backgroundColor: theme.card,
+          borderBottomColor: theme.border,
+        },
       ]}
     >
       {/* LEFT: optional Select All / Clear */}
@@ -133,25 +154,31 @@ export function HeaderWithButton({
         <View style={{ width: 90 }} />
       )}
 
-      {/* CENTER: title (unchanged) */}
-      <Text
+      {/* CENTER: title, centered in the same band as the buttons */}
+      <View
+        pointerEvents="none"
         style={[
-          styles.headerText,
+          styles.headerTitleWrap,
           {
-            fontSize: width * 0.05,
-            color: theme.textPrimary,
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: insets.top,
-            textAlign: "center",
+            top: insets.top + HEADER_BAND_EXTRA_HALF,
+            bottom: HEADER_BAND_EXTRA_HALF,
           },
         ]}
-        pointerEvents="none"
-        numberOfLines={1}
       >
-        {title}
-      </Text>
+        <Text
+          style={[
+            styles.headerText,
+            {
+              fontSize: width * 0.05,
+              color: theme.textPrimary,
+              textAlign: "center",
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+      </View>
 
       {/* RIGHT: existing button (Edit / Done) */}
       <TouchableOpacity
@@ -172,6 +199,7 @@ export function HeaderWithButton({
 }
 
 export function HeaderWithHiddenButton({ title, onPress, hideButton = true }) {
+  const { t } = useTranslation();
   const { theme } = useContext(GlobalContext);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -182,41 +210,57 @@ export function HeaderWithHiddenButton({ title, onPress, hideButton = true }) {
         <View
           style={[
             styles.hide_header,
-            { paddingTop: insets.top, backgroundColor: theme.card, borderBottomColor: theme.border },
+            {
+              paddingTop: insets.top + HEADER_BAND_EXTRA_HALF,
+              paddingBottom: HEADER_BAND_EXTRA_HALF,
+              backgroundColor: theme.card,
+              borderBottomColor: theme.border,
+            },
           ]}
         >
           <TouchableOpacity
             onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t("header.goBack")}
           >
             <Ionicons name="arrow-back" size={24} color={theme.accent} />
           </TouchableOpacity>
-          <Text
+          <View
+            pointerEvents="none"
             style={[
-              styles.headerText,
+              styles.headerTitleWrap,
               {
-                fontSize: width * 0.05,
-                color: theme.textPrimary,
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: insets.top,
-                textAlign: "center",
+                top: insets.top + HEADER_BAND_EXTRA_HALF,
+                bottom: HEADER_BAND_EXTRA_HALF,
               },
             ]}
-            pointerEvents="none"
-            numberOfLines={1}
           >
-            {title}
-          </Text>
+            <Text
+              style={[
+                styles.headerText,
+                {
+                  fontSize: width * 0.05,
+                  color: theme.textPrimary,
+                  textAlign: "center",
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+          </View>
         </View>
       )}
       {hideButton && (
         <View
           style={[
             styles.plain_header,
-            { paddingTop: insets.top, backgroundColor: theme.card, borderBottomColor: theme.border },
+            {
+              paddingTop: insets.top + HEADER_BAND_EXTRA_HALF,
+              paddingBottom: HEADER_BAND_EXTRA_HALF,
+              backgroundColor: theme.card,
+              borderBottomColor: theme.border,
+            },
           ]}
         >
           <Text style={[styles.headerText, { fontSize: width * 0.05, color: theme.textPrimary }]}>
@@ -253,6 +297,13 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontWeight: "600",
+  },
+  headerTitleWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   editButton: {
     fontWeight: "600",

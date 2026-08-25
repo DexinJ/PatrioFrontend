@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import "react-native-get-random-values";
 import { useAuth } from "../../auth/useAuth";
@@ -19,6 +20,7 @@ import { AppleSubscriptionProvider } from "../../context/SubscriptionContext";
 import { canExposeAccountData } from "../../context/refreshPolicy";
 
 function ChatTabHeader() {
+  const { t } = useTranslation();
   const {
     activeConversationTitle,
     createConversation,
@@ -31,14 +33,14 @@ function ChatTabHeader() {
       leftItems={[
         {
           icon: "menu-outline",
-          label: "Open conversations",
+          label: t("conversations.openConversations"),
           onPress: () => setConversationsVisible(true),
         },
       ]}
       rightItems={[
         {
           icon: "add",
-          label: "New chat",
+          label: t("conversations.newChat"),
           onPress: () => createConversation(),
         },
       ]}
@@ -47,6 +49,7 @@ function ChatTabHeader() {
 }
 
 function SessionBackedGlobalProvider({ authUser, children }) {
+  const { t } = useTranslation();
   const {
     session,
     initializing,
@@ -69,7 +72,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
         await refreshSession({ maxAgeMs: 0 });
       } catch (nextError) {
         setActionError(
-          String(nextError?.message || "Could not verify account access.")
+          String(nextError?.message || t("tabsLayout.couldNotVerifyAccountAccess"))
         );
       } finally {
         setWorking(false);
@@ -84,7 +87,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
         releaseAccountOperation = beginAccountTeardown("logout");
         await signOut();
       } catch (nextError) {
-        setActionError(String(nextError?.message || "Could not log out."));
+        setActionError(String(nextError?.message || t("tabsLayout.couldNotLogOut")));
       } finally {
         releaseAccountOperation?.();
         setWorking(false);
@@ -101,7 +104,9 @@ function SessionBackedGlobalProvider({ authUser, children }) {
           backgroundColor: "#F7F8FA",
         }}
         accessibilityLabel={
-          waiting ? "Verifying account access" : "Account access unavailable"
+          waiting
+            ? t("tabsLayout.verifyingAccountAccess")
+            : t("tabsLayout.accountAccessUnavailable")
         }
       >
         {waiting ? (
@@ -111,8 +116,8 @@ function SessionBackedGlobalProvider({ authUser, children }) {
               style={{ marginTop: 14, color: "#30343B", textAlign: "center" }}
             >
               {accountDeletionPending
-                ? "Finishing account deletion…"
-                : "Verifying account access…"}
+                ? t("tabsLayout.finishingAccountDeletion")
+                : t("tabsLayout.verifyingAccountAccessEllipsis")}
             </Text>
           </>
         ) : (
@@ -127,7 +132,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
                 textAlign: "center",
               }}
             >
-              Account access could not be verified
+              {t("tabsLayout.accountAccessCouldNotBeVerified")}
             </Text>
             <Text
               style={{
@@ -138,13 +143,13 @@ function SessionBackedGlobalProvider({ authUser, children }) {
                 textAlign: "center",
               }}
             >
-              {actionError || error || "Check your connection and try again."}
+              {actionError || error || t("tabsLayout.checkConnection")}
             </Text>
             <Pressable
               onPress={() => void retry()}
               disabled={working}
               accessibilityRole="button"
-              accessibilityLabel="Retry account verification"
+              accessibilityLabel={t("tabsLayout.retryAccountVerification")}
               style={({ pressed }) => ({
                 marginTop: 22,
                 minWidth: 128,
@@ -160,7 +165,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>
-                  Retry
+                  {t("common.retry")}
                 </Text>
               )}
             </Pressable>
@@ -168,7 +173,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
               onPress={() => void logout()}
               disabled={working}
               accessibilityRole="button"
-              accessibilityLabel="Log out of this account"
+              accessibilityLabel={t("tabsLayout.logOutOfThisAccount")}
               style={({ pressed }) => ({
                 marginTop: 12,
                 minWidth: 128,
@@ -182,7 +187,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
               })}
             >
               <Text style={{ color: "#30343B", fontWeight: "700" }}>
-                Log out
+                {t("common.logOut")}
               </Text>
             </Pressable>
           </>
@@ -203,6 +208,7 @@ function SessionBackedGlobalProvider({ authUser, children }) {
 }
 
 function ThemedTabs() {
+  const { t } = useTranslation();
   const { signOut } = useAuth();
   const {
     retryStorageHydration,
@@ -243,7 +249,7 @@ function ThemedTabs() {
     } catch (error) {
       if (mountedRef.current) {
         setRecoveryLogoutError(
-          String(error?.message || "Could not log out. Try again.")
+          String(error?.message || t("tabsLayout.couldNotLogOutTryAgain"))
         );
       }
     } finally {
@@ -263,7 +269,7 @@ function ThemedTabs() {
     return (
       <View
         style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        accessibilityLabel="Loading account data"
+        accessibilityLabel={t("tabsLayout.loadingAccountData")}
       >
         <ActivityIndicator size="large" color={theme.actionButton} />
       </View>
@@ -280,7 +286,7 @@ function ThemedTabs() {
           paddingHorizontal: 28,
           backgroundColor: theme.background,
         }}
-        accessibilityLabel="Local data recovery required"
+        accessibilityLabel={t("tabsLayout.localDataRecoveryRequired")}
       >
         <Ionicons
           name="warning-outline"
@@ -296,7 +302,7 @@ function ThemedTabs() {
             textAlign: "center",
           }}
         >
-          Local data needs attention
+          {t("tabsLayout.localDataNeedsAttention")}
         </Text>
         <Text
           style={{
@@ -307,8 +313,7 @@ function ThemedTabs() {
             textAlign: "center",
           }}
         >
-          Pantrio could not safely load or finish clearing local data. Your
-          stored data has not been replaced. Retry to recover access.
+          {t("tabsLayout.localDataMessage")}
         </Text>
         <Pressable
           onPress={() => {
@@ -317,7 +322,7 @@ function ThemedTabs() {
           }}
           disabled={recoveryLoggingOut}
           accessibilityRole="button"
-          accessibilityLabel="Retry loading local data"
+          accessibilityLabel={t("tabsLayout.retryLoadingLocalData")}
           style={({ pressed }) => ({
             marginTop: 22,
             minWidth: 128,
@@ -330,14 +335,14 @@ function ThemedTabs() {
           })}
         >
           <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
-            Retry
+            {t("common.retry")}
           </Text>
         </Pressable>
         <Pressable
           onPress={() => void logoutFromRecovery()}
           disabled={recoveryLoggingOut}
           accessibilityRole="button"
-          accessibilityLabel="Log out of this account"
+          accessibilityLabel={t("tabsLayout.logOutOfThisAccount")}
           style={({ pressed }) => ({
             marginTop: 12,
             minWidth: 128,
@@ -360,7 +365,7 @@ function ThemedTabs() {
                 fontWeight: "700",
               }}
             >
-              Log out
+              {t("common.logOut")}
             </Text>
           )}
         </Pressable>
@@ -396,7 +401,7 @@ function ThemedTabs() {
         name="index"
         options={{
           headerShown: false,
-          title: "Home",
+          title: t("tabs.home"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -406,7 +411,7 @@ function ThemedTabs() {
         name="chat"
         options={{
           header: () => <ChatTabHeader />,
-          title: "Chat",
+          title: t("tabs.chat"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
@@ -415,7 +420,7 @@ function ThemedTabs() {
       <Tabs.Screen
         name="fridge"
         options={{
-          title: "Fridge",
+          title: t("tabs.fridge"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube-outline" size={size} color={color} />
           ),
@@ -424,7 +429,7 @@ function ThemedTabs() {
       <Tabs.Screen
         name="list"
         options={{
-          title: "Shopping List",
+          title: t("tabs.shoppingList"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cart-outline" size={size} color={color} />
           ),
@@ -433,7 +438,7 @@ function ThemedTabs() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: t("tabs.settings"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),

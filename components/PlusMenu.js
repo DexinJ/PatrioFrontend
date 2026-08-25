@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import i18next from "i18next";
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { persistChatAttachment } from "../api/chatAttachments";
 import { GlobalContext } from "../context/GlobalContext";
@@ -13,6 +15,7 @@ const MAX_SOURCE_IMAGE_EDGE = 30_000;
 const MAX_SOURCE_IMAGE_PIXELS = 100_000_000;
 
 export default function PlusMenu({ onSend }) {
+  const { t } = useTranslation();
   const { settings, storageOwnerUid, theme } = useContext(GlobalContext);
   const fontSize = settings?.ux?.fontSize || 16;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,12 +32,12 @@ export default function PlusMenu({ onSend }) {
 
   async function prepareJpegAttachment(asset) {
     if (!asset || typeof asset.uri !== "string" || !asset.uri.trim()) {
-      throw new Error("The selected image is missing its file location.");
+      throw new Error(i18next.t("plusMenu.imageMissingFile"));
     }
 
     const sourceBytes = Number(asset.fileSize);
     if (Number.isFinite(sourceBytes) && sourceBytes > MAX_SOURCE_IMAGE_BYTES) {
-      throw new Error("The selected image is too large. Choose an image under 20 MB.");
+      throw new Error(i18next.t("plusMenu.imageTooLarge"));
     }
 
     const width = Number(asset.width);
@@ -45,16 +48,14 @@ export default function PlusMenu({ onSend }) {
       width <= 0 ||
       height <= 0
     ) {
-      throw new Error("The selected image has invalid dimensions.");
+      throw new Error(i18next.t("plusMenu.imageInvalidDimensions"));
     }
     if (
       width > MAX_SOURCE_IMAGE_EDGE ||
       height > MAX_SOURCE_IMAGE_EDGE ||
       width * height > MAX_SOURCE_IMAGE_PIXELS
     ) {
-      throw new Error(
-        "The selected image has too many pixels to process safely."
-      );
+      throw new Error(i18next.t("plusMenu.imageTooManyPixels"));
     }
 
     const ctx = ImageManipulator.ImageManipulator.manipulate(asset.uri);
@@ -74,7 +75,7 @@ export default function PlusMenu({ onSend }) {
       compress: 0.65,
       base64: true,
     });
-    if (!result.base64) throw new Error("Failed to create base64 image");
+    if (!result.base64) throw new Error(i18next.t("plusMenu.base64Failed"));
     const dataUrl = `data:image/jpeg;base64,${result.base64}`;
     // if (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH) {
     //   throw new Error("The selected image is too large to send.");
@@ -95,7 +96,10 @@ export default function PlusMenu({ onSend }) {
       if (!mountedRef.current) return;
       if (status !== "granted") {
         if (mountedRef.current) {
-          Alert.alert("Camera permission required", "Camera permissions are required.");
+          Alert.alert(
+            t("plusMenu.cameraPermissionTitle"),
+            t("plusMenu.cameraPermissionMessage")
+          );
         }
         return;
       }
@@ -121,7 +125,10 @@ export default function PlusMenu({ onSend }) {
       }
     } catch (error) {
       if (mountedRef.current) {
-        Alert.alert("Image", error?.message || "The photo could not be prepared.");
+        Alert.alert(
+          t("plusMenu.imageTitle"),
+          error?.message || t("plusMenu.photoPrepFailed")
+        );
       }
     } finally {
       busyRef.current = false;
@@ -143,8 +150,8 @@ export default function PlusMenu({ onSend }) {
       if (status !== "granted") {
         if (mountedRef.current) {
           Alert.alert(
-            "Photo permission required",
-            "Media library permissions are required."
+            t("plusMenu.photoPermissionTitle"),
+            t("plusMenu.photoPermissionMessage")
           );
         }
         return;
@@ -171,7 +178,10 @@ export default function PlusMenu({ onSend }) {
       }
     } catch (error) {
       if (mountedRef.current) {
-        Alert.alert("Image", error?.message || "The image could not be prepared.");
+        Alert.alert(
+          t("plusMenu.imageTitle"),
+          error?.message || t("plusMenu.imagePrepFailed")
+        );
       }
     } finally {
       busyRef.current = false;
@@ -196,7 +206,9 @@ export default function PlusMenu({ onSend }) {
         onPress={() => setMenuOpen((open) => !open)}
         disabled={busy}
         accessibilityRole="button"
-        accessibilityLabel={menuOpen ? "Close attachment menu" : "Add a photo"}
+        accessibilityLabel={
+          menuOpen ? t("plusMenu.closeMenu") : t("plusMenu.addPhoto")
+        }
         accessibilityState={{ disabled: busy, expanded: menuOpen }}
         >
         <Ionicons
@@ -226,12 +238,12 @@ export default function PlusMenu({ onSend }) {
             onPress={takePhoto}
             disabled={busy}
             accessibilityRole="button"
-            accessibilityLabel="Take a photo"
+            accessibilityLabel={t("plusMenu.takeAPhoto")}
             accessibilityState={{ disabled: busy }}
           >
             <Ionicons name="camera" size={fontSize} color={theme.textPrimary} />
             <Text style={[styles.menuText, { fontSize, color: theme.textPrimary }]} numberOfLines={1}>
-              Take a Photo
+              {t("plusMenu.takeAPhoto")}
             </Text>
           </TouchableOpacity>
 
@@ -247,12 +259,12 @@ export default function PlusMenu({ onSend }) {
             onPress={pickPhoto}
             disabled={busy}
             accessibilityRole="button"
-            accessibilityLabel="Choose a photo from the gallery"
+            accessibilityLabel={t("plusMenu.chooseFromGallery")}
             accessibilityState={{ disabled: busy }}
           >
             <Ionicons name="image" size={fontSize} color={theme.textPrimary} />
             <Text style={[styles.menuText, { fontSize, color: theme.textPrimary }]} numberOfLines={1}>
-              Pick from Gallery
+              {t("plusMenu.pickFromGallery")}
             </Text>
           </TouchableOpacity>
         </View>

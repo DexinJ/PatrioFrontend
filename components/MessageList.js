@@ -15,12 +15,14 @@ import {
 import MessageBubble from "./MessageBubble";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
 import DropDownPicker from "react-native-dropdown-picker";
+import { useTranslation } from "react-i18next";
 import {
   fridgeProposalActionKey,
   isFridgeProposalActionConsumed,
   normalizeFridgeProposalCategories,
   normalizeFridgeProposalQuantity,
 } from "../utils/fridgeProposal";
+import { translateTagLabel } from "../utils/tagTranslation";
 
 function toDisplayText(value) {
   if (typeof value === "string") return value;
@@ -40,6 +42,7 @@ function safeAction(value) {
  * Renders a UI action card inside the chat list.
  */
 function ActionCard({ action, onPress }) {
+  const { t } = useTranslation();
   const normalizedAction = safeAction(action);
   if (!normalizedAction) return null;
 
@@ -47,7 +50,8 @@ function ActionCard({ action, onPress }) {
     const items = Array.isArray(normalizedAction.items)
       ? normalizedAction.items
       : [];
-    const title = toDisplayText(normalizedAction.title) || "Add all to fridge";
+    const title =
+      toDisplayText(normalizedAction.title) || t("messageList.addAllToFridge");
     const consumed = isFridgeProposalActionConsumed(normalizedAction);
 
     return (
@@ -61,12 +65,12 @@ function ActionCard({ action, onPress }) {
         }}
       >
         <Text style={{ fontWeight: "600", marginBottom: 6 }}>
-          I found {items.length} item(s):
+          {t("messageList.foundItems", { count: items.length })}
         </Text>
 
         {items.slice(0, 6).map((it, idx) => (
           <Text key={idx} style={{ marginBottom: 2 }}>
-            • {toDisplayText(it?.name) || "(unnamed)"}
+            • {toDisplayText(it?.name) || t("common.unnamed")}
             {toDisplayText(it?.quantity)
               ? ` — ${toDisplayText(it?.quantity)}`
               : ""}
@@ -74,7 +78,7 @@ function ActionCard({ action, onPress }) {
         ))}
         {items.length > 6 ? (
           <Text style={{ marginTop: 4, opacity: 0.7 }}>
-            +{items.length - 6} more…
+            {t("messageList.more", { count: items.length - 6 })}
           </Text>
         ) : null}
 
@@ -94,7 +98,7 @@ function ActionCard({ action, onPress }) {
           }}
         >
           <Text style={{ fontWeight: "700" }}>
-            {consumed ? "Added to fridge" : title}
+            {consumed ? t("messageList.addedToFridge") : title}
           </Text>
         </TouchableOpacity>
       </View>
@@ -109,26 +113,29 @@ function ActionCard({ action, onPress }) {
       ? normalizedAction.operation
       : "merge";
     const labels = {
-      preferredCuisines: "Prefer cuisines",
-      dislikedCuisines: "Avoid cuisines",
-      allergens: "Allergens",
-      dietaryPatterns: "Diet",
-      excludedIngredients: "Never include",
-      dislikedIngredients: "Dislike",
-      preferredEnergy: "Meal style",
-      maxCaloriesPerServing: "Calories per serving",
-      maxPrepMinutes: "Maximum time",
-      defaultServings: "Default servings",
+      preferredCuisines: t("messageList.preferCuisines"),
+      dislikedCuisines: t("messageList.avoidCuisines"),
+      allergens: t("messageList.allergens"),
+      dietaryPatterns: t("messageList.diet"),
+      excludedIngredients: t("messageList.neverInclude"),
+      dislikedIngredients: t("messageList.dislike"),
+      preferredEnergy: t("messageList.mealStyle"),
+      maxCaloriesPerServing: t("messageList.caloriesPerServing"),
+      maxPrepMinutes: t("messageList.maximumTime"),
+      defaultServings: t("messageList.defaultServings"),
     };
     const changes = Object.entries(patch).map(([key, value]) => {
       const displayValue = Array.isArray(value)
-        ? value.join(", ") || "none"
+        ? value.join(", ") || t("messageList.noneValue")
         : value === null
-          ? "no limit"
+          ? t("messageList.noLimit")
           : key === "maxPrepMinutes"
-            ? `${value} min`
+            ? t("messageList.minSuffix", { count: value })
             : String(value);
-      return `${labels[key] || key}: ${displayValue}`;
+      return t("messageList.changeLine", {
+        label: labels[key] || key,
+        value: displayValue,
+      });
     });
 
     return (
@@ -144,10 +151,10 @@ function ActionCard({ action, onPress }) {
         <Text style={{ fontWeight: "600", marginBottom: 6 }}>
           {toDisplayText(normalizedAction.summary) ||
             (operation === "remove"
-              ? "Remove these saved recipe preferences?"
+              ? t("messageList.removePreferences")
               : operation === "replace"
-                ? "Replace these recipe preferences?"
-                : "Save these recipe preferences?")}
+                ? t("messageList.replacePreferences")
+                : t("messageList.savePreferences"))}
         </Text>
         {changes.slice(0, 8).map((change) => (
           <Text key={change} style={{ marginBottom: 2 }}>
@@ -166,7 +173,8 @@ function ActionCard({ action, onPress }) {
           }}
         >
           <Text style={{ fontWeight: "700" }}>
-            {toDisplayText(normalizedAction.title) || "Save preferences"}
+            {toDisplayText(normalizedAction.title) ||
+              t("messageList.savePreferencesButton")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -177,10 +185,11 @@ function ActionCard({ action, onPress }) {
 }
 
 function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
+  const { t } = useTranslation();
   const { theme } = useContext(GlobalContext);
 
   const rawItems = Array.isArray(action?.items) ? action.items : [];
-  const title = toDisplayText(action?.title) || "Confirm items";
+  const title = toDisplayText(action?.title) || t("messageList.confirmItems");
 
   const [draftItems, setDraftItems] = useState([]);
   const [expandedIdx, setExpandedIdx] = useState(null);
@@ -272,47 +281,53 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
 
   const STORAGE_ITEMS = useMemo(
     () => [
-      { label: "Fridge", value: "Fridge" },
-      { label: "Freezer", value: "Freezer" },
-      { label: "Pantry", value: "Pantry" },
+      { label: translateTagLabel("Fridge", "storage"), value: "Fridge" },
+      { label: translateTagLabel("Freezer", "storage"), value: "Freezer" },
+      { label: translateTagLabel("Pantry", "storage"), value: "Pantry" },
     ],
-    []
+    [t]
   );
   const URGENCY_ITEMS = useMemo(
     () => [
-      { label: "Eat first", value: "Eat first" },
-      { label: "Use soon", value: "Use soon" },
-      { label: "Lasts a while", value: "Lasts a while" },
-      { label: "Long keeper", value: "Long keeper" },
+      { label: translateTagLabel("Eat first", "urgency"), value: "Eat first" },
+      { label: translateTagLabel("Use soon", "urgency"), value: "Use soon" },
+      {
+        label: translateTagLabel("Lasts a while", "urgency"),
+        value: "Lasts a while",
+      },
+      {
+        label: translateTagLabel("Long keeper", "urgency"),
+        value: "Long keeper",
+      },
     ],
-    []
+    [t]
   );
   const FOODTYPE_ITEMS = useMemo(
     () => [
-      { label: "Produce", value: "Produce" },
-      { label: "Dairy", value: "Dairy" },
-      { label: "Meat", value: "Meat" },
-      { label: "Seafood", value: "Seafood" },
-      { label: "Prepared", value: "Prepared" },
-      { label: "Condiments", value: "Condiments" },
-      { label: "Beverages", value: "Beverages" },
-      { label: "Snacks", value: "Snacks" },
-      { label: "Bakery", value: "Bakery" },
-      { label: "Frozen", value: "Frozen" },
+      { label: translateTagLabel("Produce", "food_type"), value: "Produce" },
+      { label: translateTagLabel("Dairy", "food_type"), value: "Dairy" },
+      { label: translateTagLabel("Meat", "food_type"), value: "Meat" },
+      { label: translateTagLabel("Seafood", "food_type"), value: "Seafood" },
+      { label: translateTagLabel("Prepared", "food_type"), value: "Prepared" },
+      { label: translateTagLabel("Condiments", "food_type"), value: "Condiments" },
+      { label: translateTagLabel("Beverages", "food_type"), value: "Beverages" },
+      { label: translateTagLabel("Snacks", "food_type"), value: "Snacks" },
+      { label: translateTagLabel("Bakery", "food_type"), value: "Bakery" },
+      { label: translateTagLabel("Frozen", "food_type"), value: "Frozen" },
     ],
-    []
+    [t]
   );
   const STATE_ITEMS = useMemo(
     () => [
-      { label: "None", value: "" },
-      { label: "Opened", value: "Opened" },
-      { label: "Unopened", value: "Unopened" },
-      { label: "Raw", value: "Raw" },
-      { label: "Cooked", value: "Cooked" },
-      { label: "Cut", value: "Cut" },
-      { label: "Whole", value: "Whole" },
+      { label: translateTagLabel("None", "state"), value: "" },
+      { label: translateTagLabel("Opened", "state"), value: "Opened" },
+      { label: translateTagLabel("Unopened", "state"), value: "Unopened" },
+      { label: translateTagLabel("Raw", "state"), value: "Raw" },
+      { label: translateTagLabel("Cooked", "state"), value: "Cooked" },
+      { label: translateTagLabel("Cut", "state"), value: "Cut" },
+      { label: translateTagLabel("Whole", "state"), value: "Whole" },
     ],
-    []
+    [t]
   );
 
   const CHIP_COLORS = {
@@ -498,12 +513,14 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: TextPrimary }]}>{title}</Text>
               <Text style={{ marginTop: 2, opacity: 0.7, color: TextSecondary }}>
-                {selectedCount} selected
+                {t("messageList.selectedCount", { count: selectedCount })}
               </Text>
             </View>
 
             <TouchableOpacity onPress={handleClose} style={{ padding: 8 }}>
-              <Text style={{ fontWeight: "700", color: TextPrimary }}>Close</Text>
+              <Text style={{ fontWeight: "700", color: TextPrimary }}>
+                {t("common.close")}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -537,14 +554,28 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontWeight: "700", color: TextPrimary }}>
-                          {it?.name ?? "(unnamed)"}
+                          {it?.name ?? t("common.unnamed")}
                         </Text>
 
                         <View style={styles.chipRow}>
-                          <Chip label={cats.storage} color={CHIP_COLORS.storage} />
-                          <Chip label={cats.urgency} color={CHIP_COLORS.urgency} />
-                          <Chip label={cats.food_type} color={CHIP_COLORS.food_type} />
-                          {cats.state ? <Chip label={cats.state} color={CHIP_COLORS.state} /> : null}
+                          <Chip
+                            label={translateTagLabel(cats.storage, "storage")}
+                            color={CHIP_COLORS.storage}
+                          />
+                          <Chip
+                            label={translateTagLabel(cats.urgency, "urgency")}
+                            color={CHIP_COLORS.urgency}
+                          />
+                          <Chip
+                            label={translateTagLabel(cats.food_type, "food_type")}
+                            color={CHIP_COLORS.food_type}
+                          />
+                          {cats.state ? (
+                            <Chip
+                              label={translateTagLabel(cats.state, "state")}
+                              color={CHIP_COLORS.state}
+                            />
+                          ) : null}
                         </View>
 
                         <TouchableOpacity
@@ -573,14 +604,16 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
                               color: TextPrimary,
                             }}
                           >
-                            {showEditor ? "Hide tags" : "Edit tags"}
+                            {showEditor
+                              ? t("messageList.hideTags")
+                              : t("messageList.editTags")}
                           </Text>
                         </TouchableOpacity>
                       </View>
 
                       <View style={styles.qtyRow}>
                         <Text style={{ opacity: 0.75, marginRight: 8, color: TextSecondary }}>
-                          Qty
+                          {t("messageList.qty")}
                         </Text>
                         <TextInput
                           value={String(it?.quantity ?? "1")}
@@ -599,69 +632,69 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
                     {showEditor ? (
                       <View style={[styles.editor, { borderColor: Border }]}>
                         <Text style={[styles.editorLabel, { color: TextSecondary }]}>
-                          Storage (required)
+                          {t("messageList.storageRequired")}
                         </Text>
                         <DropDownPicker
                           listMode="MODAL"
-                          modalTitle="Select storage"
+                          modalTitle={t("messageList.selectStorage")}
                           open={isOpen(`${idx}-storage`)}
                           value={cats.storage}
                           items={STORAGE_ITEMS}
                           setOpen={(v) => setOpenFor(`${idx}-storage`, v)}
                           onChangeValue={(v) => updateCategory(idx, "storage", v)}
                           searchable
-                          searchPlaceholder="Search storage..."
+                          searchPlaceholder={t("messageList.searchStorage")}
                           style={[styles.dd, { backgroundColor: InputBg, borderColor: Border }]}
                           textStyle={{ color: InputText }}
                         />
 
                         <Text style={[styles.editorLabel, { color: TextSecondary }]}>
-                          Urgency (required)
+                          {t("messageList.urgencyRequired")}
                         </Text>
                         <DropDownPicker
                           listMode="MODAL"
-                          modalTitle="Select urgency"
+                          modalTitle={t("messageList.selectUrgency")}
                           open={isOpen(`${idx}-urgency`)}
                           value={cats.urgency}
                           items={URGENCY_ITEMS}
                           setOpen={(v) => setOpenFor(`${idx}-urgency`, v)}
                           onChangeValue={(v) => updateCategory(idx, "urgency", v)}
                           searchable
-                          searchPlaceholder="Search urgency..."
+                          searchPlaceholder={t("messageList.searchUrgency")}
                           style={[styles.dd, { backgroundColor: InputBg, borderColor: Border }]}
                           textStyle={{ color: InputText }}
                         />
 
                         <Text style={[styles.editorLabel, { color: TextSecondary }]}>
-                          Food type (required)
+                          {t("messageList.foodTypeRequired")}
                         </Text>
                         <DropDownPicker
                           listMode="MODAL"
-                          modalTitle="Select food type"
+                          modalTitle={t("messageList.selectFoodType")}
                           open={isOpen(`${idx}-food_type`)}
                           value={cats.food_type}
                           items={FOODTYPE_ITEMS}
                           setOpen={(v) => setOpenFor(`${idx}-food_type`, v)}
                           onChangeValue={(v) => updateCategory(idx, "food_type", v)}
                           searchable
-                          searchPlaceholder="Search food types..."
+                          searchPlaceholder={t("messageList.searchFoodTypes")}
                           style={[styles.dd, { backgroundColor: InputBg, borderColor: Border }]}
                           textStyle={{ color: InputText }}
                         />
 
                         <Text style={[styles.editorLabel, { color: TextSecondary }]}>
-                          State (optional)
+                          {t("messageList.stateOptional")}
                         </Text>
                         <DropDownPicker
                           listMode="MODAL"
-                          modalTitle="Select state"
+                          modalTitle={t("messageList.selectState")}
                           open={isOpen(`${idx}-state`)}
                           value={cats.state ?? ""}
                           items={STATE_ITEMS}
                           setOpen={(v) => setOpenFor(`${idx}-state`, v)}
                           onChangeValue={(v) => updateCategory(idx, "state", v)}
                           searchable
-                          searchPlaceholder="Search state..."
+                          searchPlaceholder={t("messageList.searchState")}
                           style={[styles.dd, { backgroundColor: InputBg, borderColor: Border }]}
                           textStyle={{ color: InputText }}
                         />
@@ -700,7 +733,7 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
               disabled={selectedCount === 0 || closing}
             >
               <Text style={{ fontWeight: "900", color: TextPrimary }}>
-                Confirm ({selectedCount})
+                {t("messageList.confirm", { count: selectedCount })}
               </Text>
             </TouchableOpacity>
           </View>

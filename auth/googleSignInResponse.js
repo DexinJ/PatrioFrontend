@@ -1,3 +1,5 @@
+import i18next from "i18next";
+
 function normalizedToken(value) {
   const token = typeof value === "string" ? value.trim() : "";
   return token || null;
@@ -19,8 +21,8 @@ export async function extractGoogleIdTokenFromSignInResponse(
   {
     getTokens,
     cancelledCode = "GOOGLE_SIGN_IN_CANCELLED",
-    cancelledMessage = "Google sign-in was cancelled.",
-    missingTokenMessage = "Google did not return an identity token.",
+    cancelledMessage = i18next.t("errors.googleSignInCancelled"),
+    missingTokenMessage = i18next.t("errors.googleNoIdentityToken"),
   } = {}
 ) {
   if (response?.type === "cancelled") {
@@ -31,7 +33,7 @@ export async function extractGoogleIdTokenFromSignInResponse(
   const isLegacyResponse = response?.type == null;
   if (!isV16Success && !isLegacyResponse) {
     throw codedError(
-      "Google returned an unsupported sign-in response.",
+      i18next.t("errors.googleUnsupportedResponse"),
       "GOOGLE_SIGN_IN_INVALID_RESPONSE"
     );
   }

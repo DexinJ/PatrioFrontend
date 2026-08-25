@@ -1,5 +1,6 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import i18next from "i18next";
 import { extractGoogleIdTokenFromSignInResponse } from "./googleSignInResponse";
 
 let configured = false;
@@ -13,7 +14,7 @@ function requireGoogleClientId(name, clientId) {
   const value = String(clientId || "").trim();
   if (!value) {
     throw new Error(
-      `${name} is not configured. Add it to the selected Expo/EAS environment.`
+      i18next.t("errors.envNotConfigured", { name })
     );
   }
   return value;

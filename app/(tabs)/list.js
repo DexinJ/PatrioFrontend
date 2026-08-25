@@ -4,6 +4,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, {
   memo,
   useCallback,
@@ -39,13 +40,6 @@ import SearchAndSortBar from "../../components/SearchAndSortBar";
 
 // ✅ OPTIONAL: if you want the same sort sheet UX
 import SortSheetModal from "../../components/SortSheetModal";
-
-// ---- sort options (keep minimal; you can add more later) ----
-const SORT_ITEMS = [
-  { label: "Added", value: "added" },
-  { label: "Name", value: "name" },
-  { label: "Category", value: "category" },
-];
 
 const norm = (s) => String(s || "").trim().toLowerCase();
 
@@ -134,6 +128,7 @@ const ShoppingListRow = memo(function ShoppingListRow({
 });
 
 export default function ShoppingListScreen() {
+  const { t } = useTranslation();
   const {
     shoppingListItems,
     addToShoppingList,
@@ -171,6 +166,15 @@ export default function ShoppingListScreen() {
   const transferLockedRef = useRef(false);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const SORT_ITEMS = useMemo(
+    () => [
+      { label: t("shoppingList.sortAdded"), value: "added" },
+      { label: t("shoppingList.sortName"), value: "name" },
+      { label: t("shoppingList.sortCategory"), value: "category" },
+    ],
+    [t]
+  );
 
   const hasCheckedItems = Object.values(checkedItems).some((v) => v);
 
@@ -326,19 +330,25 @@ export default function ShoppingListScreen() {
     (item, afterDelete) => {
       if (!item?.id) return;
       const label = String(item?.name || "").trim();
-      Alert.alert("Delete item", `Delete "${label || "this item"}"?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            removeFromShoppingList(item.id);
-            afterDelete?.();
+      Alert.alert(
+        t("shoppingList.deleteItem"),
+        t("shoppingList.deleteItemQuestion", {
+          name: label || t("shoppingList.thisItem"),
+        }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("common.delete"),
+            style: "destructive",
+            onPress: () => {
+              removeFromShoppingList(item.id);
+              afterDelete?.();
+            },
           },
-        },
-      ]);
+        ]
+      );
     },
-    [removeFromShoppingList]
+    [removeFromShoppingList, t]
   );
 
   // Confirm before bulk-deleting checked shopping-list items.
@@ -347,19 +357,23 @@ export default function ShoppingListScreen() {
       const safeIds = (Array.isArray(ids) ? ids : []).filter(Boolean);
       if (safeIds.length === 0) return;
 
-      Alert.alert("Delete items", `Delete ${safeIds.length} item(s)?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            removeManyFromShoppingList(safeIds);
-            setCheckedItems({});
+      Alert.alert(
+        t("shoppingList.deleteItems"),
+        t("shoppingList.deleteItemsQuestion", { count: safeIds.length }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("common.delete"),
+            style: "destructive",
+            onPress: () => {
+              removeManyFromShoppingList(safeIds);
+              setCheckedItems({});
+            },
           },
-        },
-      ]);
+        ]
+      );
     },
-    [removeManyFromShoppingList]
+    [removeManyFromShoppingList, t]
   );
 
   const deleteSelectedItems = useCallback(() => {
@@ -407,10 +421,18 @@ export default function ShoppingListScreen() {
   const categoryTabs = useMemo(() => {
     return categoryPills.map((label) => ({
       key: label,
-      label,
-      count: label === "All" ? shoppingListItems.length : (categoryCounts.get(label) || 0),
+      label:
+        label === "All"
+          ? t("shoppingList.all")
+          : label === "Uncategorized"
+            ? t("shoppingList.uncategorized")
+            : label,
+      count:
+        label === "All"
+          ? shoppingListItems.length
+          : categoryCounts.get(label) || 0,
     }));
-  }, [categoryCounts, categoryPills, shoppingListItems.length]);
+  }, [categoryCounts, categoryPills, shoppingListItems.length, t]);
 
   const effectiveActiveCategory = categoryPills.includes(activeCategory)
     ? activeCategory
@@ -520,11 +542,11 @@ export default function ShoppingListScreen() {
   useLayoutEffect(() => {
     const leftButtonLabel = editMode
       ? hasCheckedItems
-        ? "Delete"
-        : "Select All"
+        ? t("common.delete")
+        : t("shoppingList.selectAll")
       : hasCheckedItems
-      ? "Clear"
-      : "Select All";
+      ? t("common.clear")
+      : t("shoppingList.selectAll");
 
     const onLeftPress = editMode
       ? hasCheckedItems
@@ -537,8 +559,8 @@ export default function ShoppingListScreen() {
     navigation.setOptions({
       header: () => (
         <HeaderWithButton
-          title="🛒 Shopping List"
-          buttonLabel={editMode ? "Done" : "Edit"}
+          title={t("shoppingList.title")}
+          buttonLabel={editMode ? t("common.done") : t("common.edit")}
           onPress={toggleEditMode}
           showLeftButton={true}
           leftButtonLabel={leftButtonLabel}
@@ -553,6 +575,7 @@ export default function ShoppingListScreen() {
     hasCheckedItems,
     navigation,
     selectAllVisible,
+    t,
     toggleEditMode,
   ]);
 
@@ -663,7 +686,7 @@ export default function ShoppingListScreen() {
             onPressSort={() => setSortSheetVisible(true)}
             theme={theme}
             fontSize={fontSize}
-            placeholder="Search items..."
+            placeholder={t("shoppingList.searchPlaceholder")}
           />
 
           <View style={{ marginTop: 10 }}>
@@ -682,7 +705,9 @@ export default function ShoppingListScreen() {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
               <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>
-                {shoppingListItems.length === 0 ? "Your shopping list is empty! Add something below 👇" : "No matches. Try a different search or tab."}
+                {shoppingListItems.length === 0
+                  ? t("shoppingList.emptyList")
+                  : t("shoppingList.noMatches")}
               </Text>
             </View>
           </TouchableWithoutFeedback>
@@ -699,7 +724,10 @@ export default function ShoppingListScreen() {
                     { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.8) },
                   ]}
                 >
-                  {section.title.toUpperCase()}
+                  {(section.title === "Uncategorized"
+                    ? t("shoppingList.uncategorized")
+                    : section.title
+                  ).toUpperCase()}
                 </Text>
               </View>
             )}
@@ -716,7 +744,7 @@ export default function ShoppingListScreen() {
               styles.input,
               { fontSize, borderColor: theme.border, backgroundColor: theme.inputBackground, color: theme.inputText },
             ]}
-            placeholder="Item Name"
+            placeholder={t("shoppingList.itemNamePlaceholder")}
             placeholderTextColor={theme.textPlaceholder}
             value={newItemName}
             onChangeText={setNewItemName}
@@ -730,7 +758,7 @@ export default function ShoppingListScreen() {
               styles.input,
               { fontSize, borderColor: theme.border, backgroundColor: theme.inputBackground, color: theme.inputText },
             ]}
-            placeholder="Quantity"
+            placeholder={t("shoppingList.quantityPlaceholder")}
             placeholderTextColor={theme.textPlaceholder}
             value={newItemQuantity}
             onChangeText={setNewItemQuantity}
@@ -747,7 +775,9 @@ export default function ShoppingListScreen() {
         {/* ✅ Done Shopping Button (DISABLED in edit mode) */}
         {hasCheckedItems && !editMode && (
           <TouchableOpacity style={[styles.doneButton, { backgroundColor: theme.accent }]} onPress={handleDoneShopping}>
-            <Text style={[styles.doneButtonText, { fontSize }]}>✅ Done Shopping</Text>
+            <Text style={[styles.doneButtonText, { fontSize }]}>
+              {t("shoppingList.doneShopping")}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -758,19 +788,21 @@ export default function ShoppingListScreen() {
               <TouchableWithoutFeedback onPress={() => {}}>
                 <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={styles.modalHeader}>
-                    <Text style={[styles.modalTitle, { color: theme.text, fontSize: fontSize * 1.05 }]}>Edit item</Text>
+                    <Text style={[styles.modalTitle, { color: theme.text, fontSize: fontSize * 1.05 }]}>
+                      {t("shoppingList.editItem")}
+                    </Text>
                     <TouchableOpacity onPress={closeItemMenu} style={styles.modalCloseBtn}>
                       <Ionicons name="close" size={fontSize * 1.4} color={theme.textSecondary} />
                     </TouchableOpacity>
                   </View>
 
                   <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.85) }]}>
-                    Name
+                    {t("shoppingList.name")}
                   </Text>
                   <TextInput
                     value={editName}
                     onChangeText={setEditName}
-                    placeholder="Item name"
+                    placeholder={t("shoppingList.itemName")}
                     placeholderTextColor={theme.textPlaceholder}
                     style={[
                       styles.modalInput,
@@ -780,12 +812,12 @@ export default function ShoppingListScreen() {
                   />
 
                   <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.85) }]}>
-                    Quantity
+                    {t("shoppingList.quantity")}
                   </Text>
                   <TextInput
                     value={editQty}
                     onChangeText={setEditQty}
-                    placeholder="Quantity"
+                    placeholder={t("shoppingList.quantityPlaceholder")}
                     placeholderTextColor={theme.textPlaceholder}
                     style={[
                       styles.modalInput,
@@ -795,7 +827,7 @@ export default function ShoppingListScreen() {
                   />
 
                   <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.85) }]}>
-                    Category
+                    {t("shoppingList.category")}
                   </Text>
 
                   <TouchableOpacity
@@ -804,7 +836,7 @@ export default function ShoppingListScreen() {
                     activeOpacity={0.8}
                   >
                     <Text style={{ flex: 1, fontSize, color: theme.inputText }} numberOfLines={1}>
-                      {editCategory || "Uncategorized"}
+                      {editCategory || t("shoppingList.uncategorized")}
                     </Text>
                     <Ionicons
                       name={categoryDropdownOpen ? "chevron-up" : "chevron-down"}
@@ -822,7 +854,9 @@ export default function ShoppingListScreen() {
                         }}
                         style={styles.categoryOption}
                       >
-                        <Text style={{ fontSize, color: theme.text }}>Uncategorized</Text>
+                        <Text style={{ fontSize, color: theme.text }}>
+                          {t("shoppingList.uncategorized")}
+                        </Text>
                       </TouchableOpacity>
 
                       {categoryOptions.map((c) => (
@@ -843,17 +877,23 @@ export default function ShoppingListScreen() {
                   <View style={styles.modalActions}>
                     <TouchableOpacity onPress={deleteActiveItem} style={[styles.modalBtn, { backgroundColor: theme.danger }]}>
                       <Ionicons name="trash" size={fontSize * 1.1} color="#fff" />
-                      <Text style={[styles.modalBtnText, { fontSize, color: "#fff" }]}>Delete</Text>
+                      <Text style={[styles.modalBtnText, { fontSize, color: "#fff" }]}>
+                        {t("common.delete")}
+                      </Text>
                     </TouchableOpacity>
 
                     <View style={{ flex: 1 }} />
 
                     <TouchableOpacity onPress={closeItemMenu} style={[styles.modalBtnOutline, { borderColor: theme.border }]}>
-                      <Text style={[styles.modalBtnText, { fontSize, color: theme.text }]}>Cancel</Text>
+                      <Text style={[styles.modalBtnText, { fontSize, color: theme.text }]}>
+                        {t("common.cancel")}
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={saveItemEdits} style={[styles.modalBtn, { backgroundColor: theme.actionButton }]}>
-                      <Text style={[styles.modalBtnText, { fontSize, color: "#fff" }]}>Save</Text>
+                      <Text style={[styles.modalBtnText, { fontSize, color: "#fff" }]}>
+                        {t("common.save")}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -873,7 +913,7 @@ export default function ShoppingListScreen() {
           setSortDir={setSortDir}
           theme={theme}
           fontSize={fontSize}
-          title="Sort by"
+          title={t("shoppingList.sortBy")}
         />
       </View>
     </KeyboardAvoidingView>

@@ -1,4 +1,5 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import i18next from "i18next";
 import * as AppleAuthentication from "expo-apple-authentication";
 import {
   EmailAuthProvider,
@@ -55,7 +56,7 @@ async function reauthenticateWithGoogle(user) {
   const idToken = await extractGoogleIdTokenFromSignInResponse(response, {
     getTokens: () => GoogleSignin.getTokens(),
     cancelledCode: "GOOGLE_REAUTHENTICATION_CANCELLED",
-    cancelledMessage: "Google sign-in confirmation was cancelled.",
+    cancelledMessage: i18next.t("errors.googleConfirmationCancelled"),
   });
 
   const credential = GoogleAuthProvider.credential(idToken);

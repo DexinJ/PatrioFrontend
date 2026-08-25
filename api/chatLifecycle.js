@@ -1,3 +1,5 @@
+import i18next from "i18next";
+
 const cancellationHandlers = new Set();
 
 export function registerChatCancellation(handler) {
@@ -6,7 +8,9 @@ export function registerChatCancellation(handler) {
   return () => cancellationHandlers.delete(handler);
 }
 
-export async function cancelActiveChatWork(reason = "Chat history was cleared.") {
+export async function cancelActiveChatWork(
+  reason = i18next.t("errors.chatHistoryCleared")
+) {
   const results = await Promise.allSettled(
     [...cancellationHandlers].map((handler) => Promise.resolve(handler(reason)))
   );

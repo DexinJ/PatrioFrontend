@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import i18next from "i18next";
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -62,7 +64,7 @@ async function saveUserProfileToBackend({ idToken, username, signal }) {
       },
       {
         timeoutMs: PROFILE_REQUEST_TIMEOUT_MS,
-        timeoutMessage: "Account setup timed out. Please try again.",
+        timeoutMessage: i18next.t("errors.accountSetupTimedOut"),
       }
     );
   } catch (error) {
@@ -75,7 +77,10 @@ async function saveUserProfileToBackend({ idToken, username, signal }) {
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
     throw new Error(
-      `Backend save failed: ${resp.status} ${text.slice(0, 200)}`
+      i18next.t("errors.backendSaveFailed", {
+        status: resp.status,
+        message: text.slice(0, 200),
+      })
     );
   }
 
@@ -93,6 +98,7 @@ function makeFallbackUsername(user, typedUsername = "") {
 }
 
 export default function SignUpScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const {
     abortProvisioning,
@@ -148,16 +154,22 @@ export default function SignUpScreen() {
     const u = username.trim();
 
     if (!u || !e || !pw || !pw2) {
-      return Alert.alert("Missing info", "Fill out all fields.");
+      return Alert.alert(t("auth.missingInfo"), t("auth.fillAllFields"));
     }
     if (u.length < 2 || u.length > 20) {
-      return Alert.alert("Username", "Username must be 2–20 characters.");
+      return Alert.alert(t("auth.username"), t("auth.usernameRules"));
     }
     if (pw !== pw2) {
-      return Alert.alert("Passwords don’t match", "Please retype your password.");
+      return Alert.alert(
+        t("auth.passwordsDontMatch"),
+        t("auth.retypePassword")
+      );
     }
     if (pw.length < 6) {
-      return Alert.alert("Weak password", "Password must be at least 6 characters.");
+      return Alert.alert(
+        t("auth.weakPassword"),
+        t("auth.passwordMinLength")
+      );
     }
     if (operationBusyRef.current) return;
 
@@ -229,7 +241,7 @@ export default function SignUpScreen() {
       activeProvisioningRef.current = null;
       activeProvisioningProviderRef.current = null;
       if (mountedRef.current && err?.code !== "ACCOUNT_SETUP_CANCELLED") {
-        Alert.alert("Sign up failed", err?.message || "Unknown error");
+        Alert.alert(t("auth.signUpFailed"), err?.message || t("common.unknownError"));
       }
     } finally {
       profileRequestControllerRef.current = null;
@@ -242,8 +254,8 @@ export default function SignUpScreen() {
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
     if (!webClientId) {
       return Alert.alert(
-        "Google not configured",
-        "Missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env"
+        t("auth.googleNotConfigured"),
+        t("auth.googleNotConfiguredMessage")
       );
     }
     if (operationBusyRef.current) return;
@@ -316,7 +328,10 @@ export default function SignUpScreen() {
       activeProvisioningRef.current = null;
       activeProvisioningProviderRef.current = null;
       if (mountedRef.current && err?.code !== "ACCOUNT_SETUP_CANCELLED") {
-        Alert.alert("Google sign-in failed", err?.message || "Unknown error");
+        Alert.alert(
+          t("auth.googleSignInFailed"),
+          err?.message || t("common.unknownError")
+        );
       }
     } finally {
       profileRequestControllerRef.current = null;
@@ -416,7 +431,10 @@ export default function SignUpScreen() {
       activeProvisioningProviderRef.current = null;
       if (err?.code === "ERR_REQUEST_CANCELED") return;
       if (mountedRef.current && err?.code !== "ACCOUNT_SETUP_CANCELLED") {
-        Alert.alert("Apple sign-in failed", err?.message || "Unknown error");
+        Alert.alert(
+          t("auth.appleSignInFailed"),
+          err?.message || t("common.unknownError")
+        );
       }
     } finally {
       profileRequestControllerRef.current = null;
@@ -433,15 +451,17 @@ export default function SignUpScreen() {
           { color: theme.textPrimary, fontSize: fontSize * 1.6 },
         ]}
       >
-        Create account
+        {t("auth.createAccount")}
       </Text>
 
-      <Text style={[styles.label, { color: theme.textSecondary }]}>Username</Text>
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {t("auth.username")}
+      </Text>
       <TextInput
         value={username}
         onChangeText={setUsernameInput}
         autoCapitalize="none"
-        placeholder="e.g. johndoe"
+        placeholder={t("auth.usernamePlaceholder")}
         placeholderTextColor={theme.textPlaceholder}
         style={[
           styles.input,
@@ -454,13 +474,15 @@ export default function SignUpScreen() {
         ]}
       />
 
-      <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {t("auth.email")}
+      </Text>
       <TextInput
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
-        placeholder="you@example.com"
+        placeholder={t("auth.emailPlaceholder")}
         placeholderTextColor={theme.textPlaceholder}
         style={[
           styles.input,
@@ -473,7 +495,9 @@ export default function SignUpScreen() {
         ]}
       />
 
-      <Text style={[styles.label, { color: theme.textSecondary }]}>Password</Text>
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {t("auth.password")}
+      </Text>
       <TextInput
         value={pw}
         onChangeText={setPw}
@@ -492,7 +516,7 @@ export default function SignUpScreen() {
       />
 
       <Text style={[styles.label, { color: theme.textSecondary }]}>
-        Confirm password
+        {t("auth.confirmPassword")}
       </Text>
       <TextInput
         value={pw2}
@@ -525,13 +549,15 @@ export default function SignUpScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={[styles.buttonText, { fontSize }]}>Create account</Text>
+          <Text style={[styles.buttonText, { fontSize }]}>
+            {t("auth.createAccount")}
+          </Text>
         )}
       </Pressable>
 
       <View style={styles.oauthRowWrap}>
         <Text style={[styles.oauthLabel, { color: theme.textSecondary }]}>
-          Or continue with
+          {t("auth.orContinueWith")}
         </Text>
 
         <View style={styles.oauthRow}>
@@ -547,7 +573,7 @@ export default function SignUpScreen() {
             onPress={onPressGoogle}
             disabled={isBusy}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
+            accessibilityLabel={t("auth.continueWithGoogle")}
           >
             {googleLoading ? (
               <ActivityIndicator color={theme.accent} />
@@ -570,7 +596,7 @@ export default function SignUpScreen() {
               onPress={onPressApple}
               disabled={isBusy}
               accessibilityRole="button"
-              accessibilityLabel="Continue with Apple"
+              accessibilityLabel={t("auth.continueWithApple")}
             >
               {appleLoading ? (
                 <ActivityIndicator color={theme.accent} />
@@ -594,7 +620,7 @@ export default function SignUpScreen() {
               },
             ]}
             disabled
-            accessibilityLabel="Facebook (coming soon)"
+            accessibilityLabel={t("auth.facebookComingSoon")}
           >
             <Ionicons name="logo-facebook" size={22} color={theme.textSecondary} />
           </Pressable>
@@ -602,7 +628,7 @@ export default function SignUpScreen() {
       </View>
 
       <Text style={[styles.footer, { color: theme.textSecondary }]}>
-        Already have an account?{" "}
+        {t("auth.alreadyHaveAccount")}{" "}
         <Text
           style={[
             styles.link,
@@ -612,7 +638,7 @@ export default function SignUpScreen() {
           accessibilityRole="link"
           accessibilityState={{ disabled: isBusy }}
         >
-          Log in
+          {t("auth.logIn")}
         </Text>
       </Text>
     </View>

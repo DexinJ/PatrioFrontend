@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import React, { useContext, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Animated,
   Dimensions,
@@ -20,37 +21,9 @@ const { width } = Dimensions.get("window");
 const ROUTE_SIGN_UP = "/(auth)/sign-up";
 const ROUTE_SIGN_IN = "/(auth)/sign-in";
 
-const PAGES = [
-  {
-    emoji: "🧊",
-    title: "Welcome to Fridge Manager",
-    body: "Track what you own, avoid waste, and plan meals smarter.",
-  },
-  {
-    emoji: "🥗",
-    title: "Your fridge, organized",
-    body: "Add items, track expiration, and see what to eat first.",
-  },
-  {
-    emoji: "🛒",
-    title: "Shopping list, organized",
-    body: "Move items from shopping → fridge in one tap.",
-  },
-  {
-    emoji: "⚡️",
-    title: "Smart tags & warnings",
-    body: "We suggest storage, urgency, and food type so nothing goes bad unnoticed.",
-  },
-  {
-    emoji: "🔐",
-    title: "Create your account",
-    body: "Keep your lists and settings private to this device and account.",
-    isAuth: true,
-  },
-];
-
 export default function OnboardingScreen() {
-  const {theme} = useContext(GlobalContext);
+  const { t } = useTranslation();
+  const { theme } = useContext(GlobalContext);
   const fontSize = 16;
   const listRef = useRef(null);
   const [scrollX] = useState(() => new Animated.Value(0));
@@ -58,8 +31,43 @@ export default function OnboardingScreen() {
   const [index, setIndex] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
+  const PAGES = useMemo(
+    () => [
+      {
+        emoji: "🧊",
+        title: t("onboarding.welcome.title"),
+        body: t("onboarding.welcome.body"),
+      },
+      {
+        emoji: "🥗",
+        title: t("onboarding.organized.title"),
+        body: t("onboarding.organized.body"),
+      },
+      {
+        emoji: "🛒",
+        title: t("onboarding.shoppingList.title"),
+        body: t("onboarding.shoppingList.body"),
+      },
+      {
+        emoji: "⚡️",
+        title: t("onboarding.smartTags.title"),
+        body: t("onboarding.smartTags.body"),
+      },
+      {
+        emoji: "🔐",
+        title: t("onboarding.createAccount.title"),
+        body: t("onboarding.createAccount.body"),
+        isAuth: true,
+      },
+    ],
+    [t]
+  );
+
   const isLast = index === PAGES.length - 1;
-  const progress = useMemo(() => (index + 1) / PAGES.length, [index]);
+  const progress = useMemo(
+    () => (index + 1) / PAGES.length,
+    [index, PAGES.length]
+  );
 
   // Optional: a subtle "float" animation you can reuse for an image later
   const [floatY] = useState(() => new Animated.Value(0));
@@ -129,7 +137,9 @@ export default function OnboardingScreen() {
               { opacity: index === 0 ? 0 : pressed ? 0.65 : 1 },
             ]}
           >
-            <Text style={[styles.headerBtnText, { color: theme.actionButton }]}>Back</Text>
+            <Text style={[styles.headerBtnText, { color: theme.actionButton }]}>
+              {t("onboarding.back")}
+            </Text>
           </Pressable>
 
           <View
@@ -262,7 +272,7 @@ export default function OnboardingScreen() {
 
                   <View style={[styles.tipRow, { borderTopColor: theme.border }]}>
                     <Text style={[styles.tipText, { color: theme.textPlaceholder }]}>
-                      Tip: You can change settings anytime.
+                      {t("onboarding.tip")}
                     </Text>
                   </View>
                 </Animated.View>
@@ -284,7 +294,7 @@ export default function OnboardingScreen() {
               disabled={isAdvancing}
             >
               <Text style={[styles.primaryBtnText, { color: theme.background }]}>
-                {isAdvancing ? "..." : "Continue"}
+                {isAdvancing ? "..." : t("common.continue")}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -296,7 +306,7 @@ export default function OnboardingScreen() {
                 activeOpacity={0.85}
               >
                 <Text style={[styles.primaryBtnText, { color: theme.background }]}>
-                  Create account
+                  {t("onboarding.createAccountButton")}
                 </Text>
               </TouchableOpacity>
 
@@ -309,7 +319,7 @@ export default function OnboardingScreen() {
                 activeOpacity={0.85}
               >
                 <Text style={[styles.secondaryBtnText, { color: theme.textPrimary }]}>
-                  Log in
+                  {t("onboarding.logInButton")}
                 </Text>
               </TouchableOpacity>
 

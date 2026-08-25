@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 /**
@@ -14,6 +15,7 @@ export default function FilterTabsRow({
   fontSize = 16,
   style,
 }) {
+  const { t } = useTranslation();
   return (
     <ScrollView
       horizontal
@@ -21,11 +23,11 @@ export default function FilterTabsRow({
       contentContainerStyle={styles.content}
       style={style}
     >
-      {tabs.map((t) => {
-        const selected = t.key === activeKey;
+      {tabs.map((tab) => {
+        const selected = tab.key === activeKey;
         return (
           <TouchableOpacity
-            key={t.key}
+            key={tab.key}
             style={[
               styles.pill,
               {
@@ -33,10 +35,17 @@ export default function FilterTabsRow({
                 borderColor: theme?.border,
               },
             ]}
-            onPress={() => onChange?.(t.key)}
+            onPress={() => onChange?.(tab.key)}
             activeOpacity={0.85}
             accessibilityRole="tab"
-            accessibilityLabel={`${t.label}${typeof t.count === "number" ? `, ${t.count} items` : ""}`}
+            accessibilityLabel={
+              typeof tab.count === "number"
+                ? t("filterTabs.tabA11y", {
+                    label: tab.label,
+                    count: tab.count,
+                  })
+                : tab.label
+            }
             accessibilityState={{ selected }}
           >
             <Text
@@ -46,8 +55,8 @@ export default function FilterTabsRow({
                 color: selected ? theme?.textPrimary : theme?.textSecondary,
               }}
             >
-              {t.label}
-              {typeof t.count === "number" ? ` ${t.count}` : ""}
+              {tab.label}
+              {typeof tab.count === "number" ? ` ${tab.count}` : ""}
             </Text>
           </TouchableOpacity>
         );

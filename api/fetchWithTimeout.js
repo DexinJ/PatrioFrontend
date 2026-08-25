@@ -1,3 +1,5 @@
+import i18next from "i18next";
+
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /**
@@ -7,7 +9,10 @@ const DEFAULT_TIMEOUT_MS = 15000;
 export async function fetchWithTimeout(
   input,
   init = {},
-  { timeoutMs = DEFAULT_TIMEOUT_MS, timeoutMessage = "The request timed out." } = {}
+  {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    timeoutMessage = i18next.t("errors.requestTimedOut"),
+  } = {}
 ) {
   const controller = new AbortController();
   const callerSignal = init.signal;

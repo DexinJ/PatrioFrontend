@@ -4,6 +4,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { AppState } from "react-native";
+import i18next from "i18next";
 import { auth } from "../auth/firebaseClient";
 import { useAccountSession } from "../context/AccountSessionContext";
 import { ChatActionsContext, GlobalContext } from "../context/GlobalContext";
@@ -207,6 +208,40 @@ function toChatCompletionsMessages(
     return out;
   }
 
+// When a request supplies a short displayText, the full prompt should reach
+// the AI without being persisted or shown in the chat. This swaps the last
+// user message's text parts for the full prompt in the request copy only,
+// leaving the chat state (short display text) untouched.
+function replaceLastUserPromptForRequest(messages, promptText) {
+  if (!Array.isArray(messages) || messages.length === 0) return messages;
+
+  const lastIndex = messages.length - 1;
+  const lastMessage = messages[lastIndex];
+  if (lastMessage?.role !== "user") return messages;
+
+  const hasTextPart =
+    Array.isArray(lastMessage.content) &&
+    lastMessage.content.some((part) => part?.type === "input_text");
+  const content = Array.isArray(lastMessage.content)
+    ? lastMessage.content.map((part) =>
+        part?.type === "input_text"
+          ? { ...part, text: promptText }
+          : part
+      )
+    : [];
+  if (!hasTextPart) {
+    content.push({ type: "input_text", text: promptText });
+  }
+
+  const next = [...messages];
+  const nextMessage = { ...lastMessage, content };
+  // Legacy app-style messages carried a top-level text field; drop it so the
+  // converter doesn't concatenate it with the content parts.
+  delete nextMessage.text;
+  next[lastIndex] = nextMessage;
+  return next;
+}
+
 function makeId() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
@@ -221,7 +256,7 @@ function safeJsonParse(str) {
 
 function backendErrorFromMessage(message, fallbackCode = "BACKEND_ERROR") {
   const error = createBackendResponseError(message, {
-    fallbackMessage: "The request could not be completed.",
+    fallbackMessage: i18next.t("errors.requestCouldNotBeCompleted"),
   });
   if (!error.code) error.code = fallbackCode;
   return error;
@@ -444,7 +479,7 @@ const useGptRuntime = () => {
   function assertCurrentLifecycle(generation) {
     if (lifecycleGenerationRef.current === generation) return;
     throw backendErrorFromMessage(
-      { message: "The chat request was cancelled because the session ended." },
+      { message: i18next.t("errors.chatCancelledSession") },
       "REQUEST_CANCELLED"
     );
   }
@@ -481,7 +516,7 @@ const useGptRuntime = () => {
         clearTimeout(job.timeoutId);
         job.reject?.(
           backendErrorFromMessage(
-            { message: "The chat connection closed unexpectedly." },
+            { message: i18next.t("errors.chatConnectionClosed") },
             "CONNECTION_CLOSED"
           )
         );
@@ -748,7 +783,7 @@ const useGptRuntime = () => {
       throw backendErrorFromMessage(
         {
           code: "AUTH_REQUIRED",
-          message: "Sign in is required to get recipe recommendations.",
+          message: i18next.t("errors.signInForRecipes"),
         },
         "AUTH_REQUIRED"
       );
@@ -1025,6 +1060,7 @@ ${toolDescriptions}`;
     language = "en",
     intent,
     selectedIngredients = [],
+    displayText,
   }) => {
     const lifecycleGeneration = lifecycleGenerationRef.current;
     pendingActionMessageIdRef.current = null;
@@ -1034,6 +1070,8 @@ ${toolDescriptions}`;
         : typeof text === "number" || typeof text === "boolean"
           ? String(text)
           : "";
+    const normalizedDisplayText =
+      typeof displayText === "string" ? displayText.trim() : "";
     const normalizedImageUri = typeof imageUri === "string" ? imageUri : "";
     const normalizedImageRequestUri =
       typeof imageRequestUri === "string" && imageRequestUri.trim()
@@ -1059,7 +1097,7 @@ ${toolDescriptions}`;
     // 1) Add user message locally
     const updatedMessages = await addMessage(setMessages, {
       role: "user",
-      text: normalizedText,
+      text: normalizedDisplayText || normalizedText,
       imageUri: normalizedImageUri,
     });
     const selectedProvider = resolveAiProvider(
@@ -1069,7 +1107,16 @@ ${toolDescriptions}`;
     // const incognito = Boolean(settings?.privacy?.incognito);
     // const currentSummary = getChatSnapshot?.().summary || "";
     // let requestMessages = updatedMessages.slice(-20);
-    const requestMessages = updatedMessages.slice(-5);
+    let requestMessages = updatedMessages.slice(-5);
+    if (
+      normalizedDisplayText &&
+      normalizedDisplayText !== normalizedText.trim()
+    ) {
+      requestMessages = replaceLastUserPromptForRequest(
+        requestMessages,
+        normalizedText
+      );
+    }
     // let requestSummary = incognito ? "" : currentSummary;
 
     // if (selectedProvider === "pantrio" && !incognito) {
@@ -1165,7 +1212,10 @@ ${toolDescriptions}`;
     const currentUser = auth.currentUser;
     if (!currentUser) {
       throw backendErrorFromMessage(
-        { code: "AUTH_REQUIRED", message: "Sign in is required to use Pantrio AI." },
+        {
+          code: "AUTH_REQUIRED",
+          message: i18next.t("errors.signInForAi"),
+        },
         "AUTH_REQUIRED"
       );
     }
@@ -1213,7 +1263,7 @@ ${toolDescriptions}`;
         scheduleIdleSocketClose(ws);
         reject(
           backendErrorFromMessage(
-            { message: "The chat request timed out. Please try again." },
+            { message: i18next.t("errors.chatTimedOut") },
             "REQUEST_TIMEOUT"
           )
         );

@@ -11,6 +11,7 @@ import {
 import ImageViewing from "./ImageViewer";
 import MarkdownText from "./MarkdownText";
 import { getLinkPreview } from "link-preview-js";
+import { useTranslation } from "react-i18next";
 import { GlobalContext } from "../context/GlobalContext";
 import {
   canFetchLinkPreview,
@@ -36,6 +37,7 @@ function getDomain(url) {
 }
 
 function MessageBubble({ text, imageUri, isUser }) {
+  const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
   const fontSize = settings?.ux?.fontSize || 16;
   const incognito = Boolean(settings?.privacy?.incognito);
@@ -129,12 +131,15 @@ function MessageBubble({ text, imageUri, isUser }) {
   const openLink = async (url) => {
     try {
       const supported = await Linking.canOpenURL(url);
-      if (!supported) throw new Error("This link is not supported on this device.");
+      if (!supported) throw new Error(t("linkPreview.linkNotSupported"));
       if (!mountedRef.current) return;
       await Linking.openURL(url);
     } catch (error) {
       if (mountedRef.current) {
-        Alert.alert("Could not open link", error?.message || "Please try again.");
+        Alert.alert(
+          t("linkPreview.couldNotOpenLink"),
+          error?.message || t("linkPreview.pleaseTryAgain")
+        );
       }
     }
   };
@@ -151,7 +156,7 @@ function MessageBubble({ text, imageUri, isUser }) {
         <TouchableOpacity
           onPress={openPreview}
           accessibilityRole="imagebutton"
-          accessibilityLabel="Open attached image"
+          accessibilityLabel={t("linkPreview.openAttachedImage")}
         >
           <Image
             source={{ uri: safeImageUri }}
@@ -253,16 +258,16 @@ function MessageBubble({ text, imageUri, isUser }) {
                 {!loaded && (
                   <Text style={[styles.linkHint, { color: theme.textSecondary }]}>
                     {loading
-                      ? "Loading preview…"
+                      ? t("linkPreview.loadingPreview")
                       : meta?.status === "blocked"
-                        ? "Preview blocked for safety."
+                        ? t("linkPreview.blockedForSafety")
                         : meta?.status === "failed"
-                          ? "Preview unavailable."
+                          ? t("linkPreview.previewUnavailable")
                           : incognito
-                            ? "Preview is off in incognito until you choose to load it."
+                            ? t("linkPreview.incognitoOff")
                             : autoLoadPreview
-                              ? "Loading preview…"
-                              : "Preview loads only when requested."}
+                              ? t("linkPreview.loadingPreview")
+                              : t("linkPreview.loadsWhenRequested")}
                   </Text>
                 )}
                 <View style={styles.linkActions}>
@@ -271,21 +276,29 @@ function MessageBubble({ text, imageUri, isUser }) {
                       onPress={() => loadPreview(url)}
                       disabled={loading}
                       accessibilityRole="button"
-                      accessibilityLabel={`Load preview for ${getDomain(url)}`}
-                      accessibilityHint="This contacts the linked website."
+                      accessibilityLabel={t("linkPreview.loadPreview", {
+                        url: getDomain(url),
+                      })}
+                      accessibilityHint={t("linkPreview.contactsWebsite")}
                       accessibilityState={{ disabled: loading, busy: loading }}
                     >
                       <Text style={[styles.linkAction, { color: theme.accent }]}>
-                        {loading ? "Loading…" : "Load preview"}
+                        {loading
+                          ? t("linkPreview.loadingEllipsis")
+                          : t("linkPreview.loadPreviewButton")}
                       </Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
                     onPress={() => openLink(url)}
                     accessibilityRole="link"
-                    accessibilityLabel={`Open ${getDomain(url)}`}
+                    accessibilityLabel={t("linkPreview.open", {
+                      url: getDomain(url),
+                    })}
                   >
-                    <Text style={[styles.linkAction, { color: theme.accent }]}>Open link</Text>
+                    <Text style={[styles.linkAction, { color: theme.accent }]}>
+                      {t("linkPreview.openLink")}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>

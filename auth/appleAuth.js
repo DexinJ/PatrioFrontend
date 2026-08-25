@@ -1,5 +1,6 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import i18next from 'i18next';
 import {
   OAuthProvider,
   reauthenticateWithCredential,
@@ -65,7 +66,7 @@ export async function linkAppleAuthorizationToBackend({
     {
       timeoutMs: APPLE_LINK_TIMEOUT_MS,
       timeoutMessage:
-        'Linking Sign in with Apple to your account timed out.',
+        i18next.t('errors.appleLinkTimedOut'),
     }
   );
   const responseText = await response.text().catch(() => '');
@@ -74,7 +75,7 @@ export async function linkAppleAuthorizationToBackend({
   if (!response.ok) {
     throw createBackendResponseError(payload, {
       status: response.status,
-      fallbackMessage: 'Could not link Sign in with Apple to your account.',
+      fallbackMessage: i18next.t('errors.appleLinkFailed'),
     });
   }
 

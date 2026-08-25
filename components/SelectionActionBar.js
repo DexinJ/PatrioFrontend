@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ActionTile from "./ActionTile";
 
@@ -24,13 +25,16 @@ export default function SelectionActionBar({
   fontSize = 16,
   style,
 }) {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
     <View style={[styles.bar, style, { backgroundColor: theme?.card, borderColor: theme?.border }]}>
       <View style={styles.topRow}>
         <Text style={{ color: theme?.textSecondary, fontSize: fontSize * 0.9, fontWeight: "700" }}>
-          {selectedCount === 0 ? "Select items" : `${selectedCount} selected`}
+          {selectedCount === 0
+            ? t("selectionBar.selectItems")
+            : t("selectionBar.selectedCount", { count: selectedCount })}
         </Text>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -41,11 +45,11 @@ export default function SelectionActionBar({
               style={[styles.pillBtn, !canSelectAll && { opacity: 0.4 }]}
               disabled={!canSelectAll}
               accessibilityRole="button"
-              accessibilityLabel="Select all items"
+              accessibilityLabel={t("selectionBar.selectAllItems")}
               accessibilityState={{ disabled: !canSelectAll }}
             >
               <Text style={{ color: theme?.textPrimary, fontSize: fontSize * 0.9, fontWeight: "800" }}>
-                Select all
+                {t("selectionBar.selectAll")}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -54,10 +58,10 @@ export default function SelectionActionBar({
               activeOpacity={0.8}
               style={styles.pillBtn}
               accessibilityRole="button"
-              accessibilityLabel="Clear item selection"
+              accessibilityLabel={t("selectionBar.clearItemSelection")}
             >
               <Text style={{ color: theme?.textPrimary, fontSize: fontSize * 0.9, fontWeight: "800" }}>
-                Clear
+                {t("common.clear")}
               </Text>
             </TouchableOpacity>
           )}

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 /**
@@ -17,8 +18,11 @@ export default function SortSheetModal({
   setSortDir,
   theme,
   fontSize = 16,
-  title = "Sort by",
+  title,
 }) {
+  const { t } = useTranslation();
+  const resolvedTitle = title || t("common.sortBy");
+
   return (
     <Modal
       transparent
@@ -33,14 +37,14 @@ export default function SortSheetModal({
           onPress={() => {}}
           accessibilityViewIsModal
           accessibilityRole="menu"
-          accessibilityLabel={title}
+          accessibilityLabel={resolvedTitle}
         >
           <View style={styles.header}>
             <TouchableOpacity
               onPress={onClose}
               style={styles.headerBtn}
               accessibilityRole="button"
-              accessibilityLabel="Back"
+              accessibilityLabel={t("common.back")}
             >
               <Ionicons name="chevron-back" size={fontSize * 1.2} color={theme?.textPrimary} />
             </TouchableOpacity>
@@ -49,14 +53,14 @@ export default function SortSheetModal({
               accessibilityRole="header"
               style={{ fontSize: fontSize * 1.05, fontWeight: "800", color: theme?.textPrimary }}
             >
-              {title}
+              {resolvedTitle}
             </Text>
 
             <TouchableOpacity
               onPress={onClose}
               style={styles.headerBtn}
               accessibilityRole="button"
-              accessibilityLabel="Close sort options"
+              accessibilityLabel={t("sortSheet.closeSortOptions")}
             >
               <Ionicons name="close" size={fontSize * 1.2} color={theme?.textPrimary} />
             </TouchableOpacity>
@@ -76,7 +80,7 @@ export default function SortSheetModal({
                   onClose?.();
                 }}
                 accessibilityRole="radio"
-                accessibilityLabel={`Sort by ${opt.label}`}
+                accessibilityLabel={t("sortSheet.sortBy", { option: opt.label })}
                 accessibilityState={{ selected, checked: selected }}
               >
                 <Text
@@ -105,11 +109,19 @@ export default function SortSheetModal({
             activeOpacity={0.75}
             onPress={() => setSortDir?.((d) => (d === "asc" ? "desc" : "asc"))}
             accessibilityRole="button"
-            accessibilityLabel={`Sort direction: ${sortDir === "asc" ? "Ascending" : "Descending"}`}
-            accessibilityHint="Toggles between ascending and descending."
+            accessibilityLabel={t("sortSheet.sortDirection", {
+              direction:
+                sortDir === "asc"
+                  ? t("sortSheet.ascending")
+                  : t("sortSheet.descending"),
+            })}
+            accessibilityHint={t("sortSheet.sortDirectionHint")}
           >
             <Text style={{ fontSize, color: theme?.textPrimary, fontWeight: "700" }}>
-              Direction: {sortDir === "asc" ? "Ascending" : "Descending"}
+              {t("sortSheet.direction")}{" "}
+              {sortDir === "asc"
+                ? t("sortSheet.ascending")
+                : t("sortSheet.descending")}
             </Text>
             <Ionicons
               name={sortDir === "asc" ? "arrow-up" : "arrow-down"}

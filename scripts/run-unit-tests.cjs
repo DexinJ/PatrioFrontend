@@ -1,6 +1,8 @@
+/* global __dirname */
 const { readdirSync } = require("node:fs");
 const { join } = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { pathToFileURL } = require("node:url");
 
 const nodeMajor = Number(process.versions.node.split(".")[0]);
 const testFiles = readdirSync(join(process.cwd(), "tests"))
@@ -12,7 +14,13 @@ const moduleModeArgs =
     : ["--experimental-default-type=module"];
 const result = spawnSync(
   process.execPath,
-  [...moduleModeArgs, "--test", ...testFiles],
+  [
+    ...moduleModeArgs,
+    "--import",
+    pathToFileURL(join(__dirname, "i18n-test-setup.mjs")).href,
+    "--test",
+    ...testFiles,
+  ],
   { stdio: "inherit" }
 );
 

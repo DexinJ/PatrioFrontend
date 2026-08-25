@@ -1,5 +1,6 @@
 import { router, useNavigation } from "expo-router";
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, SectionList, StyleSheet, Text, View } from "react-native";
 import { useGpt } from "../../api/gpt";
 import ActionGridPopover from "../../components/ActionGridPopover";
@@ -15,17 +16,10 @@ import SortSheetModal from "../../components/SortSheetModal";
 import { GlobalContext } from "../../context/GlobalContext";
 import { buildTagMaps, makeGetTagLabelByType, makeLabelToTagId, makeLabelsFromTagIds } from "../../utils/itemTagLabels";
 
-const SORT_ITEMS = [
-  { label: "Added", value: "added" },
-  { label: "Name", value: "name" },
-  { label: "Urgency", value: "urgency" },
-  { label: "Storage", value: "storage" },
-  { label: "Food type", value: "food_type" },
-];
-
 const norm = (s) => String(s || "").trim().toLowerCase();
 
 export default function FridgeScreen() {
+  const { t } = useTranslation();
   const {
     fridgeItems,
     addToFridge,
@@ -44,6 +38,17 @@ export default function FridgeScreen() {
   const fontSize = settings?.ux?.fontSize || 16;
   const navigation = useNavigation();
   const { streamMessage } = useGpt();
+
+  const SORT_ITEMS = useMemo(
+    () => [
+      { label: t("fridge.sortAdded"), value: "added" },
+      { label: t("fridge.sortName"), value: "name" },
+      { label: t("fridge.sortUrgency"), value: "urgency" },
+      { label: t("fridge.sortStorage"), value: "storage" },
+      { label: t("fridge.sortFoodType"), value: "food_type" },
+    ],
+    [t]
+  );
 
   // UI state
   const [editMode, setEditMode] = useState(false);
@@ -103,13 +108,13 @@ export default function FridgeScreen() {
     navigation.setOptions({
       header: () => (
         <HeaderWithButton
-          title="🧊 My Fridge"
-          buttonLabel={editMode ? "Done" : "Edit"}
+          title={t("fridge.title")}
+          buttonLabel={editMode ? t("common.done") : t("fridge.edit")}
           onPress={toggleEditMode}
         />
       ),
     });
-  }, [navigation, editMode, toggleEditMode]);
+  }, [navigation, editMode, toggleEditMode, t]);
 
   // Decorate items once
   const decoratedItems = useMemo(() => {
@@ -156,12 +161,12 @@ export default function FridgeScreen() {
       if (counts[s] !== undefined) counts[s] += 1;
     }
     return [
-      { key: "All", label: "All", count: counts.All },
-      { key: "Fridge", label: "Fridge", count: counts.Fridge },
-      { key: "Freezer", label: "Freezer", count: counts.Freezer },
-      { key: "Pantry", label: "Pantry", count: counts.Pantry },
+      { key: "All", label: t("fridge.all"), count: counts.All },
+      { key: "Fridge", label: t("fridge.fridge"), count: counts.Fridge },
+      { key: "Freezer", label: t("fridge.freezer"), count: counts.Freezer },
+      { key: "Pantry", label: t("fridge.pantry"), count: counts.Pantry },
     ];
-  }, [decoratedItems]);
+  }, [decoratedItems, t]);
 
   // Filter by search + tab
   const filteredItems = useMemo(() => {
@@ -252,12 +257,23 @@ export default function FridgeScreen() {
     const out = [];
     const hasAlerts = expiredItems.length > 0 || almostExpiredItems.length > 0;
 
-    if (expiredItems.length > 0) out.push({ title: "EXPIRED", data: expiredItems });
-    if (almostExpiredItems.length > 0) out.push({ title: "EXPIRING SOON", data: almostExpiredItems });
-    if (sortedItems.length > 0) out.push({ title: hasAlerts ? "ITEMS" : "", data: sortedItems });
+    if (expiredItems.length > 0)
+      out.push({ title: t("fridge.expired"), tone: "danger", data: expiredItems });
+    if (almostExpiredItems.length > 0)
+      out.push({
+        title: t("fridge.expiringSoon"),
+        tone: "warning",
+        data: almostExpiredItems,
+      });
+    if (sortedItems.length > 0)
+      out.push({
+        title: hasAlerts ? t("fridge.items") : "",
+        tone: "neutral",
+        data: sortedItems,
+      });
 
     return out;
-  }, [expiredItems, almostExpiredItems, sortedItems]);
+  }, [expiredItems, almostExpiredItems, sortedItems, t]);
 
   // Selection helpers
   const toggleSelect = useCallback((id) => {
@@ -309,6 +325,19 @@ export default function FridgeScreen() {
         .filter(Boolean)
         .join("\n");
 
+      const ingredientNames = items
+        .map((it) => String(it?.name || "").trim())
+        .filter(Boolean);
+      const displayText = ingredientNames.length
+        ? t("fridge.findRecipesUsing", {
+            items:
+              ingredientNames.slice(0, 6).join(", ") +
+              (ingredientNames.length > 6
+                ? t("fridge.more", { count: ingredientNames.length - 6 })
+                : ""),
+          })
+        : t("fridge.findRecipesWithItems");
+
       const prompt = `
 Recommend 5 quick recipes using as many of these selected fridge items as practical:
 ${ingredientLines}
@@ -326,6 +355,7 @@ For each recipe:
         router.push("/chat");
         await streamMessage({
           text: prompt,
+          displayText,
           language: "en",
           intent: "recipe_recommendation",
           selectedIngredients: items,
@@ -336,7 +366,10 @@ For each recipe:
           mountedRef.current &&
           recipeGenerationRef.current === generation
         ) {
-          Alert.alert("Recipes", e?.message || "Failed to generate recipes.");
+          Alert.alert(
+            t("fridge.recipes"),
+            e?.message || t("fridge.recipeGenerationFailed")
+          );
         }
       } finally {
         if (recipeGenerationRef.current === generation) {
@@ -344,38 +377,45 @@ For each recipe:
         }
       }
     },
-    [streamMessage]
+    [streamMessage, t]
   );
 
   const addItemsToShopList = useCallback(
     (items) => {
       if (!items || items.length === 0) return;
       addManyToShoppingList(items);
-      Alert.alert("Shop list", `Added ${items.length} item(s) to shopping list.`);
+      Alert.alert(
+        t("fridge.shopList"),
+        t("fridge.addedToShoppingList", { count: items.length })
+      );
     },
-    [addManyToShoppingList]
+    [addManyToShoppingList, t]
   );
 
   const confirmDeleteItems = useCallback(
     (items) => {
       if (!items || items.length === 0) return;
 
-      Alert.alert("Delete items", `Delete ${items.length} item(s)?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            removeManyFromFridge(items.map((item) => item.id));
-            setSelectedIds(new Set());
-            setContextMenuVisible(false);
-            setContextFromRect(null);
-            setContextItem(null);
+      Alert.alert(
+        t("fridge.deleteItems"),
+        t("fridge.deleteItemsQuestion", { count: items.length }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("common.delete"),
+            style: "destructive",
+            onPress: () => {
+              removeManyFromFridge(items.map((item) => item.id));
+              setSelectedIds(new Set());
+              setContextMenuVisible(false);
+              setContextFromRect(null);
+              setContextItem(null);
+            },
           },
-        },
-      ]);
+        ]
+      );
     },
-    [removeManyFromFridge]
+    [removeManyFromFridge, t]
   );
 
   const openEditForItem = useCallback((item) => {
@@ -390,7 +430,7 @@ For each recipe:
       {
         key: "recipes",
         icon: "search",
-        label: "Recipes",
+        label: t("fridge.recipes"),
         onPress: () => {
           setContextMenuVisible(false);
           openRecipesForItems(contextItem ? [contextItem] : []);
@@ -399,7 +439,7 @@ For each recipe:
       {
         key: "shop",
         icon: "cart",
-        label: "Shop list",
+        label: t("fridge.shopList"),
         onPress: () => {
           setContextMenuVisible(false);
           addItemsToShopList(contextItem ? [contextItem] : []);
@@ -408,7 +448,7 @@ For each recipe:
       {
         key: "edit",
         icon: "pencil",
-        label: "Edit",
+        label: t("common.edit"),
         onPress: () => {
           // open edit AFTER popover closes (prevents “double overlay” weirdness)
           pendingEditRef.current = contextItem;
@@ -418,12 +458,12 @@ For each recipe:
       {
         key: "delete",
         icon: "trash",
-        label: "Delete",
+        label: t("common.delete"),
         danger: true,
         onPress: () => confirmDeleteItems(contextItem ? [contextItem] : []),
       },
     ],
-    [contextItem, openRecipesForItems, addItemsToShopList, confirmDeleteItems]
+    [contextItem, openRecipesForItems, addItemsToShopList, confirmDeleteItems, t]
   );
 
   // Bottom bar actions (edit mode)
@@ -432,22 +472,22 @@ For each recipe:
       {
         key: "recipes",
         icon: "search",
-        label: "Recipes",
+        label: t("fridge.recipes"),
         onPress: () => openRecipesForItems(selectedItems),
       },
       {
         key: "shop",
         icon: "cart",
-        label: "Shop list",
+        label: t("fridge.shopList"),
         onPress: () => addItemsToShopList(selectedItems),
       },
       {
         key: "edit",
         icon: "pencil",
-        label: "Edit",
+        label: t("common.edit"),
         onPress: () => {
           if (selectedItems.length !== 1) {
-            Alert.alert("Edit", "Select exactly 1 item to edit.");
+            Alert.alert(t("fridge.editTitle"), t("fridge.selectOneToEdit"));
             return;
           }
           openEditForItem(selectedItems[0]);
@@ -456,12 +496,19 @@ For each recipe:
       {
         key: "delete",
         icon: "trash",
-        label: "Delete",
+        label: t("common.delete"),
         danger: true,
         onPress: () => confirmDeleteItems(selectedItems),
       },
     ],
-    [selectedItems, openRecipesForItems, addItemsToShopList, openEditForItem, confirmDeleteItems]
+    [
+      selectedItems,
+      openRecipesForItems,
+      addItemsToShopList,
+      openEditForItem,
+      confirmDeleteItems,
+      t,
+    ]
   );
 
   const handleMeasuredLongPress = useCallback((rect, item) => {
@@ -496,8 +543,8 @@ For each recipe:
 
   const emptyText =
     fridgeItems.length === 0
-      ? "👇 Your fridge is empty. Add some items!"
-      : "No matches. Try a different search or tab.";
+      ? t("fridge.emptyFridge")
+      : t("fridge.noMatches");
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -509,7 +556,7 @@ For each recipe:
           onPressSort={() => setSortSheetVisible(true)}
           theme={theme}
           fontSize={fontSize}
-          placeholder="Search items..."
+          placeholder={t("fridge.searchPlaceholder")}
         />
 
         <View style={{ marginTop: 10 }}>
@@ -534,9 +581,13 @@ For each recipe:
           stickySectionHeadersEnabled
           renderSectionHeader={({ section }) => {
             if (!section.title) return null;
-            const isExpired = section.title === "EXPIRED";
-            const isAlmost = section.title === "EXPIRING SOON";
-            const count = isExpired ? expiredItems.length : isAlmost ? almostExpiredItems.length : undefined;
+            const isExpired = section.tone === "danger";
+            const isAlmost = section.tone === "warning";
+            const count = isExpired
+              ? expiredItems.length
+              : isAlmost
+                ? almostExpiredItems.length
+                : undefined;
 
             return (
               <SectionHeaderPill
@@ -583,7 +634,7 @@ For each recipe:
         setSortDir={setSortDir}
         theme={theme}
         fontSize={fontSize}
-        title="Sort by"
+        title={t("fridge.sortBy")}
       />
 
       {/* Add modal (merged form) */}

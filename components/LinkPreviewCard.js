@@ -1,6 +1,7 @@
 // components/LinkPreviewCard.js
 
 import { memo, useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Linking,
@@ -34,6 +35,7 @@ function getDomain(url) {
 }
 
 function LinkPreviewCard({ url, theme }) {
+  const { t } = useTranslation();
   const { settings } = useContext(GlobalContext);
   const incognito = Boolean(settings?.privacy?.incognito);
   const autoLoad = shouldAutoLoadLinkPreview({ incognito });
@@ -106,10 +108,13 @@ function LinkPreviewCard({ url, theme }) {
   const openLink = async () => {
     try {
       const supported = await Linking.canOpenURL(url);
-      if (!supported) throw new Error("This link is not supported on this device.");
+      if (!supported) throw new Error(t("linkPreview.linkNotSupported"));
       await Linking.openURL(url);
     } catch (error) {
-      Alert.alert("Could not open link", error?.message || "Please try again.");
+      Alert.alert(
+        t("linkPreview.couldNotOpenLink"),
+        error?.message || t("linkPreview.pleaseTryAgain")
+      );
     }
   };
 
@@ -157,14 +162,14 @@ function LinkPreviewCard({ url, theme }) {
         {!loaded && (
           <Text style={[styles.hint, { color: theme.textSecondary }]}>
             {loading
-              ? "Loading preview…"
+              ? t("linkPreview.loadingPreview")
               : meta.status === "blocked"
-                ? "Preview blocked for safety."
+                ? t("linkPreview.blockedForSafety")
                 : meta.status === "failed"
-                  ? "Preview unavailable."
+                  ? t("linkPreview.previewUnavailable")
                   : incognito
-                    ? "Preview is off in incognito until you choose to load it."
-                    : "Preview loads only when requested."}
+                    ? t("linkPreview.incognitoOff")
+                    : t("linkPreview.loadsWhenRequested")}
           </Text>
         )}
 
@@ -174,21 +179,27 @@ function LinkPreviewCard({ url, theme }) {
               onPress={() => loadPreview(url)}
               disabled={loading}
               accessibilityRole="button"
-              accessibilityLabel={`Load preview for ${getDomain(url)}`}
-              accessibilityHint="This contacts the linked website."
+              accessibilityLabel={t("linkPreview.loadPreview", {
+                url: getDomain(url),
+              })}
+              accessibilityHint={t("linkPreview.contactsWebsite")}
               accessibilityState={{ disabled: loading, busy: loading }}
             >
               <Text style={[styles.action, { color: theme.accent }]}>
-                {loading ? "Loading…" : "Load preview"}
+                {loading
+                  ? t("linkPreview.loadingEllipsis")
+                  : t("linkPreview.loadPreviewButton")}
               </Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={openLink}
             accessibilityRole="link"
-            accessibilityLabel={`Open ${getDomain(url)}`}
+            accessibilityLabel={t("linkPreview.open", { url: getDomain(url) })}
           >
-            <Text style={[styles.action, { color: theme.accent }]}>Open link</Text>
+            <Text style={[styles.action, { color: theme.accent }]}>
+              {t("linkPreview.openLink")}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

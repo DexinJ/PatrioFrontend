@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
 /**
@@ -11,10 +12,13 @@ export default function SearchAndSortBar({
   onPressSort,
   theme,
   fontSize = 16,
-  placeholder = "Search...",
+  placeholder,
   sortIcon = "swap-vertical",
   style,
 }) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder || t("common.searchPlaceholder");
+
   return (
     <View style={[styles.row, style]}>
       <View
@@ -26,11 +30,11 @@ export default function SearchAndSortBar({
         <TextInput
           value={search}
           onChangeText={onChangeSearch}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           placeholderTextColor={theme?.textPlaceholder}
           style={[styles.input, { fontSize, color: theme?.inputText }]}
           returnKeyType="search"
-          accessibilityLabel={placeholder}
+          accessibilityLabel={resolvedPlaceholder}
         />
       </View>
 
@@ -42,7 +46,7 @@ export default function SearchAndSortBar({
         onPress={onPressSort}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel="Change sort order"
+        accessibilityLabel={t("searchSort.changeSortOrder")}
       >
         <Ionicons name={sortIcon} size={fontSize * 1.2} color={theme?.textPrimary} />
       </TouchableOpacity>

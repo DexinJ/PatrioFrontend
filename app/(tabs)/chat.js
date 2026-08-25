@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import i18next from "i18next";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -30,26 +32,27 @@ import {
 
 function getChatErrorMessage(error) {
   const messagesByCode = {
-    QUOTA_EXHAUSTED: "You have used today’s Pantrio AI allowance.",
-    REQUEST_TOO_LARGE: "This conversation is too large to send. Try starting a new chat.",
-    RATE_LIMITED: "You’re sending requests too quickly. Please try again shortly.",
-    AUTH_REQUIRED: "Your session expired. Please sign in again.",
-    AUTH_INVALID: "Your session expired. Please sign in again.",
-    ENTITLEMENT_STALE: "Your subscription status needs to be refreshed in Settings.",
-    REQUEST_TIMEOUT: "The chat request timed out. Please try again.",
-    UPSTREAM_ERROR: "Pantrio AI is temporarily unavailable. Please try again.",
-    UPSTREAM_UNAVAILABLE: "Pantrio AI is temporarily unavailable. Please try again.",
+    QUOTA_EXHAUSTED: i18next.t("chat.errors.quotaExhausted"),
+    REQUEST_TOO_LARGE: i18next.t("chat.errors.requestTooLarge"),
+    RATE_LIMITED: i18next.t("chat.errors.rateLimited"),
+    AUTH_REQUIRED: i18next.t("chat.errors.sessionExpired"),
+    AUTH_INVALID: i18next.t("chat.errors.sessionExpired"),
+    ENTITLEMENT_STALE: i18next.t("chat.errors.entitlementStale"),
+    REQUEST_TIMEOUT: i18next.t("chat.errors.requestTimedOut"),
+    UPSTREAM_ERROR: i18next.t("chat.errors.upstreamUnavailable"),
+    UPSTREAM_UNAVAILABLE: i18next.t("chat.errors.upstreamUnavailable"),
   };
 
   if (messagesByCode[error?.code]) return messagesByCode[error.code];
 
   const message = String(error?.message || "").trim();
-  if (message && message !== "Unknown error") return message;
+  if (message && message !== i18next.t("common.unknownError")) return message;
 
-  return "Pantrio AI could not complete that request.";
+  return i18next.t("chat.errors.couldNotComplete");
 }
 
 function ChatEmptyState({ theme, onNewChat }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyState}>
       <Ionicons
@@ -58,15 +61,15 @@ function ChatEmptyState({ theme, onNewChat }) {
         color={theme.textSecondary}
       />
       <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
-        Start a new chat
+        {t("chat.startNewChat")}
       </Text>
       <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
-        Ask Pantrio about meals, your fridge, or your shopping list.
+        {t("chat.chatDescription")}
       </Text>
       <TouchableOpacity
         onPress={onNewChat}
         accessibilityRole="button"
-        accessibilityLabel="Start a new chat"
+        accessibilityLabel={t("chat.startNewChat")}
         style={[
           styles.emptyButton,
           { backgroundColor: theme.actionButton },
@@ -76,7 +79,7 @@ function ChatEmptyState({ theme, onNewChat }) {
         <Text
           style={[styles.emptyButtonText, { color: theme.actionButtonText }]}
         >
-          New chat
+          {t("chat.newChat")}
         </Text>
       </TouchableOpacity>
     </View>
@@ -84,6 +87,7 @@ function ChatEmptyState({ theme, onNewChat }) {
 }
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -209,8 +213,8 @@ export default function ChatScreen() {
             {
               type: "output_text",
               text: summary
-                ? `Saved your recipe preferences:\n${summary}`
-                : "Saved your recipe preferences.",
+                ? t("chat.savedPreferences", { summary })
+                : t("chat.savedPreferencesShort"),
             },
           ],
         },
@@ -285,8 +289,12 @@ export default function ChatScreen() {
           {
             type: "output_text",
             text:
-              `✅ Added ${added} item(s) to fridge.` +
-              (failed.length ? `\n⚠️ Skipped: ${failed.map((x) => x.name).join(", ")}` : ""),
+              t("chat.addedToFridge", { count: added }) +
+              (failed.length
+                ? `\n${t("chat.skipped", {
+                    names: failed.map((x) => x.name).join(", "),
+                  })}`
+                : ""),
           },
         ],
       },

@@ -12,6 +12,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import { useNavigation, useRouter } from "expo-router";
+import i18next from "i18next";
 import React, {
   useCallback,
   useContext,
@@ -21,6 +22,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -58,6 +60,7 @@ import { HeaderWithHiddenButton } from "../../components/Header";
 import { useAccountSession } from "../../context/AccountSessionContext";
 import { ChatActionsContext, GlobalContext } from "../../context/GlobalContext";
 import { useAppleSubscription } from "../../context/SubscriptionContext";
+import { SUPPORTED_LANGUAGES, setAppLanguage } from "../../i18n";
 import {
   getAppleIntelligenceAvailability,
   openAppleIntelligenceSettings,
@@ -76,10 +79,16 @@ const PRIVACY_POLICY_URL = String(
 const LOCAL_AI_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 const AI_PROVIDER_URLS = [
-  { label: "OpenAI", value: "https://api.openai.com/v1" },
-  { label: "OpenRouter", value: "https://openrouter.ai/api/v1" },
-  { label: "Groq", value: "https://api.groq.com/openai/v1" },
-  { label: "Together AI", value: "https://api.together.xyz/v1" },
+  { labelKey: "settings.providers.openai", value: "https://api.openai.com/v1" },
+  {
+    labelKey: "settings.providers.openrouter",
+    value: "https://openrouter.ai/api/v1",
+  },
+  { labelKey: "settings.providers.groq", value: "https://api.groq.com/openai/v1" },
+  {
+    labelKey: "settings.providers.togetherAi",
+    value: "https://api.together.xyz/v1",
+  },
 ];
 
 const APPLE_AI_UNSUPPORTED_STATUSES = new Set([
@@ -90,19 +99,19 @@ const APPLE_AI_UNSUPPORTED_STATUSES = new Set([
 ]);
 
 const APPLE_SUBSCRIPTION_STATUS_LABELS = {
-  subscribed: "Active",
-  active: "Active",
-  in_grace_period: "Active — billing grace period",
-  grace_period: "Active — billing grace period",
-  in_billing_retry_period: "Billing issue",
-  billing_retry: "Billing issue",
-  expired: "Expired",
-  revoked: "Revoked",
-  not_subscribed: "No active subscription",
-  loading: "Checking subscription...",
-  unknown: "Status unavailable",
-  development_build_required: "Requires an iOS app build",
-  unsupported_platform: "Available on iOS",
+  subscribed: "settings.subscriptionStatuses.active",
+  active: "settings.subscriptionStatuses.active",
+  in_grace_period: "settings.subscriptionStatuses.activeGracePeriod",
+  grace_period: "settings.subscriptionStatuses.activeGracePeriod",
+  in_billing_retry_period: "settings.subscriptionStatuses.billingIssue",
+  billing_retry: "settings.subscriptionStatuses.billingIssue",
+  expired: "settings.subscriptionStatuses.expired",
+  revoked: "settings.subscriptionStatuses.revoked",
+  not_subscribed: "settings.subscriptionStatuses.noActiveSubscription",
+  loading: "settings.subscriptionStatuses.checking",
+  unknown: "settings.subscriptionStatuses.unknown",
+  development_build_required: "settings.subscriptionStatuses.requiresIosBuild",
+  unsupported_platform: "settings.subscriptionStatuses.availableOnIos",
 };
 
 const APPLE_SUBSCRIPTION_ATTENTION_STATUSES = new Set([
@@ -113,26 +122,38 @@ const APPLE_SUBSCRIPTION_ATTENTION_STATUSES = new Set([
 ]);
 
 const SETTINGS_CATEGORIES = [
-  { key: "user", title: "Account", icon: "person-outline" },
-  { key: "plan", title: "Plan & Usage", icon: "card-outline" },
+  {
+    key: "user",
+    titleKey: "settings.categories.account",
+    icon: "person-outline",
+  },
+  {
+    key: "plan",
+    titleKey: "settings.categories.planUsage",
+    icon: "card-outline",
+  },
   {
     key: "preferences",
-    title: "Preferences",
+    titleKey: "settings.categories.preferences",
     icon: "options-outline",
   },
   {
     key: "privacy",
-    title: "Privacy & Data",
+    titleKey: "settings.categories.privacyData",
     icon: "shield-checkmark-outline",
   },
-  { key: "advanced", title: "AI Provider", icon: "construct-outline" },
+  {
+    key: "advanced",
+    titleKey: "settings.categories.aiProvider",
+    icon: "construct-outline",
+  },
 ];
 
 const RECIPE_ENERGY_OPTIONS = [
-  { value: "any", label: "Any" },
-  { value: "light", label: "Light" },
-  { value: "balanced", label: "Balanced" },
-  { value: "hearty", label: "Hearty" },
+  { value: "any", labelKey: "settings.energyOptions.any" },
+  { value: "light", labelKey: "settings.energyOptions.light" },
+  { value: "balanced", labelKey: "settings.energyOptions.balanced" },
+  { value: "hearty", labelKey: "settings.energyOptions.hearty" },
 ];
 
 function commaSeparatedList(value) {
@@ -239,7 +260,10 @@ function NumberPreferenceEditor({
 }
 
 function getSubscriptionStatusLabel(status) {
-  return APPLE_SUBSCRIPTION_STATUS_LABELS[status] || "Status unavailable";
+  const labelKey =
+    APPLE_SUBSCRIPTION_STATUS_LABELS[status] ||
+    "settings.subscriptionStatuses.unknown";
+  return i18next.t(labelKey);
 }
 
 function getSubscriptionName(subscription) {
@@ -292,10 +316,10 @@ function planName(value) {
 }
 
 const SIGN_IN_PROVIDER_LABELS = {
-  "apple.com": "Apple",
-  "google.com": "Google",
-  password: "Email and password",
-  phone: "Phone",
+  "apple.com": "settings.signInProviders.apple",
+  "google.com": "settings.signInProviders.google",
+  password: "settings.signInProviders.emailAndPassword",
+  phone: "settings.signInProviders.phone",
 };
 
 function accountEmail(user) {
@@ -305,7 +329,9 @@ function accountEmail(user) {
   const providerEmail = (user?.providerData || []).find((provider) =>
     String(provider?.email || "").trim()
   )?.email;
-  return String(providerEmail || "Not provided").trim();
+  return String(
+    providerEmail || i18next.t("settings.notProvided")
+  ).trim();
 }
 
 function emailDetail(user) {
@@ -313,27 +339,31 @@ function emailDetail(user) {
   return {
     email,
     note: /@privaterelay\.appleid\.com$/i.test(email)
-      ? "Apple private relay address"
+      ? i18next.t("settings.privateRelay")
       : "",
   };
 }
 
 function signInMethods(user) {
-  if (user?.isAnonymous) return "Guest";
+  if (user?.isAnonymous) return i18next.t("settings.guest");
 
   const providerLabels = [...new Set(
     (user?.providerData || [])
       .map((provider) => String(provider?.providerId || "").trim().toLowerCase())
       .filter(Boolean)
       .map((providerId) =>
-        SIGN_IN_PROVIDER_LABELS[providerId] ||
+        (SIGN_IN_PROVIDER_LABELS[providerId]
+          ? i18next.t(SIGN_IN_PROVIDER_LABELS[providerId])
+          : null) ||
         (/^(oidc\.|saml\.)/.test(providerId)
-          ? "Organization SSO"
-          : "Other provider")
+          ? i18next.t("settings.organizationSso")
+          : i18next.t("settings.otherProvider"))
       )
   )].sort();
 
-  return providerLabels.length ? providerLabels.join(", ") : "Signed in";
+  return providerLabels.length
+    ? providerLabels.join(", ")
+    : i18next.t("settings.signInProviders.signedIn");
 }
 
 function formatSubscriptionPeriod(period) {
@@ -341,7 +371,10 @@ function formatSubscriptionPeriod(period) {
   const unit = String(period?.unit || "").toLowerCase();
   if (!Number.isFinite(value) || value <= 0 || !unit) return null;
   const normalizedUnit = value === 1 ? unit.replace(/s$/, "") : unit;
-  return `${Math.trunc(value)} ${normalizedUnit}${value === 1 ? "" : "s"}`;
+  return i18next.t("settings.planPeriod", {
+    count: Math.trunc(value),
+    unit: normalizedUnit,
+  });
 }
 
 function validateCustomAiBaseUrl(value) {
@@ -351,15 +384,15 @@ function validateCustomAiBaseUrl(value) {
   try {
     parsed = new URL(normalized);
   } catch {
-    throw new Error("Enter a valid absolute API base URL.");
+    throw new Error(i18next.t("settings.invalidApiBaseUrl"));
   }
 
   if (parsed.username || parsed.password) {
-    throw new Error("The API base URL must not contain credentials.");
+    throw new Error(i18next.t("settings.apiBaseUrlCredentials"));
   }
 
   if (parsed.search || parsed.hash) {
-    throw new Error("The API base URL must not contain a query or fragment.");
+    throw new Error(i18next.t("settings.apiBaseUrlQuery"));
   }
 
   const localDevelopmentUrl =
@@ -370,7 +403,7 @@ function validateCustomAiBaseUrl(value) {
 
   if (parsed.protocol !== "https:" && !localDevelopmentUrl) {
     throw new Error(
-      "Custom AI providers must use HTTPS. Plain HTTP is allowed only for localhost during development."
+      i18next.t("settings.apiBaseUrlMustBeHttps")
     );
   }
 
@@ -379,6 +412,7 @@ function validateCustomAiBaseUrl(value) {
 }
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const {
     settings,
     storageHydrated,
@@ -458,6 +492,7 @@ export default function SettingsScreen() {
   const [showPlanDetails, setShowPlanDetails] = useState(false);
   const [showAvailablePlans, setShowAvailablePlans] = useState(false);
   const [showUrgencyThresholds, setShowUrgencyThresholds] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [aiApiKey, setAiApiKey] = useState("");
   const [aiProviderSettingsBaseUrl, setAiProviderSettingsBaseUrl] = useState(null);
   const configuredAiBaseUrl =
@@ -481,6 +516,10 @@ export default function SettingsScreen() {
   const router = useRouter();
   const fontSize = settings?.ux?.fontSize ?? 16;
   const username = settings?.user?.name ?? "freeUser";
+  const currentLanguageLabel =
+    SUPPORTED_LANGUAGES.find(
+      (lang) => lang.code === i18next.language
+    )?.label ?? SUPPORTED_LANGUAGES[0].label;
   const recipePreferences = settings?.recipePreferences;
   const explicitRecipePreferences = recipePreferences?.explicit || {};
   const { email: signedInEmail, note: signedInEmailNote } = emailDetail(user);
@@ -504,17 +543,17 @@ export default function SettingsScreen() {
   );
   const subscriptionPlanLabel = subscriptionName ||
     (subscriptionStatus === "loading"
-      ? "Looking up your plan..."
-      : "No plan selected");
+      ? t("settings.lookingUpPlan")
+      : t("settings.noPlanSelected"));
   const accountAccessStatusLabel = accountSessionLoading
-    ? "Checking account..."
+    ? t("settings.checkingAccount")
     : accountSessionError && !accountSession
-      ? "Access unavailable"
+      ? t("settings.accessUnavailable")
     : entitlement?.active
       ? entitlement?.verified
-        ? "Verified subscription access"
-        : "Reported subscription access"
-      : "Free access";
+        ? t("settings.verifiedAccess")
+        : t("settings.reportedAccess")
+      : t("settings.freeAccess");
   const accountAccessStatusColor = accountSessionLoading
     ? theme.textSecondary
     : accountSessionError && !accountSession
@@ -523,10 +562,10 @@ export default function SettingsScreen() {
       ? theme.accent
       : theme.textSecondary;
   const accountPlanLabel = accountSessionLoading
-    ? "Loading Pantrio access..."
+    ? t("settings.loadingPantrioAccess")
     : accountSessionError && !accountSession
-      ? "Could not load Pantrio access"
-      : `${planName(entitlement?.plan)} plan`;
+      ? t("settings.couldNotLoadPantrioAccess")
+      : t("settings.planSuffix", { plan: planName(entitlement?.plan) });
   const quotaReset = formatQuotaReset(quota?.resetsAt, quota?.timezone);
   const effectiveModel = accountModel?.effective || null;
   const applePurchasesAvailable =
@@ -548,18 +587,18 @@ export default function SettingsScreen() {
 
   const confirmRecipePreferenceReset = useCallback(() => {
     Alert.alert(
-      "Reset recipe preferences?",
-      "This clears cuisines, dietary needs, ingredient preferences, nutrition targets, and learned recipe signals on this device.",
+      t("settings.resetRecipePreferencesAlertTitle"),
+      t("settings.resetRecipePreferencesAlertMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Reset Preferences",
+          text: t("settings.resetPreferencesButton"),
           style: "destructive",
           onPress: resetRecipePreferences,
         },
       ]
     );
-  }, [resetRecipePreferences]);
+  }, [resetRecipePreferences, t]);
 
   const setAiBaseUrl = useCallback((nextValue) => {
     setAiBaseUrlDraft((currentDraft) => {
@@ -577,14 +616,24 @@ export default function SettingsScreen() {
 
   const aiProviderItems = useMemo(() => {
     const normalizedUrl = normalizeAiBaseUrl(aiBaseUrl);
-    if (!normalizedUrl || AI_PROVIDER_URLS.some((item) => item.value === normalizedUrl)) {
-      return AI_PROVIDER_URLS;
+    const translatedDefaults = AI_PROVIDER_URLS.map((item) => ({
+      label: t(item.labelKey),
+      value: item.value,
+    }));
+    if (
+      !normalizedUrl ||
+      AI_PROVIDER_URLS.some((item) => item.value === normalizedUrl)
+    ) {
+      return translatedDefaults;
     }
     return [
-      { label: `Custom (${normalizedUrl})`, value: normalizedUrl },
-      ...AI_PROVIDER_URLS,
+      {
+        label: t("settings.providers.custom", { url: normalizedUrl }),
+        value: normalizedUrl,
+      },
+      ...translatedDefaults,
     ];
-  }, [aiBaseUrl]);
+  }, [aiBaseUrl, t]);
 
   useEffect(() => {
     if (!storageHydrated) return undefined;
@@ -662,19 +711,21 @@ export default function SettingsScreen() {
       if (!availability.available) {
         if (availability.status === "not_enabled") {
           Alert.alert(
-            "Turn on Apple Intelligence?",
-            `${availability.reason}\n\nOpen Settings, then go to Apple Intelligence & Siri to turn it on.`,
+            t("settings.turnOnAppleIntelligenceAlertTitle"),
+            t("settings.turnOnAppleIntelligenceAlertMessage", {
+              reason: availability.reason,
+            }),
             [
-              { text: "Not now", style: "cancel" },
+              { text: t("common.notNow"), style: "cancel" },
               {
-                text: "Open Settings",
+                text: t("common.openSettings"),
                 onPress: openAppleIntelligenceSettings,
               },
             ]
           );
         } else {
           Alert.alert(
-            "Apple Intelligence unavailable",
+            t("settings.appleIntelligenceUnavailable"),
             availability.reason
           );
         }
@@ -691,12 +742,18 @@ export default function SettingsScreen() {
     try {
       baseUrl = validateCustomAiBaseUrl(aiBaseUrl);
     } catch (error) {
-      Alert.alert("Invalid URL", error?.message || "Enter a valid HTTPS URL.");
+      Alert.alert(
+        t("settings.invalidUrl"),
+        error?.message || t("settings.enterValidHttpsUrl")
+      );
       return;
     }
     const model = aiModel.trim();
     if (!model || !aiApiKey.trim()) {
-      Alert.alert("Missing details", "Enter both a model name and API key.");
+      Alert.alert(
+        t("settings.missingDetails"),
+        t("settings.missingDetailsMessage")
+      );
       return;
     }
 
@@ -710,14 +767,14 @@ export default function SettingsScreen() {
       updateSetting("advanced", "aiBaseUrl", baseUrl);
       updateSetting("advanced", "aiModel", model);
       Alert.alert(
-        "Saved",
-        "This provider's API key and model name were saved securely."
+        t("settings.savedAlertTitle"),
+        t("settings.savedAlertMessage")
       );
     } catch (error) {
       if (mountedRef.current) {
         Alert.alert(
-          "Save failed",
-          error?.message || "Could not save AI settings."
+          t("settings.saveFailed"),
+          error?.message || t("settings.couldNotSaveAiSettings")
         );
       }
     } finally {
@@ -732,7 +789,10 @@ export default function SettingsScreen() {
     try {
       baseUrl = validateCustomAiBaseUrl(aiBaseUrl);
     } catch (error) {
-      Alert.alert("Invalid URL", error?.message || "Enter a valid HTTPS URL.");
+      Alert.alert(
+        t("settings.invalidUrl"),
+        error?.message || t("settings.enterValidHttpsUrl")
+      );
       return;
     }
 
@@ -740,8 +800,8 @@ export default function SettingsScreen() {
     const apiKey = aiApiKey.trim();
     if (!model || !apiKey) {
       Alert.alert(
-        "Missing details",
-        "Enter both a model name and API key before testing the connection."
+        t("settings.missingDetails"),
+        t("settings.missingDetailsTestMessage")
       );
       return;
     }
@@ -768,7 +828,7 @@ export default function SettingsScreen() {
         },
         {
           timeoutMs: 20_000,
-          timeoutMessage: "The AI provider connection test timed out.",
+          timeoutMessage: t("settings.connectionTestTimedOut"),
         }
       );
       const data = await response.json().catch(() => null);
@@ -780,7 +840,11 @@ export default function SettingsScreen() {
         throw new Error(
           providerMessage
             ? providerMessage.slice(0, 300)
-            : `The provider rejected the request (${response.status}).`
+            : response.status === 404
+              ? t("settings.noChatCompletionsEndpoint")
+              : t("settings.providerRejected", {
+                  status: response.status,
+                })
         );
       }
       const responseContent = data?.choices?.[0]?.message?.content;
@@ -790,20 +854,20 @@ export default function SettingsScreen() {
           ? responseContent.map((part) => part?.text || "").join("")
           : "";
       if (!responseText.trim()) {
-        throw new Error("The provider returned an unexpected response.");
+        throw new Error(t("settings.providerUnexpectedResponse"));
       }
       if (!mountedRef.current) return;
 
       const providerHost = new URL(baseUrl).hostname;
       Alert.alert(
-        "Connection successful",
-        `${providerHost} accepted this API key and model. No settings were changed.`
+        t("settings.connectionSuccessful"),
+        t("settings.connectionSuccessfulMessage", { host: providerHost })
       );
     } catch (error) {
       if (mountedRef.current) {
         Alert.alert(
-          "Connection failed",
-          error?.message || "The AI provider could not be reached."
+          t("settings.connectionFailed"),
+          error?.message || t("settings.aiProviderUnreachable")
         );
       }
     } finally {
@@ -822,16 +886,15 @@ export default function SettingsScreen() {
       setAiProviderSettingsRevision((revision) => revision + 1);
       if (!result || result.ok !== true) {
         Alert.alert(
-          "Cleanup incomplete",
-          "Some local data could not be cleared. Pantrio will retry automatically."
+          t("settings.cleanupIncomplete"),
+          t("settings.cleanupIncompleteMessage")
         );
       }
     } catch (error) {
       if (mountedRef.current) {
         Alert.alert(
-          "Cleanup incomplete",
-          error?.message ||
-            "Some local data could not be cleared. Pantrio will retry automatically."
+          t("settings.cleanupIncomplete"),
+          error?.message || t("settings.cleanupIncompleteMessage")
         );
       }
     }
@@ -849,12 +912,12 @@ export default function SettingsScreen() {
       if (!granted) {
         updateSetting(section, key, false);
         Alert.alert(
-          "Notifications are off",
-          "Allow notifications in your device settings before enabling Pantrio reminders.",
+          t("settings.notificationsOff"),
+          t("settings.notificationsOffMessage"),
           [
-            { text: "Not now", style: "cancel" },
+            { text: t("common.notNow"), style: "cancel" },
             {
-              text: "Open Settings",
+              text: t("common.openSettings"),
               onPress: () => Linking.openSettings().catch(() => {}),
             },
           ]
@@ -868,15 +931,15 @@ export default function SettingsScreen() {
       if (!mountedRef.current) return;
       updateSetting(section, key, false);
       Alert.alert(
-        "Could not enable reminders",
-        error?.message || "Notification permission could not be requested."
+        t("settings.couldNotEnableReminders"),
+        error?.message || t("settings.notificationPermissionFailed")
       );
     }
   };
 
   async function updateUsernameOnBackend(name) {
     if (!user) {
-      throw new Error("Not logged in");
+      throw new Error(t("settings.notLoggedIn"));
     }
 
     const token = await user.getIdToken();
@@ -891,12 +954,17 @@ export default function SettingsScreen() {
         },
         body: JSON.stringify({ name }),
       },
-      { timeoutMessage: "Updating the username timed out. Please try again." }
+      { timeoutMessage: t("settings.usernameUpdateTimedOut") }
     );
 
     if (!resp.ok) {
       const text = await resp.text().catch(() => "");
-      throw new Error(text || `Failed to update name (${resp.status})`);
+      throw new Error(
+        text ||
+          t("settings.updateNameFailed", {
+            status: resp.status,
+          })
+      );
     }
 
     return resp.json().catch(() => ({}));
@@ -911,7 +979,7 @@ export default function SettingsScreen() {
     const next = String(tempName || "").trim();
 
     if (!next) {
-      Alert.alert("Name required", "Please enter a username.");
+      Alert.alert(t("settings.nameRequired"), t("settings.nameRequiredMessage"));
       return;
     }
 
@@ -939,8 +1007,8 @@ export default function SettingsScreen() {
       updateSetting("user", "name", prev);
 
       Alert.alert(
-        "Update failed",
-        e?.message || "Could not update username on server."
+        t("settings.updateFailed"),
+        e?.message || t("settings.couldNotUpdateUsername")
       );
     } finally {
       if (mountedRef.current) setSavingName(false);
@@ -948,13 +1016,13 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert("Log out", "Are you sure you want to log out?", [
+    Alert.alert(t("settings.logOutAlertTitle"), t("settings.logOutAlertMessage"), [
       {
-        text: "Cancel",
+        text: t("common.cancel"),
         style: "cancel",
       },
       {
-        text: "Log out",
+        text: t("common.logOut"),
         style: "destructive",
         onPress: () => {
           // Let iOS dismiss its native alert window before auth removes the
@@ -978,9 +1046,9 @@ export default function SettingsScreen() {
                   if (mountedRef.current) {
                     Alert.alert(
                       e?.code === "ACCOUNT_OPERATION_IN_PROGRESS"
-                        ? "Action in progress"
-                        : "Logout failed",
-                      e?.message || "Could not log out."
+                        ? t("settings.actionInProgress")
+                        : t("settings.logoutFailed"),
+                      e?.message || t("settings.couldNotLogOut")
                     );
                   }
                 } finally {
@@ -999,9 +1067,8 @@ export default function SettingsScreen() {
       await Linking.openURL(APPLE_SUBSCRIPTIONS_URL);
     } catch (error) {
       Alert.alert(
-        "Could not open subscriptions",
-        error?.message ||
-          "Open your Apple Account subscriptions in the App Store."
+        t("settings.couldNotOpenSubscriptions"),
+        error?.message || t("settings.openSubscriptionsHint")
       );
     }
   };
@@ -1011,8 +1078,8 @@ export default function SettingsScreen() {
       await Linking.openURL(url);
     } catch (nextError) {
       Alert.alert(
-        `Could not open ${title}`,
-        nextError?.message || `Open the ${title} in your web browser.`
+        t("settings.couldNotOpenTitle", { title }),
+        nextError?.message || t("settings.openInBrowser", { title })
       );
     }
   };
@@ -1026,15 +1093,15 @@ export default function SettingsScreen() {
       if (result?.outcome === "cancelled") return;
       if (result?.outcome === "pending") {
         Alert.alert(
-          "Purchase pending",
-          "Apple is waiting for approval or payment confirmation. Pantrio will update automatically when the transaction completes."
+          t("settings.purchasePending"),
+          t("settings.purchasePendingMessage")
         );
         return;
       }
       if (result?.outcome === "purchased") {
         Alert.alert(
-          "Subscription active",
-          "Apple verified the purchase and Pantrio refreshed your account access."
+          t("settings.subscriptionActive"),
+          t("settings.subscriptionActiveMessage")
         );
       }
     } catch (nextError) {
@@ -1042,8 +1109,8 @@ export default function SettingsScreen() {
         return;
       }
       Alert.alert(
-        "Purchase not completed",
-        nextError?.message || "Could not complete the Apple purchase."
+        t("settings.purchaseNotCompleted"),
+        nextError?.message || t("settings.couldNotCompleteApplePurchase")
       );
     }
   };
@@ -1056,13 +1123,13 @@ export default function SettingsScreen() {
       if (!mountedRef.current) return;
       if (result?.verification || result?.evidence?.length) {
         Alert.alert(
-          "Purchases restored",
-          "Pantrio verified the Apple purchase for this account."
+          t("settings.purchasesRestored"),
+          t("settings.purchasesRestoredMessage")
         );
       } else {
         Alert.alert(
-          "No purchases found",
-          "Apple did not return an active Pantrio subscription for this account."
+          t("settings.noPurchasesFound"),
+          t("settings.noPurchasesFoundMessage")
         );
       }
     } catch (nextError) {
@@ -1070,8 +1137,8 @@ export default function SettingsScreen() {
         return;
       }
       Alert.alert(
-        "Restore failed",
-        nextError?.message || "Could not restore Apple purchases."
+        t("settings.restoreFailed"),
+        nextError?.message || t("settings.couldNotRestorePurchases")
       );
     }
   };
@@ -1086,8 +1153,8 @@ export default function SettingsScreen() {
         return;
       }
       Alert.alert(
-        "Refresh failed",
-        nextError?.message || "Could not refresh the Apple subscription."
+        t("settings.refreshFailed"),
+        nextError?.message || t("settings.couldNotRefreshSubscription")
       );
     }
   };
@@ -1107,7 +1174,7 @@ export default function SettingsScreen() {
         storageOwnerUid !== user.uid
       ) {
         throw new Error(
-          "Local account data is still loading. Wait a moment and try again."
+          t("settings.localDataStillLoading")
         );
       }
 
@@ -1124,9 +1191,9 @@ export default function SettingsScreen() {
         Alert.alert(
           error?.code === "auth/wrong-password" ||
             error?.code === "auth/invalid-credential"
-            ? "Password not accepted"
-            : "Could not confirm deletion",
-          error?.message || "Sign in again and retry account deletion."
+            ? t("settings.passwordNotAccepted")
+            : t("settings.couldNotConfirmDeletion"),
+          error?.message || t("settings.retryDeletionHint")
         );
       }
     } finally {
@@ -1143,12 +1210,12 @@ export default function SettingsScreen() {
     if (!user || deletingAccount) return;
 
     Alert.alert(
-      "Delete account?",
-      "This permanently deletes your Pantrio account and clears your fridge items, shopping list, chat history, and settings from this device. This cannot be undone.\n\nDeleting your Pantrio account does not cancel an Apple subscription. Manage or cancel it separately in Apple Subscriptions.",
+      t("settings.deleteAccountAlertTitle"),
+      t("settings.deleteAccountAlertMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Continue",
+          text: t("common.continue"),
           style: "destructive",
           onPress: () => {
             void getAccountDeletionReauthenticationMethod(user)
@@ -1164,8 +1231,8 @@ export default function SettingsScreen() {
               .catch((error) => {
                 if (mountedRef.current) {
                   Alert.alert(
-                    "Could not confirm sign-in",
-                    error?.message || "Try signing in again."
+                    t("settings.couldNotConfirmSignIn"),
+                    error?.message || t("settings.trySigningInAgain")
                   );
                 }
               });
@@ -1196,21 +1263,24 @@ export default function SettingsScreen() {
     }).start(() => setCurrentSubMenu(null));
   }, [anim]);
 
-  const currentMenuTitle =
-    SETTINGS_CATEGORIES.find((category) => category.key === currentSubMenu)
-      ?.title || "Settings";
+  const currentMenuCategory = SETTINGS_CATEGORIES.find(
+    (category) => category.key === currentSubMenu
+  );
+  const currentMenuTitle = currentMenuCategory
+    ? t(currentMenuCategory.titleKey)
+    : t("tabs.settings");
 
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
         <HeaderWithHiddenButton
-          title={opened ? currentMenuTitle : "Settings"}
+          title={opened ? currentMenuTitle : t("tabs.settings")}
           hideButton={!opened}
           onPress={goBack}
         />
       ),
     });
-  }, [currentMenuTitle, goBack, navigation, opened, theme]);
+  }, [currentMenuTitle, goBack, navigation, opened, t, theme]);
 
   const CustomButton = ({
     title,
@@ -1261,15 +1331,17 @@ export default function SettingsScreen() {
           style={stylesWithFont.sectionHeader}
           onPress={() => openSubMenu(cat.key)}
           accessibilityRole="button"
-          accessibilityLabel={cat.title}
-          accessibilityHint={`Opens ${cat.title} settings`}
+          accessibilityLabel={t(cat.titleKey)}
+          accessibilityHint={t("settings.categoryA11y", {
+            title: t(cat.titleKey),
+          })}
         >
           <View style={stylesWithFont.sectionIcon}>
             <Ionicons name={cat.icon} size={fontSize * 1.25} color={theme.accent} />
           </View>
 
           <Text style={stylesWithFont.sectionTitle}>
-            {cat.title}
+            {t(cat.titleKey)}
           </Text>
 
           <Ionicons
@@ -1354,12 +1426,12 @@ export default function SettingsScreen() {
             },
           ]}
         >
-          Urgency thresholds (days remaining)
+          {t("settings.urgencyThresholdsTitle")}
         </Text>
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            Expired: 0 days
+            {t("settings.expiredDays")}
           </Text>
 
           <Text
@@ -1370,13 +1442,13 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            (Automatically when expiration date is in the past)
+            {t("settings.autoWhenExpired")}
           </Text>
         </View>
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            Eat first: {U.eat_first} days
+            {t("settings.eatFirstLabel")} {U.eat_first} {t("settings.daysUnit")}
           </Text>
 
           <Slider
@@ -1399,7 +1471,7 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            Use soon: {U.use_soon} days
+            {t("settings.useSoonLabel")} {U.use_soon} {t("settings.daysUnit")}
           </Text>
 
           <Slider
@@ -1422,7 +1494,8 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            Lasts a while: {U.lasts_a_while} days
+            {t("settings.lastsWhileLabel")} {U.lasts_a_while}{" "}
+            {t("settings.daysUnit")}
           </Text>
 
           <Slider
@@ -1447,7 +1520,8 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 4 }}>
           <Text style={stylesWithFont.label}>
-            Long keeper: {U.long_keeper} days
+            {t("settings.longKeeperLabel")} {U.long_keeper}{" "}
+            {t("settings.daysUnit")}
           </Text>
 
           <Slider
@@ -1484,7 +1558,9 @@ export default function SettingsScreen() {
               activeOpacity={0.75}
               onPress={openUsernameEditor}
               accessibilityRole="button"
-              accessibilityLabel={`Edit username, currently ${username}`}
+              accessibilityLabel={t("settings.editUsernameA11y", {
+                username,
+              })}
             >
               <View style={stylesWithFont.sectionIcon}>
                 <Ionicons
@@ -1494,7 +1570,9 @@ export default function SettingsScreen() {
                 />
               </View>
               <View style={stylesWithFont.accountCardCopy}>
-                <Text style={stylesWithFont.accountFieldLabel}>Username</Text>
+                <Text style={stylesWithFont.accountFieldLabel}>
+                  {t("settings.username")}
+                </Text>
                 <Text
                   style={stylesWithFont.accountValue}
                   numberOfLines={1}
@@ -1508,7 +1586,9 @@ export default function SettingsScreen() {
                   size={Math.max(16, fontSize)}
                   color={theme.accent}
                 />
-                <Text style={stylesWithFont.accountEditText}>Edit</Text>
+                <Text style={stylesWithFont.accountEditText}>
+                  {t("common.edit")}
+                </Text>
               </View>
             </TouchableOpacity>
 
@@ -1524,17 +1604,17 @@ export default function SettingsScreen() {
                   </View>
                   <View style={stylesWithFont.accountCardCopy}>
                     <Text style={stylesWithFont.accountCardTitle}>
-                      Sign-in details
+                      {t("settings.signInDetails")}
                     </Text>
                     <Text style={stylesWithFont.accountCardSubtitle}>
-                      The identity connected to this Pantrio account
+                      {t("settings.signInDetailsBody")}
                     </Text>
                   </View>
                 </View>
                 <View style={stylesWithFont.subscriptionDetails}>
                   <View style={stylesWithFont.subscriptionDetailRow}>
                     <Text style={stylesWithFont.subscriptionDetailLabel}>
-                      Email
+                      {t("settings.email")}
                     </Text>
                     <Text
                       style={stylesWithFont.subscriptionDetailValue}
@@ -1545,7 +1625,7 @@ export default function SettingsScreen() {
                   </View>
                   <View style={stylesWithFont.subscriptionDetailRow}>
                     <Text style={stylesWithFont.subscriptionDetailLabel}>
-                      Sign-in methods
+                      {t("settings.signInMethods")}
                     </Text>
                     <Text style={stylesWithFont.subscriptionDetailValue}>
                       {signInMethodLabel}
@@ -1570,10 +1650,10 @@ export default function SettingsScreen() {
                 </View>
                 <View style={stylesWithFont.accountCardCopy}>
                   <Text style={stylesWithFont.accountCardTitle}>
-                    Current plan
+                    {t("settings.currentPlan")}
                   </Text>
                   <Text style={stylesWithFont.accountCardSubtitle}>
-                    Subscription access and daily AI usage
+                    {t("settings.currentPlanBody")}
                   </Text>
                 </View>
                 {accountSessionLoading ? (
@@ -1612,22 +1692,29 @@ export default function SettingsScreen() {
                   <View style={stylesWithFont.subscriptionDetails}>
                     <View style={stylesWithFont.subscriptionDetailRow}>
                       <Text style={stylesWithFont.subscriptionDetailLabel}>
-                        Daily AI allowance
+                        {t("settings.dailyAiAllowance")}
                       </Text>
                       <Text style={stylesWithFont.subscriptionDetailValue}>
                         {quota.applies
-                          ? `${formatQuotaCount(quota.remaining)} of ${formatQuotaCount(quota.limit)} tokens left`
-                          : "No daily quota"}
+                          ? t("settings.tokensLeft", {
+                              used: formatQuotaCount(quota.remaining),
+                              limit: formatQuotaCount(quota.limit),
+                            })
+                          : t("settings.noDailyQuota")}
                       </Text>
                     </View>
                     {quota.applies && quotaReset ? (
                       <View style={stylesWithFont.subscriptionDetailRow}>
                         <Text style={stylesWithFont.subscriptionDetailLabel}>
-                          Resets
+                          {t("settings.resets")}
                         </Text>
                         <Text style={stylesWithFont.subscriptionDetailValue}>
                           {quotaReset}
-                          {quota.timezone ? ` (${quota.timezone})` : ""}
+                          {quota.timezone
+                            ? t("settings.resetsTimezoneSuffix", {
+                                timezone: quota.timezone,
+                              })
+                            : ""}
                         </Text>
                       </View>
                     ) : null}
@@ -1635,8 +1722,8 @@ export default function SettingsScreen() {
                       <View style={stylesWithFont.subscriptionDetailRow}>
                         <Text style={stylesWithFont.subscriptionDetailLabel}>
                           {subscription?.willAutoRenew
-                            ? "Next renewal"
-                            : "Access until"}
+                            ? t("settings.nextRenewal")
+                            : t("settings.accessUntil")}
                         </Text>
                         <Text style={stylesWithFont.subscriptionDetailValue}>
                           {subscriptionDate}
@@ -1659,7 +1746,11 @@ export default function SettingsScreen() {
                       </Text>
                     </View>
                     <CustomButton
-                      title={accountSessionLoading ? "Retrying..." : "Retry Account Check"}
+                      title={
+                        accountSessionLoading
+                          ? t("settings.retrying")
+                          : t("settings.retryAccountCheck")
+                      }
                       onPress={
                         accountSessionLoading
                           ? null
@@ -1673,7 +1764,7 @@ export default function SettingsScreen() {
               </View>
               {entitlement?.active || subscription?.productId ? (
                 <CustomButton
-                  title="Manage Apple Subscription"
+                  title={t("settings.manageAppleSubscription")}
                   onPress={openAppleSubscriptions}
                   fontSize={fontSize}
                   color={theme.accent}
@@ -1683,8 +1774,8 @@ export default function SettingsScreen() {
                 <CustomButton
                   title={
                     appleOperation === "restore"
-                      ? "Restoring Purchases..."
-                      : "Restore Purchases"
+                      ? t("settings.restoringPurchases")
+                      : t("settings.restorePurchases")
                   }
                   onPress={
                     applePurchasesAvailable && !appleBusy
@@ -1696,8 +1787,7 @@ export default function SettingsScreen() {
                 />
               ) : null}
               <Text style={stylesWithFont.subscriptionFootnote}>
-                Paid access is enabled after Pantrio verifies the Apple
-                transaction for this account.
+                {t("settings.paidAccessEnabled")}
               </Text>
             </View>
 
@@ -1706,7 +1796,7 @@ export default function SettingsScreen() {
                 style={stylesWithFont.disclosureRow}
                 onPress={() => setShowPlanDetails((visible) => !visible)}
                 accessibilityRole="button"
-                accessibilityLabel="Technical subscription details"
+                accessibilityLabel={t("settings.technicalDetailsA11y")}
                 accessibilityState={{ expanded: showPlanDetails }}
               >
                 <View style={stylesWithFont.sectionIcon}>
@@ -1718,10 +1808,10 @@ export default function SettingsScreen() {
                 </View>
                 <View style={stylesWithFont.accountCardCopy}>
                   <Text style={stylesWithFont.accountCardTitle}>
-                    Technical details
+                    {t("settings.technicalDetails")}
                   </Text>
                   <Text style={stylesWithFont.accountCardSubtitle}>
-                    Verification, StoreKit status, and model
+                    {t("settings.technicalDetailsBody")}
                   </Text>
                 </View>
                 <Ionicons
@@ -1763,20 +1853,20 @@ export default function SettingsScreen() {
                 <View style={stylesWithFont.subscriptionDetails}>
                   <View style={stylesWithFont.subscriptionDetailRow}>
                     <Text style={stylesWithFont.subscriptionDetailLabel}>
-                      Access verification
+                      {t("settings.accessVerification")}
                     </Text>
                     <Text style={stylesWithFont.subscriptionDetailValue}>
                       {entitlement?.active
                         ? entitlement?.verified
-                          ? "Server verified"
-                          : "StoreKit report (unverified)"
-                        : "Free access"}
+                          ? t("settings.serverVerified")
+                          : t("settings.storeKitUnverified")
+                        : t("settings.freeAccess")}
                     </Text>
                   </View>
                   {effectiveModel ? (
                     <View style={stylesWithFont.subscriptionDetailRow}>
                       <Text style={stylesWithFont.subscriptionDetailLabel}>
-                        AI model
+                        {t("settings.aiModel")}
                       </Text>
                       <Text style={stylesWithFont.subscriptionDetailValue}>
                         {effectiveModel}
@@ -1787,7 +1877,7 @@ export default function SettingsScreen() {
                     <>
                     <View style={stylesWithFont.subscriptionDetailRow}>
                       <Text style={stylesWithFont.subscriptionDetailLabel}>
-                        Apple product
+                        {t("settings.appleProduct")}
                       </Text>
                       <Text
                         style={stylesWithFont.subscriptionDetailValue}
@@ -1798,20 +1888,20 @@ export default function SettingsScreen() {
                     </View>
                     <View style={stylesWithFont.subscriptionDetailRow}>
                       <Text style={stylesWithFont.subscriptionDetailLabel}>
-                        Renewal
+                        {t("settings.renewal")}
                       </Text>
                       <Text style={stylesWithFont.subscriptionDetailValue}>
                         {subscription?.willAutoRenew
-                          ? "Renews automatically"
-                          : "Will not renew"}
+                          ? t("settings.renewsAutomatically")
+                          : t("settings.willNotRenew")}
                       </Text>
                     </View>
                     {subscriptionDate ? (
                       <View style={stylesWithFont.subscriptionDetailRow}>
                         <Text style={stylesWithFont.subscriptionDetailLabel}>
                           {subscription?.willAutoRenew
-                            ? "Next renewal"
-                            : "Access until"}
+                            ? t("settings.nextRenewal")
+                            : t("settings.accessUntil")}
                         </Text>
                         <Text style={stylesWithFont.subscriptionDetailValue}>
                           {subscriptionDate}
@@ -1852,8 +1942,8 @@ export default function SettingsScreen() {
               <CustomButton
                 title={
                   appleOperation === "refresh"
-                    ? "Refreshing Subscription..."
-                    : "Refresh Subscription Status"
+                    ? t("settings.refreshingSubscription")
+                    : t("settings.refreshSubscriptionStatus")
                 }
                 onPress={
                   applePurchasesAvailable && !appleBusy
@@ -1871,11 +1961,11 @@ export default function SettingsScreen() {
                   style={stylesWithFont.planDisclosure}
                   onPress={() => setShowAvailablePlans((visible) => !visible)}
                   accessibilityRole="button"
-                  accessibilityLabel="Available subscription plans"
+                  accessibilityLabel={t("settings.availablePlansA11y")}
                   accessibilityState={{ expanded: showAvailablePlans }}
                 >
                   <Text style={stylesWithFont.accountCardTitle}>
-                    View or change plans
+                    {t("settings.viewOrChangePlans")}
                   </Text>
                   <Ionicons
                     name={showAvailablePlans ? "chevron-up" : "chevron-down"}
@@ -1885,7 +1975,7 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               ) : (
                 <Text style={stylesWithFont.accountInputLabel}>
-                  Available plans
+                  {t("settings.availablePlans")}
                 </Text>
               )}
 
@@ -1899,8 +1989,8 @@ export default function SettingsScreen() {
               {!appleProductsLoading && !applePlans.length ? (
                 <Text style={stylesWithFont.helpText}>
                   {apple?.enabled === false
-                    ? "Apple subscriptions are not configured for this app yet."
-                    : "No Apple subscription plans are currently available."}
+                    ? t("settings.appleNotConfigured")
+                    : t("settings.noApplePlans")}
                 </Text>
               ) : null}
               {applePlans.map((plan) => {
@@ -1911,7 +2001,10 @@ export default function SettingsScreen() {
                 const periodLabel = formatSubscriptionPeriod(plan.period);
                 const priceLabel = plan.displayPrice
                   ? periodLabel
-                    ? `${plan.displayPrice} every ${periodLabel}`
+                    ? t("settings.planPriceEvery", {
+                        price: plan.displayPrice,
+                        period: periodLabel,
+                      })
                     : plan.displayPrice
                   : periodLabel;
                 const canPurchase =
@@ -1939,7 +2032,7 @@ export default function SettingsScreen() {
                       {currentPlan ? (
                         <View style={stylesWithFont.currentPlanBadge}>
                           <Text style={stylesWithFont.currentPlanText}>
-                            Current
+                            {t("settings.current")}
                           </Text>
                         </View>
                       ) : null}
@@ -1951,21 +2044,24 @@ export default function SettingsScreen() {
                     ) : null}
                     {plan.displayPrice && periodLabel ? (
                       <Text style={stylesWithFont.appleRenewalDisclosure}>
-                        Automatically renews at {plan.displayPrice} every {periodLabel}
-                        {" "}unless canceled at least 24 hours before the current
-                        period ends. Payment is charged to your Apple Account at
-                        confirmation.
+                        {t("settings.autoRenewsAt")} {plan.displayPrice}{" "}
+                        {t("settings.every")} {periodLabel}{" "}
+                        {t("settings.renewalFootnote")}
                       </Text>
                     ) : null}
                     <CustomButton
                       title={
                         currentPlan
-                          ? "Current Plan"
+                          ? t("settings.currentPlanButton")
                           : appleOperation === "purchase"
-                            ? "Processing Purchase..."
+                            ? t("settings.processingPurchase")
                             : entitlement?.active
-                              ? `Change to ${plan.displayName}`
-                              : `Subscribe to ${plan.displayName}`
+                              ? t("settings.changeToPlan", {
+                                  plan: plan.displayName,
+                                })
+                              : t("settings.subscribeToPlan", {
+                                  plan: plan.displayName,
+                                })
                       }
                       onPress={
                         canPurchase
@@ -1977,7 +2073,7 @@ export default function SettingsScreen() {
                     />
                     {!plan.storeKitAvailable && Platform.OS === "ios" ? (
                       <Text style={stylesWithFont.applePlanUnavailable}>
-                        This product is not currently available from Apple.
+                        {t("settings.productUnavailable")}
                       </Text>
                     ) : null}
                   </View>
@@ -2007,7 +2103,7 @@ export default function SettingsScreen() {
                   accessibilityRole="link"
                 >
                   <Text style={stylesWithFont.appleLegalLinkText}>
-                    Terms of Use
+                    {t("settings.termsOfUse")}
                   </Text>
                 </TouchableOpacity>
                 {PRIVACY_POLICY_URL ? (
@@ -2021,14 +2117,13 @@ export default function SettingsScreen() {
                     accessibilityRole="link"
                   >
                     <Text style={stylesWithFont.appleLegalLinkText}>
-                      Privacy Policy
+                      {t("settings.privacyPolicy")}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
               <Text style={stylesWithFont.subscriptionFootnote}>
-                Purchases are linked with an anonymous account token. Pantrio
-                never receives your Apple Account email or password.
+                {t("settings.purchasesLinkedNote")}
               </Text>
             </View>
               </>
@@ -2049,15 +2144,15 @@ export default function SettingsScreen() {
                     </View>
                     <View style={stylesWithFont.accountCardCopy}>
                       <Text style={stylesWithFont.accountCardTitle}>
-                        Session
+                        {t("settings.session")}
                       </Text>
                       <Text style={stylesWithFont.accountCardSubtitle}>
-                        Sign out of Pantrio on this device
+                        {t("settings.signOutOnDevice")}
                       </Text>
                     </View>
                   </View>
                   <CustomButton
-                    title="Log out"
+                    title={t("common.logOut")}
                     onPress={
                       deletingAccount || accountBusy ? null : handleLogout
                     }
@@ -2082,18 +2177,18 @@ export default function SettingsScreen() {
                     </View>
                     <View style={stylesWithFont.accountCardCopy}>
                       <Text style={stylesWithFont.accountDangerTitle}>
-                        Delete account
+                        {t("settings.deleteAccount")}
                       </Text>
                       <Text style={stylesWithFont.accountCardSubtitle}>
-                      Permanently delete account and app data
+                        {t("settings.deleteAccountBody")}
                       </Text>
                     </View>
                   </View>
                   <CustomButton
                     title={
                       deletingAccount
-                        ? "Deleting Account..."
-                        : "Delete Account"
+                        ? t("settings.deletingAccountEllipsis")
+                        : t("settings.deleteAccountButton")
                     }
                     onPress={
                       deletingAccount || accountBusy
@@ -2122,15 +2217,15 @@ export default function SettingsScreen() {
                   </View>
                   <View style={stylesWithFont.accountCardCopy}>
                     <Text style={stylesWithFont.accountCardTitle}>
-                      Pantrio account
+                      {t("settings.pantrioAccount")}
                     </Text>
                     <Text style={stylesWithFont.accountCardSubtitle}>
-                      Sign in to sync and manage your account
+                      {t("settings.signInToSync")}
                     </Text>
                   </View>
                 </View>
                 <CustomButton
-                  title="Log In/Sign Up"
+                  title={t("settings.logInSignUpTitle")}
                   onPress={() => router.push("/(auth)/sign-in")}
                   fontSize={fontSize}
                   color={theme.accent}
@@ -2160,20 +2255,22 @@ export default function SettingsScreen() {
                     </View>
                     <View style={stylesWithFont.accountCardCopy}>
                       <Text style={stylesWithFont.accountCardTitle}>
-                        Edit username
+                        {t("settings.editUsernameTitle")}
                       </Text>
                       <Text style={stylesWithFont.accountCardSubtitle}>
-                        Choose how your name appears in Pantrio
+                        {t("settings.editUsernameBody")}
                       </Text>
                     </View>
                   </View>
 
-                  <Text style={stylesWithFont.accountInputLabel}>Username</Text>
+                  <Text style={stylesWithFont.accountInputLabel}>
+                    {t("settings.username")}
+                  </Text>
                   <TextInput
                     style={stylesWithFont.accountInput}
                     value={tempName}
                     onChangeText={setTempName}
-                    placeholder="Your name"
+                    placeholder={t("settings.usernamePlaceholder")}
                     placeholderTextColor={theme.textPlaceholder}
                     returnKeyType="done"
                     onSubmitEditing={saveName}
@@ -2188,12 +2285,16 @@ export default function SettingsScreen() {
                   ) : null}
 
                   <CustomButton
-                    title={savingName ? "Saving..." : "Save Username"}
+                    title={
+                      savingName
+                        ? t("settings.saving")
+                        : t("settings.saveUsername")
+                    }
                     onPress={savingName ? null : saveName}
                     fontSize={fontSize}
                   />
                   <CustomButton
-                    title="Cancel"
+                    title={t("common.cancel")}
                     onPress={
                       savingName ? null : () => setModalVisible(false)
                     }
@@ -2218,18 +2319,19 @@ export default function SettingsScreen() {
               <View style={stylesWithFont.modalBackground}>
                 <View style={stylesWithFont.modalContainer}>
                   <Text style={stylesWithFont.accountCardTitle}>
-                    Confirm your password
+                    {t("settings.confirmPassword")}
                   </Text>
                   <Text style={stylesWithFont.accountCardSubtitle}>
-                    Re-enter your password before permanently deleting this
-                    account.
+                    {t("settings.confirmPasswordBody")}
                   </Text>
-                  <Text style={stylesWithFont.accountInputLabel}>Password</Text>
+                  <Text style={stylesWithFont.accountInputLabel}>
+                    {t("settings.passwordPlaceholder")}
+                  </Text>
                   <TextInput
                     style={stylesWithFont.accountInput}
                     value={deletePassword}
                     onChangeText={setDeletePassword}
-                    placeholder="Password"
+                    placeholder={t("settings.passwordPlaceholder")}
                     placeholderTextColor={theme.textPlaceholder}
                     secureTextEntry
                     autoCapitalize="none"
@@ -2246,7 +2348,11 @@ export default function SettingsScreen() {
                     autoFocus
                   />
                   <CustomButton
-                    title={deletingAccount ? "Confirming..." : "Delete Account"}
+                    title={
+                      deletingAccount
+                        ? t("settings.confirming")
+                        : t("settings.deleteAccountButton")
+                    }
                     onPress={
                       deletePassword && !deletingAccount
                         ? () =>
@@ -2259,7 +2365,7 @@ export default function SettingsScreen() {
                     color={theme.danger}
                   />
                   <CustomButton
-                    title="Cancel"
+                    title={t("common.cancel")}
                     onPress={
                       deletingAccount
                         ? null
@@ -2282,14 +2388,45 @@ export default function SettingsScreen() {
       case "preferences":
         return (
           <View style={stylesWithFont.subMenu}>
-            <Text style={stylesWithFont.menuSectionLabel}>Appearance</Text>
+            <TouchableOpacity
+              style={stylesWithFont.settingRow}
+              activeOpacity={0.75}
+              onPress={() => setLanguageModalVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.languageA11y", {
+                language: currentLanguageLabel,
+              })}
+            >
+              <View style={stylesWithFont.settingCopy}>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.language")}
+                </Text>
+                <Text style={stylesWithFont.helpText}>
+                  {t("settings.languageBody")}
+                </Text>
+              </View>
+              <View style={stylesWithFont.languageValue}>
+                <Text style={stylesWithFont.value}>
+                  {currentLanguageLabel}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={Math.max(16, fontSize)}
+                  color={theme.textSecondary}
+                />
+              </View>
+            </TouchableOpacity>
+
+            <Text style={stylesWithFont.menuSectionLabel}>
+              {t("settings.appearance")}
+            </Text>
             <View style={stylesWithFont.settingRow}>
               <Text style={stylesWithFont.label}>
-                Use System Theme
+                {t("settings.useSystemTheme")}
               </Text>
 
               <Switch
-                accessibilityLabel="Use system theme"
+                accessibilityLabel={t("settings.useSystemThemeA11y")}
                 value={!!settings?.ux?.systemTheme}
                 onValueChange={(val) =>
                   updateSetting("ux", "systemTheme", val)
@@ -2308,16 +2445,18 @@ export default function SettingsScreen() {
               ]}
             >
               <View style={stylesWithFont.settingCopy}>
-                <Text style={stylesWithFont.label}>Dark Mode</Text>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.darkMode")}
+                </Text>
                 {settings?.ux?.systemTheme ? (
                   <Text style={stylesWithFont.helpText}>
-                    Controlled by your device while System Theme is on.
+                    {t("settings.darkModeBody")}
                   </Text>
                 ) : null}
               </View>
 
               <Switch
-                accessibilityLabel="Dark mode"
+                accessibilityLabel={t("settings.darkModeA11y")}
                 value={!!settings?.ux?.darkMode}
                 disabled={!!settings?.ux?.systemTheme}
                 onValueChange={(val) =>
@@ -2332,14 +2471,16 @@ export default function SettingsScreen() {
 
             <View style={stylesWithFont.settingRow}>
               <View style={stylesWithFont.settingCopy}>
-                <Text style={stylesWithFont.label}>ChatGPT-style chat</Text>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.chatgptStyleChat")}
+                </Text>
                 <Text style={stylesWithFont.helpText}>
-                  Compact chat window with an inline composer.
+                  {t("settings.chatgptStyleChatBody")}
                 </Text>
               </View>
 
               <Switch
-                accessibilityLabel="ChatGPT-style chat"
+                accessibilityLabel={t("settings.chatgptStyleChat")}
                 value={!!settings?.chat?.chatgptStyle}
                 onValueChange={(val) =>
                   updateSetting("chat", "chatgptStyle", val)
@@ -2354,16 +2495,18 @@ export default function SettingsScreen() {
             <View style={stylesWithFont.settingRow}>
               <View style={stylesWithFont.sliderSetting}>
                 <Text style={stylesWithFont.label}>
-                  Font Size: {displayedFontSize}
+                  {t("settings.fontSizeLabel")} {displayedFontSize}
                 </Text>
 
                 <Slider
-                  accessibilityLabel="App font size"
+                  accessibilityLabel={t("settings.fontSizeA11y")}
                   accessibilityValue={{
                     min: 12,
                     max: 24,
                     now: displayedFontSize,
-                    text: `${displayedFontSize} point font`,
+                    text: t("settings.fontSizeValue", {
+                      size: displayedFontSize,
+                    }),
                   }}
                   style={{ width: "100%", marginTop: 8 }}
                   value={displayedFontSize}
@@ -2382,16 +2525,14 @@ export default function SettingsScreen() {
             </View>
 
             <Text style={stylesWithFont.menuSectionLabel}>
-              Recipe suggestions
+              {t("settings.recipeSuggestions")}
             </Text>
             <View style={stylesWithFont.settingColumn}>
               <Text style={stylesWithFont.accountCardTitle}>
-                Your recipe profile
+                {t("settings.recipeProfile")}
               </Text>
               <Text style={stylesWithFont.helpText}>
-                Pantrio uses these saved defaults when recommending recipes.
-                Separate multiple entries with commas. A request in chat can
-                temporarily override soft preferences.
+                {t("settings.recipeProfileBody")}
               </Text>
             </View>
 
@@ -2399,13 +2540,13 @@ export default function SettingsScreen() {
               key={`preferred-cuisines:${commaSeparatedList(
                 explicitRecipePreferences.preferredCuisines
               )}`}
-              label="Preferred cuisines"
-              help="Cuisines you would like to see more often."
+              label={t("settings.preferredCuisines")}
+              help={t("settings.preferredCuisinesHelp")}
               value={explicitRecipePreferences.preferredCuisines}
               onChange={(preferredCuisines) =>
                 updateExplicitRecipePreferences({ preferredCuisines })
               }
-              placeholder="Thai, Japanese, American"
+              placeholder={t("settings.preferredCuisinesPlaceholder")}
               styles={stylesWithFont}
               theme={theme}
             />
@@ -2414,13 +2555,13 @@ export default function SettingsScreen() {
               key={`dietary-patterns:${commaSeparatedList(
                 explicitRecipePreferences.dietaryPatterns
               )}`}
-              label="Dietary patterns"
-              help="Saved dietary needs such as vegetarian, vegan, or kosher."
+              label={t("settings.dietaryPatterns")}
+              help={t("settings.dietaryPatternsHelp")}
               value={explicitRecipePreferences.dietaryPatterns}
               onChange={(dietaryPatterns) =>
                 updateExplicitRecipePreferences({ dietaryPatterns })
               }
-              placeholder="Vegetarian, gluten-free"
+              placeholder={t("settings.dietaryPatternsPlaceholder")}
               styles={stylesWithFont}
               theme={theme}
             />
@@ -2429,13 +2570,13 @@ export default function SettingsScreen() {
               key={`disliked-cuisines:${commaSeparatedList(
                 explicitRecipePreferences.dislikedCuisines
               )}`}
-              label="Cuisines to avoid"
-              help="Soft preference that lowers cuisines you do not usually want."
+              label={t("settings.cuisinesToAvoid")}
+              help={t("settings.cuisinesToAvoidHelp")}
               value={explicitRecipePreferences.dislikedCuisines}
               onChange={(dislikedCuisines) =>
                 updateExplicitRecipePreferences({ dislikedCuisines })
               }
-              placeholder="Very spicy Sichuan, fast food"
+              placeholder={t("settings.cuisinesToAvoidPlaceholder")}
               styles={stylesWithFont}
               theme={theme}
             />
@@ -2444,13 +2585,13 @@ export default function SettingsScreen() {
               key={`allergens:${commaSeparatedList(
                 explicitRecipePreferences.allergens
               )}`}
-              label="Allergens"
-              help="Always treated as exclusions. Verify recipes and labels yourself when safety matters."
+              label={t("settings.allergens")}
+              help={t("settings.allergensHelp")}
               value={explicitRecipePreferences.allergens}
               onChange={(allergens) =>
                 updateExplicitRecipePreferences({ allergens })
               }
-              placeholder="Peanut, shellfish"
+              placeholder={t("settings.allergensPlaceholder")}
               styles={stylesWithFont}
               theme={theme}
             />
@@ -2459,13 +2600,13 @@ export default function SettingsScreen() {
               key={`excluded-ingredients:${commaSeparatedList(
                 explicitRecipePreferences.excludedIngredients
               )}`}
-              label="Always exclude ingredients"
-              help="Ingredients recipe recommendations must not contain."
+              label={t("settings.alwaysExcludeIngredients")}
+              help={t("settings.alwaysExcludeIngredientsHelp")}
               value={explicitRecipePreferences.excludedIngredients}
               onChange={(excludedIngredients) =>
                 updateExplicitRecipePreferences({ excludedIngredients })
               }
-              placeholder="Cilantro, alcohol"
+              placeholder={t("settings.alwaysExcludeIngredientsPlaceholder")}
               styles={stylesWithFont}
               theme={theme}
             />
@@ -2474,21 +2615,23 @@ export default function SettingsScreen() {
               key={`disliked-ingredients:${commaSeparatedList(
                 explicitRecipePreferences.dislikedIngredients
               )}`}
-              label="Disliked ingredients"
-              help="Soft preferences that lower a recipe's ranking without excluding it."
+              label={t("settings.dislikedIngredients")}
+              help={t("settings.dislikedIngredientsHelp")}
               value={explicitRecipePreferences.dislikedIngredients}
               onChange={(dislikedIngredients) =>
                 updateExplicitRecipePreferences({ dislikedIngredients })
               }
-              placeholder="Olives, blue cheese"
+              placeholder={t("settings.dislikedIngredientsPlaceholder")}
               styles={stylesWithFont}
               theme={theme}
             />
 
             <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.accountCardTitle}>Meal style</Text>
+              <Text style={stylesWithFont.accountCardTitle}>
+                {t("settings.mealStyle")}
+              </Text>
               <Text style={stylesWithFont.helpText}>
-                A soft default. Exact calorie limits below remain hard limits.
+                {t("settings.mealStyleBody")}
               </Text>
               <View style={stylesWithFont.preferenceChoiceRow}>
                 {RECIPE_ENERGY_OPTIONS.map((option) => {
@@ -2507,7 +2650,9 @@ export default function SettingsScreen() {
                         })
                       }
                       accessibilityRole="radio"
-                      accessibilityLabel={`${option.label} meal preference`}
+                      accessibilityLabel={t("settings.mealStyleA11y", {
+                        option: t(option.labelKey),
+                      })}
                       accessibilityState={{ selected }}
                     >
                       <Text
@@ -2517,7 +2662,7 @@ export default function SettingsScreen() {
                             stylesWithFont.preferenceChoiceTextSelected,
                         ]}
                       >
-                        {option.label}
+                        {t(option.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -2530,13 +2675,13 @@ export default function SettingsScreen() {
                 key={`max-calories:${String(
                   explicitRecipePreferences.maxCaloriesPerServing ?? ""
                 )}`}
-                label="Maximum calories per serving"
-                help="Optional hard limit. Leave blank for no maximum."
+                label={t("settings.maxCaloriesPerServing")}
+                help={t("settings.maxCaloriesHelp")}
                 value={explicitRecipePreferences.maxCaloriesPerServing}
                 onChange={(maxCaloriesPerServing) =>
                   updateExplicitRecipePreferences({ maxCaloriesPerServing })
                 }
-                placeholder="No maximum"
+                placeholder={t("settings.maxCaloriesPlaceholder")}
                 minimum={100}
                 maximum={2500}
                 styles={stylesWithFont}
@@ -2546,13 +2691,13 @@ export default function SettingsScreen() {
                 key={`max-prep:${String(
                   explicitRecipePreferences.maxPrepMinutes ?? ""
                 )}`}
-                label="Maximum recipe time"
-                help="Optional hard total-time limit in minutes. Leave blank for no maximum."
+                label={t("settings.maxRecipeTime")}
+                help={t("settings.maxRecipeTimeHelp")}
                 value={explicitRecipePreferences.maxPrepMinutes}
                 onChange={(maxPrepMinutes) =>
                   updateExplicitRecipePreferences({ maxPrepMinutes })
                 }
-                placeholder="No maximum"
+                placeholder={t("settings.maxRecipeTimePlaceholder")}
                 minimum={5}
                 maximum={480}
                 styles={stylesWithFont}
@@ -2562,13 +2707,13 @@ export default function SettingsScreen() {
                 key={`default-servings:${String(
                   explicitRecipePreferences.defaultServings ?? 2
                 )}`}
-                label="Default servings"
-                help="Used when a request does not specify a serving count."
+                label={t("settings.defaultServings")}
+                help={t("settings.defaultServingsHelp")}
                 value={explicitRecipePreferences.defaultServings ?? 2}
                 onChange={(defaultServings) =>
                   updateExplicitRecipePreferences({ defaultServings })
                 }
-                placeholder="2"
+                placeholder={t("settings.defaultServingsPlaceholder")}
                 minimum={1}
                 maximum={12}
                 allowEmpty={false}
@@ -2580,25 +2725,26 @@ export default function SettingsScreen() {
 
             <View style={stylesWithFont.settingColumn}>
               <Text style={stylesWithFont.helpText}>
-                You can clear saved and learned recipe preferences without
-                changing fridge items or other app settings.
+                {t("settings.resetRecipePreferencesBody")}
               </Text>
               <CustomButton
-                title="Reset Recipe Preferences"
+                title={t("settings.resetRecipePreferencesTitle")}
                 onPress={confirmRecipePreferenceReset}
                 fontSize={fontSize}
                 color={theme.danger}
               />
             </View>
 
-            <Text style={stylesWithFont.menuSectionLabel}>Notifications</Text>
+            <Text style={stylesWithFont.menuSectionLabel}>
+              {t("settings.notifications")}
+            </Text>
             <View style={stylesWithFont.settingRow}>
               <Text style={stylesWithFont.label}>
-                Daily Reminders
+                {t("settings.dailyReminders")}
               </Text>
 
               <Switch
-                accessibilityLabel="Daily reminders"
+                accessibilityLabel={t("settings.dailyRemindersA11y")}
                 value={
                   !!settings?.notifications?.dailyReminders
                 }
@@ -2617,15 +2763,15 @@ export default function SettingsScreen() {
             </View>
 
             <Text style={stylesWithFont.menuSectionLabel}>
-              Expiration reminders
+              {t("settings.expirationReminders")}
             </Text>
             <View style={stylesWithFont.settingRow}>
               <Text style={stylesWithFont.label}>
-                Expiration Alerts
+                {t("settings.expirationAlerts")}
               </Text>
 
               <Switch
-                accessibilityLabel="Expiration alerts"
+                accessibilityLabel={t("settings.expirationAlertsA11y")}
                 value={
                   !!settings?.expiration?.expirationAlerts
                 }
@@ -2646,16 +2792,19 @@ export default function SettingsScreen() {
             <View style={stylesWithFont.settingRow}>
               <View style={stylesWithFont.sliderSetting}>
                 <Text style={stylesWithFont.label}>
-                  Notify {remindDays} days before
+                  {t("settings.notify")} {remindDays}{" "}
+                  {t("settings.daysBefore")}
                 </Text>
 
                 <Slider
-                  accessibilityLabel="Days before expiration to notify"
+                  accessibilityLabel={t("settings.remindDaysBeforeA11y")}
                   accessibilityValue={{
                     min: 1,
                     max: 31,
                     now: remindDays,
-                    text: `${remindDays} days before expiration`,
+                    text: t("settings.remindDaysBefore", {
+                      count: remindDays,
+                    }),
                   }}
                   style={{ width: "100%", marginTop: 8 }}
                   value={settings?.expiration?.remindDays ?? 5}
@@ -2675,17 +2824,17 @@ export default function SettingsScreen() {
             <View style={stylesWithFont.settingRow}>
               <View style={stylesWithFont.settingCopy}>
                 <Text style={stylesWithFont.label}>
-                  Custom urgency thresholds
+                  {t("settings.customUrgencyThresholds")}
                 </Text>
                 <Text style={stylesWithFont.helpText}>
                   {customUrgency
-                    ? "Use your own day ranges for urgency labels."
-                    : "Use the preset day ranges for urgency labels."}
+                    ? t("settings.customUrgencyOn")
+                    : t("settings.customUrgencyOff")}
                 </Text>
               </View>
 
               <Switch
-                accessibilityLabel="Custom urgency thresholds"
+                accessibilityLabel={t("settings.customUrgencyThresholdsA11y")}
                 value={customUrgency}
                 onValueChange={(val) =>
                   updateSetting("expiration", "customUrgency", val)
@@ -2705,16 +2854,15 @@ export default function SettingsScreen() {
                     setShowUrgencyThresholds((visible) => !visible)
                   }
                   accessibilityRole="button"
-                  accessibilityLabel="Advanced expiration thresholds"
+                  accessibilityLabel={t("settings.advancedThresholdsA11y")}
                   accessibilityState={{ expanded: showUrgencyThresholds }}
                 >
                   <View style={stylesWithFont.settingCopy}>
                     <Text style={stylesWithFont.accountCardTitle}>
-                      Advanced expiration thresholds
+                      {t("settings.advancedThresholds")}
                     </Text>
                     <Text style={stylesWithFont.helpText}>
-                      Choose when items are labeled Eat first, Use soon, or
-                      longer lasting.
+                      {t("settings.advancedThresholdsBody")}
                     </Text>
                   </View>
                   <Ionicons
@@ -2733,11 +2881,66 @@ export default function SettingsScreen() {
             ) : (
               <View style={stylesWithFont.settingRow}>
                 <Text style={stylesWithFont.helpText}>
-                  Preset: Eat first 2d · Use soon 7d · Lasts a while 30d ·
-                  Long keeper 180d
+                  {t("settings.urgencyPreset")}
                 </Text>
               </View>
             )}
+
+            <Modal
+              visible={languageModalVisible}
+              animationType="fade"
+              transparent
+              onRequestClose={() => setLanguageModalVisible(false)}
+            >
+              <View style={stylesWithFont.modalBackground}>
+                <View style={stylesWithFont.modalContainer}>
+                  <Text style={stylesWithFont.accountCardTitle}>
+                    {t("settings.languagePickerTitle")}
+                  </Text>
+                  {SUPPORTED_LANGUAGES.map((lang) => {
+                    const selected = lang.code === i18next.language;
+                    return (
+                      <TouchableOpacity
+                        key={lang.code}
+                        style={[
+                          stylesWithFont.languageOptionRow,
+                          selected
+                            ? stylesWithFont.languageOptionSelected
+                            : null,
+                        ]}
+                        activeOpacity={0.75}
+                        onPress={() => {
+                          void setAppLanguage(lang.code);
+                          setLanguageModalVisible(false);
+                        }}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={t("settings.languageSelectA11y", {
+                          language: lang.label,
+                        })}
+                      >
+                        <Text style={stylesWithFont.languageOptionLabel}>
+                          {lang.label}
+                        </Text>
+                        {selected ? (
+                          <Ionicons
+                            name="checkmark"
+                            size={Math.max(18, fontSize)}
+                            color={theme.accent}
+                          />
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <CustomButton
+                    title={t("common.done")}
+                    onPress={() => setLanguageModalVisible(false)}
+                    fontSize={fontSize}
+                    color={theme.textSecondary}
+                  />
+                </View>
+              </View>
+            </Modal>
           </View>
         );
 
@@ -2746,15 +2949,16 @@ export default function SettingsScreen() {
           <View style={stylesWithFont.subMenu}>
             <View style={stylesWithFont.settingRow}>
               <View style={stylesWithFont.settingCopy}>
-                <Text style={stylesWithFont.label}>Incognito Mode</Text>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.incognitoMode")}
+                </Text>
                 <Text style={stylesWithFont.helpText}>
-                  Keeps new chat messages off this device. Leaving Incognito
-                  clears the private conversation.
+                  {t("settings.incognitoBody")}
                 </Text>
               </View>
 
               <Switch
-                accessibilityLabel="Incognito mode"
+                accessibilityLabel={t("settings.incognitoModeA11y")}
                 value={!!settings?.privacy?.incognito}
                 onValueChange={(val) =>
                   updateSetting(
@@ -2771,25 +2975,26 @@ export default function SettingsScreen() {
             </View>
 
             <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.accountCardTitle}>Stored data</Text>
+              <Text style={stylesWithFont.accountCardTitle}>
+                {t("settings.storedData")}
+              </Text>
               <Text style={stylesWithFont.helpText}>
-                These actions affect only data saved for this account on this
-                device. They do not delete your Pantrio account.
+                {t("settings.storedDataBody")}
               </Text>
 
               <CustomButton
-                title="Reset Data on This Device"
+                title={t("settings.resetDataOnDevice")}
                 onPress={() => {
                   Alert.alert(
-                    "Reset data on this device?",
-                    "This clears fridge items, the shopping list, chat history, settings, reminders, and saved custom-AI credentials for this account on this device. Your Pantrio account is not deleted. This cannot be undone.",
+                    t("settings.resetDeviceDataAlertTitle"),
+                    t("settings.resetDeviceDataAlertMessage"),
                     [
                       {
-                        text: "Cancel",
+                        text: t("common.cancel"),
                         style: "cancel",
                       },
                       {
-                        text: "Reset Device Data",
+                        text: t("settings.resetDeviceDataButton"),
                         style: "destructive",
                         onPress: handleClearAllData,
                       },
@@ -2801,18 +3006,18 @@ export default function SettingsScreen() {
               />
 
               <CustomButton
-                title="Clear Chat Messages"
+                title={t("settings.clearChatMessages")}
                 onPress={() => {
                   Alert.alert(
-                    "Clear chat messages?",
-                    "This clears chat messages, the chat summary, and chat attachments for this account on this device. This cannot be undone.",
+                    t("settings.clearChatAlertTitle"),
+                    t("settings.clearChatAlertMessage"),
                     [
                       {
-                        text: "Cancel",
+                        text: t("common.cancel"),
                         style: "cancel",
                       },
                       {
-                        text: "Clear",
+                        text: t("settings.clearButton"),
                         style: "destructive",
                         onPress: () => {
                           clearChatData(
@@ -2837,28 +3042,30 @@ export default function SettingsScreen() {
         return (
           <View style={stylesWithFont.subMenu}>
             <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.label}>Select AI</Text>
+              <Text style={stylesWithFont.label}>
+                {t("settings.selectAi")}
+              </Text>
               <Text style={stylesWithFont.helpText}>
-                Choose the AI Pantrio uses for chat and food planning.
+                {t("settings.selectAiBody")}
               </Text>
 
               {[
                 {
                   value: "pantrio",
-                  label: "Pantrio Cloud AI",
-                  detail: "Uses Pantrio's hosted AI service.",
+                  label: t("settings.pantrioCloudAi"),
+                  detail: t("settings.pantrioCloudAiDetail"),
                 },
                 {
                   value: "apple",
-                  label: "Apple Intelligence",
+                  label: t("settings.appleIntelligence"),
                   detail:
-                    appleAvailability?.reason || "Checking this device…",
+                    appleAvailability?.reason ||
+                    t("settings.checkingThisDevice"),
                 },
                 {
                   value: "custom",
-                  label: "My own AI API",
-                  detail:
-                    "Uses an OpenAI-compatible provider and your API key.",
+                  label: t("settings.myOwnAiApi"),
+                  detail: t("settings.myOwnAiApiDetail"),
                 },
               ].map((option) => {
                 const appleUnsupported =
@@ -2913,7 +3120,9 @@ export default function SettingsScreen() {
 
             {aiProvider === "custom" ? (
             <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.inputLabel}>API provider</Text>
+              <Text style={stylesWithFont.inputLabel}>
+                {t("settings.apiProvider")}
+              </Text>
               <DropDownPicker
                 open={aiProviderOpen}
                 value={aiBaseUrl}
@@ -2921,7 +3130,7 @@ export default function SettingsScreen() {
                 setOpen={setAiProviderOpen}
                 setValue={setAiBaseUrl}
                 disabled={savingAi || testingAi}
-                placeholder="Choose an API provider"
+                placeholder={t("settings.apiProviderPlaceholder")}
                 listMode="SCROLLVIEW"
                 style={stylesWithFont.dropdown}
                 dropDownContainerStyle={stylesWithFont.dropdownMenu}
@@ -2931,9 +3140,26 @@ export default function SettingsScreen() {
                 tickIconStyle={{ tintColor: theme.accent }}
                 zIndex={3000}
               />
-              <Text style={stylesWithFont.selectedUrl}>{aiBaseUrl}</Text>
 
-              <Text style={stylesWithFont.inputLabel}>Model</Text>
+              <Text style={stylesWithFont.inputLabel}>
+                {t("settings.apiUrl")}
+              </Text>
+              <TextInput
+                style={stylesWithFont.aiInput}
+                value={aiBaseUrl}
+                onChangeText={setAiBaseUrl}
+                editable={!savingAi && !testingAi && !loadingAiProviderSettings}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="url"
+                keyboardType="url"
+                placeholder={t("settings.apiUrlPlaceholder")}
+                placeholderTextColor={theme.textPlaceholder}
+              />
+
+              <Text style={stylesWithFont.inputLabel}>
+                {t("settings.model")}
+              </Text>
               <TextInput
                 style={stylesWithFont.aiInput}
                 value={loadingAiProviderSettings ? "" : aiModel}
@@ -2941,11 +3167,13 @@ export default function SettingsScreen() {
                 editable={!savingAi && !testingAi && !loadingAiProviderSettings}
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="gpt-4o-mini"
+                placeholder={t("settings.modelPlaceholder")}
                 placeholderTextColor={theme.textPlaceholder}
               />
 
-              <Text style={stylesWithFont.inputLabel}>API key</Text>
+              <Text style={stylesWithFont.inputLabel}>
+                {t("settings.apiKey")}
+              </Text>
               <TextInput
                 style={stylesWithFont.aiInput}
                 value={loadingAiProviderSettings ? "" : aiApiKey}
@@ -2954,12 +3182,16 @@ export default function SettingsScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 secureTextEntry
-                placeholder="Your provider API key"
+                placeholder={t("settings.apiKeyPlaceholder")}
                 placeholderTextColor={theme.textPlaceholder}
               />
 
               <CustomButton
-                title={savingAi ? "Saving..." : "Save AI Provider"}
+                title={
+                  savingAi
+                    ? t("settings.saving")
+                    : t("settings.saveAiProvider")
+                }
                 onPress={
                   savingAi || testingAi || loadingAiProviderSettings
                     ? null
@@ -2968,7 +3200,11 @@ export default function SettingsScreen() {
                 fontSize={fontSize}
               />
               <CustomButton
-                title={testingAi ? "Testing Connection..." : "Test Connection"}
+                title={
+                  testingAi
+                    ? t("settings.testingConnection")
+                    : t("settings.testConnection")
+                }
                 onPress={
                   savingAi || testingAi || loadingAiProviderSettings
                     ? null
@@ -2978,7 +3214,7 @@ export default function SettingsScreen() {
                 color={theme.accent}
               />
               <Text style={stylesWithFont.securityText}>
-                Each provider keeps its own model name and key in the secure device keychain. Saving stores the fields above. Testing sends one short request to this provider but does not change saved settings.
+                {t("settings.providerInfoBody")}
               </Text>
             </View>
             ) : null}
@@ -3095,6 +3331,11 @@ const dynamicStyles = (theme, fontSize) =>
       flex: 1,
       minWidth: 0,
       marginRight: 12,
+    },
+    languageValue: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginLeft: 12,
     },
     sliderSetting: {
       flex: 1,
@@ -3393,6 +3634,26 @@ const dynamicStyles = (theme, fontSize) =>
       borderColor: theme.border,
       flexDirection: "column",
       justifyContent: "space-around",
+    },
+    languageOptionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
+    },
+    languageOptionSelected: {
+      backgroundColor: `${theme.accent}18`,
+      borderColor: theme.accent,
+    },
+    languageOptionLabel: {
+      fontSize,
+      fontWeight: "600",
+      color: theme.textPrimary,
     },
 
     input: {

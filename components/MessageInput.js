@@ -7,7 +7,9 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
+import i18next from "i18next";
 import { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -58,6 +60,7 @@ async function releaseRecordingFile(uri) {
 }
 
 export default function MessageInput({ value, onChangeText, onSend }) {
+  const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
   const { receiving } = useContext(ChatContext);
   const { updateQuota } = useAccountSession();
@@ -210,8 +213,8 @@ export default function MessageInput({ value, onChangeText, onSend }) {
       if (!permission.granted) {
         recordingPressIntentRef.current = false;
         Alert.alert(
-          "Microphone permission required",
-          "Please allow microphone access to use voice messages."
+          t("voiceInput.micPermissionTitle"),
+          t("voiceInput.micPermissionMessage")
         );
         return;
       }
@@ -271,8 +274,8 @@ export default function MessageInput({ value, onChangeText, onSend }) {
 
       if (isCurrentRecordingAttempt(generation, attempt)) {
         Alert.alert(
-          "Recording error",
-          "Pantrio could not start recording. Please try again."
+          t("voiceInput.recordingError"),
+          t("voiceInput.recordingErrorBody")
         );
       }
     } finally {
@@ -313,7 +316,7 @@ export default function MessageInput({ value, onChangeText, onSend }) {
       if (!isCurrentLifecycle(generation)) return;
 
       if (!recordingUri) {
-        throw new Error("The recording did not produce a file.");
+        throw new Error(i18next.t("voiceInput.recordingNoFile"));
       }
 
       await transcribeAudio(recordingUri, generation);
@@ -328,10 +331,10 @@ export default function MessageInput({ value, onChangeText, onSend }) {
 
       if (isCurrentLifecycle(generation)) {
         Alert.alert(
-          "Voice message error",
+          t("voiceInput.voiceMessageError"),
           error instanceof Error
             ? error.message
-            : "The recording could not be processed."
+            : t("voiceInput.recordingCouldNotBeProcessed")
         );
       }
     } finally {
@@ -364,9 +367,7 @@ export default function MessageInput({ value, onChangeText, onSend }) {
       const user = auth.currentUser;
   
       if (!user) {
-        throw new Error(
-          "You must be signed in to use voice transcription."
-        );
+        throw new Error(i18next.t("voiceInput.signInRequired"));
       }
   
       // Get a fresh Firebase ID token
@@ -408,16 +409,16 @@ export default function MessageInput({ value, onChangeText, onSend }) {
       if (!response.ok) {
         throw createBackendResponseError(data, {
           status: response.status,
-          fallbackMessage: `Transcription failed with status ${response.status}.`,
+          fallbackMessage: i18next.t("voiceInput.transcriptionFailed", {
+            status: response.status,
+          }),
         });
       }
   
       const transcript = data?.text?.trim();
   
       if (!transcript) {
-        throw new Error(
-          "No speech was detected in the recording."
-        );
+        throw new Error(i18next.t("voiceInput.noSpeechDetected"));
       }
   
       onChangeText?.(mergeTranscriptIntoComposer(value, transcript));
@@ -436,10 +437,11 @@ export default function MessageInput({ value, onChangeText, onSend }) {
 
       if (error?.name !== "AbortError" || timedOut) {
         Alert.alert(
-          "Voice Transcription",
+          t("voiceInput.voiceTranscriptionTitle"),
           timedOut
-            ? "The transcription request timed out. Please try again."
-            : error?.message || String(error || "Failed to transcribe recording.")
+            ? t("voiceInput.transcriptionTimedOut")
+            : error?.message ||
+                String(error || t("voiceInput.transcriptionFailedGeneric"))
         );
       }
     } finally {
@@ -495,14 +497,14 @@ export default function MessageInput({ value, onChangeText, onSend }) {
   };
 
   const voiceButtonText = transcribing
-    ? "Transcribing..."
+    ? t("voiceInput.transcribing")
     : recordingStarting
-      ? "Starting..."
+      ? t("voiceInput.starting")
       : recorderState.isRecording || recordingActive
-        ? "Release to Transcribe"
+        ? t("voiceInput.releaseToTranscribe")
         : receiving
-          ? "Waiting..."
-          : "Hold to Talk";
+          ? t("voiceInput.waiting")
+          : t("voiceInput.holdToTalk");
   const showSendButton = shouldShowSendButton(value);
 
   return (
@@ -548,18 +550,18 @@ export default function MessageInput({ value, onChangeText, onSend }) {
             }}
             placeholder={
               receiving
-                ? "Waiting for response..."
+                ? t("voiceInput.waitingForResponse")
                 : transcribing
-                  ? "Transcribing..."
+                  ? t("voiceInput.transcribing")
                   : chatgptStyle
-                    ? "Message Pantrio AI…"
-                    : "Type a message..."
+                    ? t("voiceInput.messagePantrio")
+                    : t("voiceInput.typeAMessage")
             }
             placeholderTextColor={theme.textPlaceholder}
             submitBehavior="newline"
             textAlignVertical="top"
-            accessibilityLabel="Chat message"
-            accessibilityHint="Type a message, then tap Send. Press Enter for a new line."
+            accessibilityLabel={t("voiceInput.chatMessageA11y")}
+            accessibilityHint={t("voiceInput.messageHint")}
           />
 
           <TouchableOpacity
@@ -574,12 +576,12 @@ export default function MessageInput({ value, onChangeText, onSend }) {
             disabled={receiving || transcribing}
             accessibilityRole="button"
             accessibilityLabel={
-              showSendButton ? "Send message" : "Use voice input"
+              showSendButton ? t("voiceInput.sendMessage") : t("voiceInput.useVoiceInput")
             }
             accessibilityHint={
               showSendButton
-                ? "Send the text in the chat message field."
-                : "Open voice transcription controls."
+                ? t("voiceInput.sendMessageHint")
+                : t("voiceInput.openVoiceControls")
             }
             accessibilityState={{ disabled: receiving || transcribing }}
           >
@@ -609,7 +611,7 @@ export default function MessageInput({ value, onChangeText, onSend }) {
             disabled={receiving || transcribing}
             accessibilityRole="button"
             accessibilityLabel={voiceButtonText}
-            accessibilityHint="Press and hold to record, then release to place the transcript in the message field."
+            accessibilityHint={t("voiceInput.holdToRecordHint")}
             accessibilityState={{
               disabled: receiving || transcribing,
               busy: transcribing || recordingStarting,
@@ -645,7 +647,7 @@ export default function MessageInput({ value, onChangeText, onSend }) {
             onPress={leaveVoiceMode}
             disabled={isBusy}
             accessibilityRole="button"
-            accessibilityLabel="Close voice input"
+            accessibilityLabel={t("voiceInput.closeVoiceInput")}
             accessibilityState={{ disabled: isBusy, busy: transcribing }}
           >
             {transcribing ? (

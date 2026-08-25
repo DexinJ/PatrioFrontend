@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import i18next from "i18next";
 import {
   buildExpirationReminderSchedule,
   countItemsExpiringWithin,
@@ -33,7 +34,9 @@ async function cancelPantrioRemindersRaw() {
   ).length;
   if (failedCount > 0) {
     const error = new Error(
-      `Could not cancel ${failedCount} scheduled Pantrio reminder${failedCount === 1 ? "" : "s"}.`
+      i18next.t("notifications.couldNotCancel", {
+        count: failedCount,
+      })
     );
     error.code = "REMINDER_CANCELLATION_FAILED";
     throw error;
@@ -81,10 +84,12 @@ async function performReminderSync({ settings, fridgeItems }) {
     const expiringCount = countItemsExpiringWithin(fridgeItems, remindDays);
     requests.push({
       content: {
-        title: "Pantrio fridge check",
+        title: i18next.t("notifications.dailyCheckTitle"),
         body: expiringCount
-          ? `${expiringCount} item${expiringCount === 1 ? " is" : "s are"} nearing expiration.`
-          : "Take a moment to review your fridge and shopping list.",
+          ? i18next.t("notifications.expiringSoon", {
+              count: expiringCount,
+            })
+          : i18next.t("notifications.reviewFridgeBody"),
         data: { pantrioReminder: REMINDER_MARKER, kind: "daily" },
       },
       trigger: {
@@ -100,8 +105,10 @@ async function performReminderSync({ settings, fridgeItems }) {
     for (const reminder of schedule) {
       requests.push({
         content: {
-          title: "An item is nearing expiration",
-          body: `Open Pantrio to review items expiring within ${Math.round(Number(remindDays) || 5)} days.`,
+          title: i18next.t("notifications.nearingExpirationTitle"),
+          body: i18next.t("notifications.reviewBody", {
+            days: Math.round(Number(remindDays) || 5),
+          }),
           data: {
             pantrioReminder: REMINDER_MARKER,
             kind: "expiration",

@@ -2,6 +2,7 @@
 import * as Sentry from '@sentry/react-native';
 import { Stack } from "expo-router";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +15,11 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-get-random-values";
 import { AuthProvider, useAuth } from "../auth/useAuth";
+import i18n, {
+  SUPPORTED_LANGUAGES,
+  getDeviceLanguageCode,
+  getSavedLanguageCode,
+} from "../i18n";
 
 Sentry.init({
   dsn: "https://9d707a565864181830d59147b126ac25@o4511787964432384.ingest.us.sentry.io/4511787964563456",
@@ -58,18 +64,19 @@ Sentry.init({
 });
 
 function RootErrorFallback({ resetError }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.errorFallback} accessibilityRole="alert">
-      <Text style={styles.errorTitle}>Pantrio ran into a problem</Text>
+      <Text style={styles.errorTitle}>{t("root.ranIntoProblem")}</Text>
       <Text style={styles.errorMessage}>
-        Your saved data is still on this device. Try loading the app again.
+        {t("root.savedDataSafe")}
       </Text>
       <Pressable
         accessibilityRole="button"
         onPress={resetError}
         style={styles.retryButton}
       >
-        <Text style={styles.retryButtonText}>Try again</Text>
+        <Text style={styles.retryButtonText}>{t("root.tryAgain")}</Text>
       </Pressable>
     </View>
   );
@@ -81,12 +88,12 @@ function AuthRecoveryFallback({
   onSignOut,
   onClearDeviceData,
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.errorFallback} accessibilityRole="alert">
-      <Text style={styles.errorTitle}>We could not verify your account</Text>
+      <Text style={styles.errorTitle}>{t("root.couldNotVerifyAccount")}</Text>
       <Text style={styles.errorMessage}>
-        {error?.message ||
-          "Check your connection and try again. Your account data has not been opened."}
+        {error?.message || t("root.checkConnection")}
       </Text>
       <View style={styles.recoveryActions}>
         {!error?.signedOutRecovery ? (
@@ -95,7 +102,7 @@ function AuthRecoveryFallback({
             onPress={onRetry}
             style={styles.retryButton}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -104,18 +111,20 @@ function AuthRecoveryFallback({
           style={styles.signOutButton}
         >
           <Text style={styles.signOutButtonText}>
-            {error?.signedOutRecovery ? "Continue to sign in" : "Sign out"}
+            {error?.signedOutRecovery
+              ? t("root.continueToSignIn")
+              : t("root.signOut")}
           </Text>
         </Pressable>
         {onClearDeviceData ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityHint="Permanently removes the pending account's data from this device"
+            accessibilityHint={t("root.clearDeviceDataA11y")}
             onPress={onClearDeviceData}
             style={styles.clearDataButton}
           >
             <Text style={styles.clearDataButtonText}>
-              Clear device data & sign out
+              {t("root.clearDeviceDataAndSignOut")}
             </Text>
           </Pressable>
         ) : null}
@@ -130,21 +139,22 @@ function AppNavigator({
   accountDeletionPending,
   accountDeletionPhase,
 }) {
+  const { t } = useTranslation();
   if (accountDeletionPending) {
     const clearingLocalData = accountDeletionPhase === "purging-local-data";
     return (
       <View
         style={styles.deletionOverlay}
         accessibilityRole="progressbar"
-        accessibilityLabel="Deleting account"
+        accessibilityLabel={t("root.deletingAccountA11y")}
         accessibilityLiveRegion="polite"
       >
         <ActivityIndicator size="large" color="#0A8E91" />
-        <Text style={styles.deletionTitle}>Deleting your account…</Text>
+        <Text style={styles.deletionTitle}>{t("root.deletingAccount")}</Text>
         <Text style={styles.deletionMessage}>
           {clearingLocalData
-            ? "Clearing account data from this device."
-            : "Keep Pantrio open while this finishes."}
+            ? t("root.clearingAccountData")
+            : t("root.keepPantrioOpen")}
         </Text>
       </View>
     );
@@ -164,7 +174,7 @@ function AppNavigator({
       {loading ? (
         <View
           style={styles.loadingOverlay}
-          accessibilityLabel="Checking sign-in status"
+          accessibilityLabel={t("root.checkingSignInStatus")}
         >
           <ActivityIndicator size="large" />
         </View>
@@ -174,6 +184,7 @@ function AppNavigator({
 }
 
 function RootLayoutContent() {
+  const { t } = useTranslation();
   const {
     accountDeletionPending,
     accountDeletionPhase,
@@ -191,19 +202,18 @@ function RootLayoutContent() {
 
   const confirmRecoveryDataClear = () => {
     Alert.alert(
-      "Clear this account's device data?",
-      "This permanently removes the pending account's fridge items, shopping list, chat history, settings, reminders, and saved custom-AI credentials from this device. It does not prove that server deletion completed.",
+      t("root.clearDeviceDataTitle"),
+      t("root.clearDeviceDataMessage"),
       [
-        { text: "Keep Data", style: "cancel" },
+        { text: t("common.keepData"), style: "cancel" },
         {
-          text: "Clear Device Data",
+          text: t("root.clearDeviceData"),
           style: "destructive",
           onPress: () => {
             void clearPendingDeletionDataFromRecovery().catch((error) => {
               Alert.alert(
-                "Cleanup incomplete",
-                error?.message ||
-                  "Some account data could not be removed from this device."
+                t("root.cleanupIncomplete"),
+                error?.message || t("root.someAccountDataNotRemoved")
               );
             });
           },
@@ -217,14 +227,15 @@ function RootLayoutContent() {
     consumeAccountDeletionError();
     Alert.alert(
       accountDeletionError?.code === "RECENT_AUTH_REQUIRED"
-        ? "Sign-in confirmation expired"
-        : "Delete failed",
-      accountDeletionError?.message || "Could not delete your account."
+        ? t("root.signInConfirmationExpired")
+        : t("root.deleteFailed"),
+      accountDeletionError?.message || t("root.couldNotDeleteAccount")
     );
   }, [
     accountDeletionError,
     accountDeletionPending,
     consumeAccountDeletionError,
+    t,
   ]);
 
   useEffect(() => {
@@ -287,6 +298,25 @@ function RootLayoutContent() {
 }
 
 export default Sentry.wrap(function Layout() {
+  // Restore the language preference: explicit user choice > device locale > en.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const saved = await getSavedLanguageCode();
+      if (!active) return;
+      const deviceCode = getDeviceLanguageCode();
+      const code = SUPPORTED_LANGUAGES.some((l) => l.code === saved)
+        ? saved
+        : SUPPORTED_LANGUAGES.some((l) => l.code === deviceCode)
+          ? deviceCode
+          : "en";
+      i18n.changeLanguage(code);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <Sentry.ErrorBoundary
       fallback={({ resetError }) => (

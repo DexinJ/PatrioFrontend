@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import i18next from "i18next";
 import { auth } from "../auth/firebaseClient";
 import { API_BASE_URL } from "./backendConfig";
 import {
@@ -358,7 +359,9 @@ export async function summarizeHistory({
     if (!response.ok) {
       throw createBackendResponseError(payload, {
         status: response.status,
-        fallbackMessage: `Summarization failed with status ${response.status}.`,
+        fallbackMessage: i18next.t("errors.summarizationFailed", {
+          status: response.status,
+        }),
       });
     }
 

@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import i18next from "i18next";
 import { useContext, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Modal,
@@ -18,16 +20,16 @@ function formatRelativeTime(iso) {
   if (!Number.isFinite(timestamp)) return "";
 
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (seconds < 60) return "just now";
+  if (seconds < 60) return i18next.t("conversations.justNow");
 
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return i18next.t("conversations.minutesAgo", { count: minutes });
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return i18next.t("conversations.hoursAgo", { count: hours });
 
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return i18next.t("conversations.daysAgo", { count: days });
 
   return new Date(timestamp).toLocaleDateString();
 }
@@ -40,6 +42,7 @@ export default function ConversationListModal({
   onSelect,
   onNewChat,
 }) {
+  const { t } = useTranslation();
   const { theme } = useContext(GlobalContext);
   const insets = useSafeAreaInsets();
   const items = useMemo(
@@ -53,7 +56,9 @@ export default function ConversationListModal({
       <TouchableOpacity
         onPress={() => onSelect?.(item.id)}
         accessibilityRole="button"
-        accessibilityLabel={`Open conversation ${item.title || "Chat"}`}
+        accessibilityLabel={t("conversations.openConversation", {
+          title: item.title || t("tabs.chat"),
+        })}
         accessibilityState={{ selected: isActive }}
         style={[
           styles.row,
@@ -68,7 +73,7 @@ export default function ConversationListModal({
             ]}
             numberOfLines={1}
           >
-            {item.title || "Chat"}
+            {item.title || t("tabs.chat")}
           </Text>
           <Text style={[styles.rowMeta, { color: theme.textSecondary }]}>
             {formatRelativeTime(item.updatedAt || item.createdAt)}
@@ -92,7 +97,7 @@ export default function ConversationListModal({
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
-          accessibilityLabel="Close conversations"
+          accessibilityLabel={t("conversations.closeConversations")}
         />
         <View
           style={[
@@ -106,12 +111,12 @@ export default function ConversationListModal({
         >
           <View style={styles.drawerHeader}>
             <Text style={[styles.drawerTitle, { color: theme.textPrimary }]}>
-              Chats
+              {t("conversations.chats")}
             </Text>
             <TouchableOpacity
               onPress={onNewChat}
               accessibilityRole="button"
-              accessibilityLabel="New chat"
+              accessibilityLabel={t("conversations.newChat")}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons name="add" size={26} color={theme.accent} />
@@ -121,7 +126,7 @@ export default function ConversationListModal({
           <TouchableOpacity
             onPress={onNewChat}
             accessibilityRole="button"
-            accessibilityLabel="Start a new chat"
+            accessibilityLabel={t("conversations.startNewChat")}
             style={[
               styles.newChatRow,
               { backgroundColor: theme.inputBackground },
@@ -129,13 +134,13 @@ export default function ConversationListModal({
           >
             <Ionicons name="create-outline" size={20} color={theme.accent} />
             <Text style={[styles.newChatText, { color: theme.accent }]}>
-              New chat
+              {t("conversations.newChat")}
             </Text>
           </TouchableOpacity>
 
           {items.length === 0 ? (
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No conversations yet.
+              {t("conversations.noConversations")}
             </Text>
           ) : (
             <FlatList

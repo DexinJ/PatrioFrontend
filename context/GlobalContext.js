@@ -4,6 +4,7 @@
 // ✅ Username fetch + settings.user hydration now depend on authUser, not on useAuth.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import i18next from "i18next";
 import React, {
   createContext,
   useCallback,
@@ -159,7 +160,9 @@ function parseStoredArray(value, label) {
   if (value === null) return [];
   const parsedValue = JSON.parse(value);
   if (!Array.isArray(parsedValue)) {
-    throw new Error(`Stored ${label} data must be an array.`);
+    throw new Error(
+      i18next.t("errors.storedDataNotArray", { label })
+    );
   }
   return parsedValue;
 }
@@ -612,9 +615,14 @@ export const GlobalProvider = ({
     const id = uuidv4();
     const now = new Date().toISOString();
     saveActiveConversationToRef();
-    cancelActiveChatWork("Switched to a new conversation.");
+    cancelActiveChatWork(i18next.t("conversations.switchedToNewConversation"));
     setConversations((previous) => [
-      { id, title: "New chat", createdAt: now, updatedAt: now },
+      {
+        id,
+        title: i18next.t("conversations.newChat"),
+        createdAt: now,
+        updatedAt: now,
+      },
       ...previous,
     ]);
     setActiveConversationIdState(id);
@@ -945,7 +953,7 @@ export const GlobalProvider = ({
         setConversations([
           {
             id: "default",
-            title: "Chat",
+            title: i18next.t("tabs.chat"),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
@@ -1165,7 +1173,7 @@ export const GlobalProvider = ({
           },
           {
             timeoutMessage:
-              "Loading the account profile timed out. Please try again.",
+              i18next.t("errors.accountProfileTimedOut"),
           }
         );
 

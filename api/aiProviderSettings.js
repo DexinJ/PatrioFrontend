@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import i18next from "i18next";
 import {
   getLegacyStorageOwner,
   getUserSecureStorageKey,
@@ -200,7 +201,7 @@ export async function setCustomAiProviderSettings(
 ) {
   const providerId = normalizeAiBaseUrl(baseUrl);
   if (!providerId) {
-    throw new Error("An API base URL is required before saving its settings.");
+    throw new Error(i18next.t("errors.aiBaseUrlRequired"));
   }
 
   const nextSettings = {
@@ -234,7 +235,9 @@ export async function clearLegacyCustomAiProviderQuarantine() {
 
 export async function clearLegacyCustomAiProviderSettingsForUser(uid) {
   const normalizedUid = String(uid || "").trim();
-  if (!normalizedUid) throw new Error("An authenticated user is required.");
+  if (!normalizedUid) {
+    throw new Error(i18next.t("errors.authenticatedUserRequired"));
+  }
 
   return withSecureStoreLock(async () => {
     const ownerUid = await getLegacyStorageOwner();

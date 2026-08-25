@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +23,7 @@ import {
 import { signInWithGoogleNative } from "../../auth/googleAuth";
 
 export default function SignInScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { theme, settings } = useContext(GlobalContext);
 
@@ -48,7 +50,7 @@ export default function SignInScreen() {
     const e = email.trim();
 
     if (!e || !pw) {
-      return Alert.alert("Missing info", "Enter email and password.");
+      return Alert.alert(t("auth.missingInfo"), t("auth.enterEmailAndPassword"));
     }
     if (operationBusyRef.current) return;
 
@@ -58,7 +60,7 @@ export default function SignInScreen() {
       await signInWithEmailAndPassword(auth, e, pw);
     } catch (err) {
       if (mountedRef.current) {
-        Alert.alert("Login failed", err?.message || "Unknown error");
+        Alert.alert(t("auth.loginFailed"), err?.message || t("common.unknownError"));
       }
     } finally {
       operationBusyRef.current = false;
@@ -76,7 +78,10 @@ export default function SignInScreen() {
       if (!userCred?.user) return;
     } catch (err) {
       if (mountedRef.current) {
-        Alert.alert("Google sign-in failed", err?.message || "Unknown error");
+        Alert.alert(
+          t("auth.googleSignInFailed"),
+          err?.message || t("common.unknownError")
+        );
       }
     } finally {
       operationBusyRef.current = false;
@@ -100,7 +105,10 @@ export default function SignInScreen() {
     } catch (err) {
       if (err?.code === "ERR_REQUEST_CANCELED") return;
       if (mountedRef.current) {
-        Alert.alert("Apple sign-in failed", err?.message || "Unknown error");
+        Alert.alert(
+          t("auth.appleSignInFailed"),
+          err?.message || t("common.unknownError")
+        );
       }
     } finally {
       operationBusyRef.current = false;
@@ -116,16 +124,18 @@ export default function SignInScreen() {
           { color: theme.textPrimary, fontSize: fontSize * 1.6 },
         ]}
       >
-        Log in
+        {t("auth.logIn")}
       </Text>
 
-      <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {t("auth.email")}
+      </Text>
       <TextInput
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
-        placeholder="you@example.com"
+        placeholder={t("auth.emailPlaceholder")}
         placeholderTextColor={theme.textPlaceholder}
         style={[
           styles.input,
@@ -139,7 +149,7 @@ export default function SignInScreen() {
       />
 
       <Text style={[styles.label, { color: theme.textSecondary }]}>
-        Password
+        {t("auth.password")}
       </Text>
       <TextInput
         value={pw}
@@ -172,13 +182,13 @@ export default function SignInScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={[styles.buttonText, { fontSize }]}>Log in</Text>
+          <Text style={[styles.buttonText, { fontSize }]}>{t("auth.logIn")}</Text>
         )}
       </Pressable>
 
       <View style={styles.oauthRowWrap}>
         <Text style={[styles.oauthLabel, { color: theme.textSecondary }]}>
-          Or continue with
+          {t("auth.orContinueWith")}
         </Text>
 
         <View style={styles.oauthRow}>
@@ -194,7 +204,7 @@ export default function SignInScreen() {
             onPress={onGoogle}
             disabled={isBusy}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
+            accessibilityLabel={t("auth.continueWithGoogle")}
           >
             {googleLoading ? (
               <ActivityIndicator color={theme.accent} />
@@ -217,7 +227,7 @@ export default function SignInScreen() {
               onPress={onApple}
               disabled={isBusy}
               accessibilityRole="button"
-              accessibilityLabel="Continue with Apple"
+              accessibilityLabel={t("auth.continueWithApple")}
             >
               {appleLoading ? (
                 <ActivityIndicator color={theme.accent} />
@@ -241,7 +251,7 @@ export default function SignInScreen() {
               },
             ]}
             disabled
-            accessibilityLabel="Facebook (coming soon)"
+            accessibilityLabel={t("auth.facebookComingSoon")}
           >
             <Ionicons
               name="logo-facebook"
@@ -253,12 +263,12 @@ export default function SignInScreen() {
       </View>
 
       <Text style={[styles.footer, { color: theme.textSecondary }]}>
-        New here?{" "}
+        {t("auth.newHere")}{" "}
         <Text
           style={[styles.link, { color: theme.accent }]}
           onPress={() => router.push("/(auth)/sign-up")}
         >
-          Create an account
+          {t("auth.createAnAccount")}
         </Text>
       </Text>
     </View>

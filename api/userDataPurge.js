@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import i18next from "i18next";
 import {
   clearCustomAiProviderSettings,
   clearLegacyCustomAiProviderSettingsForUser,
@@ -88,7 +89,7 @@ export async function completePendingUserDataPurge(uid) {
         {
           scope: "purgeIntent",
           message:
-            "The pending data cleanup has not been confirmed yet.",
+            i18next.t("errors.dataCleanupNotConfirmed"),
         },
       ],
       awaitingConfirmation: true,

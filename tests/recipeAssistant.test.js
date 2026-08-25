@@ -23,6 +23,7 @@ function loadDirectAiTools() {
   });
   const module = { exports: {} };
   const stubs = new Map([
+    ["i18next", { t: (key) => key }],
     [
       "react",
       {

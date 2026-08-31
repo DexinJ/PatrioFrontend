@@ -622,7 +622,13 @@ export default function ItemFormModal({
                           setPickerVisible(false);
                         }}
                       >
-                        <Text style={{ color: "#fff", fontWeight: "900", fontSize }}>
+                        <Text
+                          style={{
+                            color: theme?.actionButtonText ?? "#fff",
+                            fontWeight: "900",
+                            fontSize,
+                          }}
+                        >
                           {t("common.done")}
                         </Text>
                       </TouchableOpacity>
@@ -768,7 +774,9 @@ export default function ItemFormModal({
                 onPress={handleSubmit}
                 disabled={submitting}
               >
-                <Text style={{ fontSize, color: "#fff" }}>{resolvedSubmitLabel}</Text>
+                <Text style={{ fontSize, color: theme?.actionButtonText ?? "#fff" }}>
+                  {resolvedSubmitLabel}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -13,6 +13,9 @@ import {
   Easing,
 } from "react-native";
 import MessageBubble from "./MessageBubble";
+import ChatMessageActionsMenu, {
+  useChatMessageActions,
+} from "./ChatMessageActionsMenu";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useTranslation } from "react-i18next";
@@ -43,6 +46,10 @@ function safeAction(value) {
  */
 function ActionCard({ action, onPress }) {
   const { t } = useTranslation();
+  const { theme } = useContext(GlobalContext);
+  const TextPrimary = theme?.textPrimary ?? "#111";
+  const TextSecondary = theme?.textSecondary ?? "#666";
+  const Border = theme?.border ?? "#ccc";
   const normalizedAction = safeAction(action);
   if (!normalizedAction) return null;
 
@@ -60,16 +67,16 @@ function ActionCard({ action, onPress }) {
           padding: 12,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: "#ccc",
+          borderColor: Border,
           marginVertical: 6,
         }}
       >
-        <Text style={{ fontWeight: "600", marginBottom: 6 }}>
+        <Text style={{ fontWeight: "600", marginBottom: 6, color: TextPrimary }}>
           {t("messageList.foundItems", { count: items.length })}
         </Text>
 
         {items.slice(0, 6).map((it, idx) => (
-          <Text key={idx} style={{ marginBottom: 2 }}>
+          <Text key={idx} style={{ marginBottom: 2, color: TextPrimary }}>
             • {toDisplayText(it?.name) || t("common.unnamed")}
             {toDisplayText(it?.quantity)
               ? ` — ${toDisplayText(it?.quantity)}`
@@ -77,7 +84,7 @@ function ActionCard({ action, onPress }) {
           </Text>
         ))}
         {items.length > 6 ? (
-          <Text style={{ marginTop: 4, opacity: 0.7 }}>
+          <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
             {t("messageList.more", { count: items.length - 6 })}
           </Text>
         ) : null}
@@ -93,11 +100,11 @@ function ActionCard({ action, onPress }) {
             borderRadius: 10,
             alignItems: "center",
             borderWidth: 1,
-            borderColor: "#333",
+            borderColor: TextPrimary,
             opacity: consumed ? 0.55 : 1,
           }}
         >
-          <Text style={{ fontWeight: "700" }}>
+          <Text style={{ fontWeight: "700", color: TextPrimary }}>
             {consumed ? t("messageList.addedToFridge") : title}
           </Text>
         </TouchableOpacity>
@@ -144,11 +151,11 @@ function ActionCard({ action, onPress }) {
           padding: 12,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: "#ccc",
+          borderColor: Border,
           marginVertical: 6,
         }}
       >
-        <Text style={{ fontWeight: "600", marginBottom: 6 }}>
+        <Text style={{ fontWeight: "600", marginBottom: 6, color: TextPrimary }}>
           {toDisplayText(normalizedAction.summary) ||
             (operation === "remove"
               ? t("messageList.removePreferences")
@@ -157,7 +164,7 @@ function ActionCard({ action, onPress }) {
                 : t("messageList.savePreferences"))}
         </Text>
         {changes.slice(0, 8).map((change) => (
-          <Text key={change} style={{ marginBottom: 2 }}>
+          <Text key={change} style={{ marginBottom: 2, color: TextPrimary }}>
             • {change}
           </Text>
         ))}
@@ -169,10 +176,10 @@ function ActionCard({ action, onPress }) {
             borderRadius: 10,
             alignItems: "center",
             borderWidth: 1,
-            borderColor: "#333",
+            borderColor: TextPrimary,
           }}
         >
-          <Text style={{ fontWeight: "700" }}>
+          <Text style={{ fontWeight: "700", color: TextPrimary }}>
             {toDisplayText(normalizedAction.title) ||
               t("messageList.savePreferencesButton")}
           </Text>
@@ -540,16 +547,24 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
                 return (
                   <View
                     key={`${it?.name ?? "item"}-${idx}`}
-                    style={styles.itemBlock}
+                    style={[styles.itemBlock, { borderBottomColor: Border }]}
                   >
                     <View style={styles.itemRow}>
                       <TouchableOpacity
                         onPress={() => toggleSelected(idx)}
-                        style={[styles.checkbox, it.selected && styles.checkboxChecked]}
+                        style={[
+                          styles.checkbox,
+                          { borderColor: TextPrimary },
+                          it.selected && { backgroundColor: TextPrimary },
+                        ]}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: !!it.selected }}
                       >
-                        {it.selected ? <Text style={styles.checkmark}>✓</Text> : null}
+                        {it.selected ? (
+                          <Text style={[styles.checkmark, { color: SheetBg }]}>
+                            ✓
+                          </Text>
+                        ) : null}
                       </TouchableOpacity>
 
                       <View style={{ flex: 1 }}>
@@ -619,6 +634,7 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
                           value={String(it?.quantity ?? "1")}
                           onChangeText={(t) => updateQty(idx, t)}
                           placeholder="1"
+                          placeholderTextColor={theme?.textPlaceholder ?? "#888"}
                           editable={it.selected}
                           style={[
                             styles.qtyInput,
@@ -818,6 +834,7 @@ export default function MessageList({ messages, onUiAction }) {
   const { waiting } = useContext(ChatContext);
   const [modalVisible, setModalVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const messageActions = useChatMessageActions();
 
   const openActionModal = (action) => {
     if (isFridgeProposalActionConsumed(action)) return;
@@ -911,9 +928,21 @@ export default function MessageList({ messages, onUiAction }) {
             return <ActionCard action={item.action} onPress={actionPress} />;
           }
           if (item.kind === "typing") return <TypingIndicator theme={theme} />;
-          return <MessageBubble text={item.text} imageUri={item.imageUri} isUser={item.isUser} />;
+          return (
+            <MessageBubble
+              text={item.text}
+              imageUri={item.imageUri}
+              isUser={item.isUser}
+              selected={messageActions.selectedId === item.key}
+              onLongPress={() =>
+                messageActions.openFor({ id: item.key, text: item.text })
+              }
+            />
+          );
         }}
         contentContainerStyle={{ padding: 10, paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         onContentSizeChange={() => {
           if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
           scrollTimerRef.current = setTimeout(() => {
@@ -928,6 +957,16 @@ export default function MessageList({ messages, onUiAction }) {
         action={pendingAction}
         onClose={closeActionModal}
         onConfirm={confirmActionModal}
+      />
+
+      <ChatMessageActionsMenu
+        visible={!!messageActions.target}
+        selectionMode={messageActions.selectionMode}
+        onCopy={messageActions.copy}
+        onSelectAll={messageActions.selectAll}
+        onShare={messageActions.share}
+        onDismiss={messageActions.dismiss}
+        theme={theme}
       />
     </>
   );
@@ -962,7 +1001,6 @@ const styles = StyleSheet.create({
   itemBlock: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
   },
   itemRow: {
     flexDirection: "row",
@@ -975,12 +1013,10 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#333",
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxChecked: { backgroundColor: "#333" },
-  checkmark: { color: "#fff", fontWeight: "900", lineHeight: 18 },
+  checkmark: { fontWeight: "900", lineHeight: 18 },
 
   qtyRow: { flexDirection: "row", alignItems: "center" },
   qtyInput: {

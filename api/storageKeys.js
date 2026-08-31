@@ -75,6 +75,7 @@ export function getUserStorageKeys(uid) {
     appSettings: `${namespace}:appSettings`,
     chatMessages: `${namespace}:chatMessages`,
     chatSummary: `${namespace}:chatSummary`,
+    chatConversations: `${namespace}:chatConversations`,
     purgeIntent: `${namespace}:purgeIntent`,
   };
 }

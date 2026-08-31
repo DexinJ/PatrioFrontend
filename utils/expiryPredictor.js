@@ -133,3 +133,35 @@ export function predictExpiresAtIso({ createdAtIso, tagIds, tagById }) {
   const days = estimateShelfLifeDays({ storage, urgency, foodType, state });
   return addDaysIso(createdAtIso, days);
 }
+
+// Maximum shelf life the app accepts from AI day estimates or absolute
+// dates (matches the manual item form's cap).
+export const MAX_SHELF_LIFE_DAYS = 36_500;
+
+/**
+ * normalizeShelfLifeDays(value)
+ * Accepts an AI "days until expiry" estimate and returns a sane integer,
+ * or null when missing/out of range. Rejects 0, negatives, non-numeric
+ * values, and estimates beyond the app-wide cap.
+ */
+export function normalizeShelfLifeDays(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return null;
+  if (n < 1 || n > MAX_SHELF_LIFE_DAYS) return null;
+  return n;
+}
+
+/**
+ * isPlausibleExpiresAtIso(value, now?)
+ * Guards against hallucinated absolute dates (e.g. 1960) before they are
+ * stored: the date must parse, not be in the past, and not be absurdly far
+ * in the future.
+ */
+export function isPlausibleExpiresAtIso(value, now = new Date()) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  const nowMs = now.getTime();
+  if (Number.isNaN(nowMs)) return false;
+  const diffMs = d.getTime() - nowMs;
+  return diffMs >= 0 && diffMs <= MAX_SHELF_LIFE_DAYS * 86_400_000;
+}

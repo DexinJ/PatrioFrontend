@@ -5,6 +5,7 @@ import test from "node:test";
 
 import babel from "@babel/core";
 import transformModulesCommonJs from "@babel/plugin-transform-modules-commonjs";
+import * as expiryPredictor from "../utils/expiryPredictor.js";
 import * as fridgeProposal from "../utils/fridgeProposal.js";
 
 function loadToolOwnershipHelpers(contextValue = {}) {
@@ -26,6 +27,7 @@ function loadToolOwnershipHelpers(contextValue = {}) {
       return { normalizeRecipePreferencePatch: (value) => value || {} };
     }
     if (specifier === "../utils/fridgeProposal") return fridgeProposal;
+    if (specifier === "../utils/expiryPredictor") return expiryPredictor;
     throw new Error(`Unexpected test import: ${specifier}`);
   };
   vm.runInNewContext(
@@ -101,7 +103,7 @@ test("proposal tools acknowledge one confirmation card with semantic results", a
           urgency: "Use soon",
           food_type: "Dairy",
         },
-        expiresAt: "2026-08-20",
+        expiresInDays: 7,
       },
     ],
   });
@@ -127,4 +129,5 @@ test("proposal tools acknowledge one confirmation card with semantic results", a
       food_type: "Dairy",
     }
   );
+  assert.equal(messages[1].action.items[0].expiresInDays, 7);
 });

@@ -44,6 +44,9 @@ import {
   getExpiryMeta,
 } from "../utils/expiration";
 import {
+  addDaysIso,
+  isPlausibleExpiresAtIso,
+  normalizeShelfLifeDays,
   predictExpiresAtIso,
   toIsoOrNull,
 } from "../utils/expiryPredictor";
@@ -70,6 +73,8 @@ import {
 import {
   boundRuntimeChatMessages,
   collectChatAttachmentUris,
+  makeChatTitleFromText,
+  normalizeChatIndex,
   prepareChatMessagesForPersistence,
   replaceChatImagesWithPlaceholders,
   shouldClearChatOnIncognitoExit,
@@ -165,6 +170,40 @@ function parseStoredArray(value, label) {
     );
   }
   return parsedValue;
+}
+
+// Titles created by the app itself (before any real content exists) are
+// treated as placeholders and replaced with an auto-name from the first
+// user message.
+const PLACEHOLDER_CHAT_TITLE_KEYS = ["conversations.newChat", "tabs.chat"];
+
+function isPlaceholderChatTitle(title) {
+  const normalized = String(title || "").trim();
+  if (!normalized) return false;
+  return PLACEHOLDER_CHAT_TITLE_KEYS.some(
+    (key) => normalized === i18next.t(key)
+  );
+}
+
+function firstUserMessageText(value) {
+  const candidates = Array.isArray(value) ? value : [];
+  for (const message of candidates) {
+    if (message?.role !== "user") continue;
+    const parts = [];
+    if (typeof message.content === "string") {
+      parts.push(message.content);
+    } else if (Array.isArray(message.content)) {
+      for (const part of message.content) {
+        if (typeof part === "string") parts.push(part);
+        else if (typeof part?.text === "string") parts.push(part.text);
+      }
+    }
+    if (typeof message.text === "string") parts.push(message.text);
+    const text = parts.join(" ").replace(/\s+/g, " ").trim();
+    // Persisted image placeholders shouldn't become a chat title.
+    if (text && text !== "[image]") return text;
+  }
+  return "";
 }
 
 function parseStoredSettings(value) {
@@ -666,6 +705,27 @@ export const GlobalProvider = ({
     );
   }, [activeConversationId, conversations]);
 
+  // Auto-name conversations from their first user message so the list never
+  // stays littered with "New chat" placeholders.
+  useEffect(() => {
+    const activeId = activeConversationIdRef.current;
+    if (!activeId) return;
+    const conversation = (Array.isArray(conversations) ? conversations : []).find(
+      (item) => item.id === activeId
+    );
+    if (!conversation || !isPlaceholderChatTitle(conversation.title)) return;
+
+    const text = firstUserMessageText(messages);
+    if (!text) return;
+
+    const title = makeChatTitleFromText(text) || i18next.t("chat.photoChat");
+    setConversations((previous) =>
+      (Array.isArray(previous) ? previous : []).map((item) =>
+        item.id === activeId ? { ...item, title } : item
+      )
+    );
+  }, [activeConversationId, conversations, messages, setConversations]);
+
   // System theme from device
   const systemScheme = useColorScheme();
   const [expiryClock, setExpiryClock] = useState(() => Date.now());
@@ -855,13 +915,19 @@ export const GlobalProvider = ({
       }
 
       const storageKeys = getUserStorageKeys(storageOwnerUid);
-      const [fridgeResult, shoppingResult, settingsResult, chatResult] =
-        await Promise.allSettled([
-          AsyncStorage.getItem(storageKeys.fridgeItems),
-          AsyncStorage.getItem(storageKeys.shoppingListItems),
-          AsyncStorage.getItem(storageKeys.appSettings),
-          loadChatData(storageOwnerUid),
-        ]);
+      const [
+        fridgeResult,
+        shoppingResult,
+        settingsResult,
+        chatResult,
+        chatIndexResult,
+      ] = await Promise.allSettled([
+        AsyncStorage.getItem(storageKeys.fridgeItems),
+        AsyncStorage.getItem(storageKeys.shoppingListItems),
+        AsyncStorage.getItem(storageKeys.appSettings),
+        loadChatData(storageOwnerUid),
+        AsyncStorage.getItem(storageKeys.chatConversations),
+      ]);
       if (cancelled) return;
 
       let fridgeData = [];
@@ -933,6 +999,23 @@ export const GlobalProvider = ({
         chatError = chatResult.reason;
       }
 
+      // The chat index (conversation list + active id) is optional: a missing
+      // or unreadable index falls back to the legacy single-conversation
+      // layout and is rewritten on the next save.
+      let storedChatIndex = null;
+      if (
+        chatIndexResult.status === "fulfilled" &&
+        chatIndexResult.value !== null
+      ) {
+        try {
+          storedChatIndex = normalizeChatIndex(
+            JSON.parse(chatIndexResult.value)
+          );
+        } catch (error) {
+          console.warn("Could not parse stored chat index:", error);
+        }
+      }
+
       if (cancelled) return;
 
       if (!fridgeError) setFridgeItemsRaw(fridgeData);
@@ -943,22 +1026,43 @@ export const GlobalProvider = ({
         );
       }
       if (!chatError) {
+        const storedConversations = storedChatIndex?.conversations || [];
+        const nowIso = new Date().toISOString();
+        conversationDataRef.current.clear();
+
+        if (storedConversations.length === 0) {
+          // Legacy single-conversation storage: seed one conversation. The
+          // rename effect gives it a real title from its first message.
+          conversationDataRef.current.set("default", {
+            messages: chatData.messages,
+            summary: chatData.summary,
+          });
+          setConversations([
+            {
+              id: "default",
+              title: i18next.t("tabs.chat"),
+              createdAt: nowIso,
+              updatedAt: nowIso,
+            },
+          ]);
+          setActiveConversationIdState("default");
+        } else {
+          const storedActiveId = storedChatIndex?.activeConversationId;
+          const activeId =
+            storedActiveId &&
+            storedConversations.some((item) => item.id === storedActiveId)
+              ? storedActiveId
+              : storedConversations[0].id;
+          conversationDataRef.current.set(activeId, {
+            messages: chatData.messages,
+            summary: chatData.summary,
+          });
+          setConversations(storedConversations);
+          setActiveConversationIdState(activeId);
+        }
+
         setMessages(chatData.messages);
         setSummary(chatData.summary);
-        conversationDataRef.current.clear();
-        conversationDataRef.current.set("default", {
-          messages: chatData.messages,
-          summary: chatData.summary,
-        });
-        setConversations([
-          {
-            id: "default",
-            title: i18next.t("tabs.chat"),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ]);
-        setActiveConversationIdState("default");
       }
       chatLastSavedAtRef.current = Date.now();
       hydratedStorageOwnerUidRef.current = storageOwnerUid;
@@ -1021,11 +1125,12 @@ export const GlobalProvider = ({
       chatSaveTimerRef.current = null;
     }
 
-    const { chatMessages, chatSummary } = getUserStorageKeys(storageOwnerUid);
+    const { chatMessages, chatSummary, chatConversations } =
+      getUserStorageKeys(storageOwnerUid);
     setSummary("");
     setMessages((previous) => replaceChatImagesWithPlaceholders(previous));
     Promise.all([
-      AsyncStorage.multiRemove([chatMessages, chatSummary]),
+      AsyncStorage.multiRemove([chatMessages, chatSummary, chatConversations]),
       pruneChatAttachments(storageOwnerUid, []),
     ]).catch((error) => {
       console.warn("Could not remove incognito chat storage:", error);
@@ -1108,6 +1213,48 @@ export const GlobalProvider = ({
   }, [
     messages,
     receiving,
+    incognitoEnabled,
+    leavingIncognito,
+    storageHydration.chat.writeEnabled,
+    storageOwnerUid,
+  ]);
+
+  // Persist the conversation list + active id (the lightweight "chat index").
+  // Per-conversation message payloads stay in memory; the active conversation
+  // continues to use the existing chatMessages/chatSummary storage.
+  useEffect(() => {
+    if (
+      !storageHydration.chat.writeEnabled ||
+      !storageWriteEnabledRef.current.chat ||
+      !storageOwnerUid
+    ) {
+      return;
+    }
+    if (incognitoEnabled || leavingIncognito) return;
+
+    const { chatConversations } = getUserStorageKeys(storageOwnerUid);
+    const payload = {
+      version: 1,
+      activeConversationId: activeConversationId || null,
+      conversations: Array.isArray(conversations) ? conversations : [],
+    };
+
+    AsyncStorage.setItem(chatConversations, JSON.stringify(payload)).catch(
+      (error) => {
+        storageWriteEnabledRef.current = {
+          ...storageWriteEnabledRef.current,
+          chat: false,
+        };
+        setStorageHydration((previous) => ({
+          ...previous,
+          chat: { resolved: true, writeEnabled: false, error },
+        }));
+        console.warn("save scoped chat conversations failed:", error);
+      }
+    );
+  }, [
+    activeConversationId,
+    conversations,
     incognitoEnabled,
     leavingIncognito,
     storageHydration.chat.writeEnabled,
@@ -1530,7 +1677,22 @@ export const GlobalProvider = ({
       const tagIds = normalizeCategoriesToTagIds(
         item?.tagIds ?? item?.categories
       );
-      let finalExpiresAt = toIsoOrNull(item?.expiresAt);
+      // Prefer the AI's whole-day shelf-life estimate (anchored to the
+      // commit moment), then a plausible absolute date, then the tag-based
+      // predictor. Absurd dates like 1960 fall through to the predictor.
+      const shelfLifeDays = normalizeShelfLifeDays(
+        item?.expiresInDays ?? item?.shelfLifeDays
+      );
+      let finalExpiresAt = shelfLifeDays
+        ? addDaysIso(nowIso, shelfLifeDays)
+        : null;
+      if (!finalExpiresAt) {
+        const rawExpiresAt = toIsoOrNull(item?.expiresAt);
+        finalExpiresAt =
+          rawExpiresAt && isPlausibleExpiresAtIso(rawExpiresAt)
+            ? rawExpiresAt
+            : null;
+      }
       if (!finalExpiresAt) {
         finalExpiresAt = predictExpiresAtIso({
           createdAtIso: nowIso,
@@ -1552,8 +1714,10 @@ export const GlobalProvider = ({
     return additions;
   };
 
-  const addToFridge = (name, quantity, categories, expiresAt) =>
-    addManyToFridge([{ name, quantity, categories, expiresAt }])[0];
+  const addToFridge = (name, quantity, categories, expiresAt, expiresInDays) =>
+    addManyToFridge([
+      { name, quantity, categories, expiresAt, expiresInDays },
+    ])[0];
 
   const removeManyFromFridge = (ids = []) => {
     const idsToRemove = new Set(Array.isArray(ids) ? ids.filter(Boolean) : []);

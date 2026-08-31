@@ -177,8 +177,8 @@
     "deleteItemsQuestion_other": "Delete {{count}} items?"
   },
   "chat": {
-    "newChat": "New chat",
     "startNewChat": "Start a new chat",
+    "photoChat": "Photo chat",
     "switchedToNewConversation": "Switched to a new conversation.",
     "chatDescription": "Ask Pantrio about meals, your fridge, or your shopping list.",
     "savedPreferences": "Saved your recipe preferences:\n{{summary}}",
@@ -196,6 +196,12 @@
       "upstreamUnavailable": "Pantrio AI is temporarily unavailable. Please try again.",
       "couldNotComplete": "Pantrio AI could not complete that request."
     }
+  },
+  "chatActions": {
+    "title": "Message actions",
+    "copy": "Copy",
+    "share": "Share",
+    "selected": "Selected message"
   },
   "conversations": {
     "chats": "Chats",
@@ -518,7 +524,7 @@
       "openrouter": "OpenRouter",
       "groq": "Groq",
       "togetherAi": "Together AI",
-      "custom": "Custom ({{url}})"
+      "custom": "Custom API"
     },
     "signInProviders": {
       "apple": "Apple",
@@ -660,6 +666,8 @@
     "resetDeviceDataAlertTitle": "Reset data on this device?",
     "resetDeviceDataAlertMessage": "This clears fridge items, the shopping list, chat history, settings, reminders, and saved custom-AI credentials for this account on this device. Your Pantrio account is not deleted. This cannot be undone.",
     "resetDeviceDataButton": "Reset Device Data",
+    "resetTypeToConfirm": "Type \"reset\" to continue.",
+    "resetConfirmPlaceholder": "reset",
     "clearChatMessages": "Clear Chat Messages",
     "clearChatAlertTitle": "Clear chat messages?",
     "clearChatAlertMessage": "This clears chat messages, the chat summary, and chat attachments for this account on this device. This cannot be undone.",

@@ -2,6 +2,7 @@ export const MAX_RUNTIME_CHAT_MESSAGES = 120;
 export const MAX_RUNTIME_CHAT_BYTES = 2 * 1024 * 1024;
 export const MAX_PERSISTED_CHAT_MESSAGES = 100;
 export const MAX_PERSISTED_CHAT_BYTES = 768 * 1024;
+export const MAX_CHAT_TITLE_LENGTH = 40;
 
 const MAX_TEXT_CHARACTERS = 60_000;
 const DATA_IMAGE_PREFIX = "data:image/";
@@ -12,6 +13,53 @@ const serializedByteCache = new WeakMap();
 
 function isPlainRecord(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function collapseWhitespace(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+// Builds a short, single-line conversation title from raw message text.
+export function makeChatTitleFromText(value) {
+  const collapsed = collapseWhitespace(value);
+  if (!collapsed) return "";
+  if (collapsed.length <= MAX_CHAT_TITLE_LENGTH) return collapsed;
+  return `${collapsed.slice(0, MAX_CHAT_TITLE_LENGTH).trimEnd()}…`;
+}
+
+// Normalizes a stored conversation list, dropping malformed/duplicate ids.
+export function normalizeConversationList(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const conversations = [];
+
+  for (const item of value) {
+    if (!isPlainRecord(item)) continue;
+    const id = typeof item.id === "string" ? item.id.trim() : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    conversations.push({
+      id,
+      title: typeof item.title === "string" ? item.title : "",
+      createdAt: typeof item.createdAt === "string" ? item.createdAt : "",
+      updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : "",
+    });
+  }
+
+  return conversations;
+}
+
+// Normalizes the persisted chat index envelope:
+// { version, activeConversationId, conversations }.
+export function normalizeChatIndex(value) {
+  if (!isPlainRecord(value)) return null;
+  return {
+    activeConversationId:
+      typeof value.activeConversationId === "string"
+        ? value.activeConversationId
+        : null,
+    conversations: normalizeConversationList(value.conversations),
+  };
 }
 
 function boundedText(value) {

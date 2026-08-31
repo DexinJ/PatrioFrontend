@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   Linking,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -36,13 +37,16 @@ function getDomain(url) {
   }
 }
 
-function MessageBubble({ text, imageUri, isUser }) {
+function MessageBubble({ text, imageUri, isUser, selected = false, onLongPress }) {
   const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
   const fontSize = settings?.ux?.fontSize || 16;
   const incognito = Boolean(settings?.privacy?.incognito);
   const chatgptStyle = Boolean(settings?.chat?.chatgptStyle);
   const autoLoadPreview = shouldAutoLoadLinkPreview({ incognito });
+  // iOS: custom actions menu (long-press), so the native copy-only menu must
+  // stay off. Android: keep native text selection with selection handles.
+  const useCustomTextMenu = Platform.OS === "ios";
 
   const [previewVisible, setPreviewVisible] = useState(false);
   const mountedRef = useRef(false);
@@ -192,18 +196,26 @@ function MessageBubble({ text, imageUri, isUser }) {
           { backgroundColor: isUser ? theme.userBubble : theme.aiBubble },
           isUser ? styles.userBubble : styles.aiBubble,
           chatgptStyle && !isUser ? styles.aiBubbleChatgpt : null,
+          selected && { borderColor: theme.accent, borderWidth: 1.5 },
         ]}
       >
         {displayText ? (
           isUser ? (
             <Text
-              selectable
+              selectable={!useCustomTextMenu}
+              onLongPress={useCustomTextMenu ? onLongPress : undefined}
               style={[styles.text, { fontSize, color: theme.textPrimary }]}
             >
               {displayText}
             </Text>
           ) : (
-            <MarkdownText text={displayText} theme={theme} fontSize={fontSize} />
+            <MarkdownText
+              text={displayText}
+              theme={theme}
+              fontSize={fontSize}
+              selectable={!useCustomTextMenu}
+              onLongPress={useCustomTextMenu ? onLongPress : undefined}
+            />
           )
         ) : null}
       </View>

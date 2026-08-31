@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlobalContext } from "../context/GlobalContext";
 
@@ -13,6 +20,18 @@ const HEADER_BAND_EXTRA = 15;
 const HEADER_BAND_EXTRA_HALF = HEADER_BAND_EXTRA / 2;
 const ICON_HEADER_BAND_EXTRA = 12;
 const ICON_HEADER_BAND_EXTRA_HALF = ICON_HEADER_BAND_EXTRA / 2;
+
+// The title (not the buttons) defines the header band height, so its full
+// line box is always visible. These insets reserve symmetric space so the
+// centered title never collides with the absolutely-positioned side controls:
+// header horizontal padding (20) + the control's max footprint
+// (90 left button / 70 right button / 24 back icon).
+const HEADER_HORIZONTAL_PADDING = 20;
+const LEFT_BUTTON_MAX_WIDTH = 90;
+const RIGHT_BUTTON_MAX_WIDTH = 70;
+const TITLE_LEFT_BUTTON_INSET = HEADER_HORIZONTAL_PADDING + LEFT_BUTTON_MAX_WIDTH;
+const TITLE_RIGHT_BUTTON_INSET = HEADER_HORIZONTAL_PADDING + RIGHT_BUTTON_MAX_WIDTH;
+const TITLE_BACK_ICON_INSET = HEADER_HORIZONTAL_PADDING + 24;
 
 export function PlainHeader({ title }) {
   const { theme } = useContext(GlobalContext);
@@ -46,22 +65,71 @@ export function PlainHeader({ title }) {
  * the accessibility label. Kept purely presentational so any screen can reuse
  * it without chat-specific knowledge.
  */
+function IconHeaderButton({
+  icon,
+  label,
+  onPress,
+  color,
+  size = 24,
+  rotateOnPress = false,
+}) {
+  const { theme } = useContext(GlobalContext);
+  const [pressScale] = useState(() => new Animated.Value(1));
+  const [pressRotate] = useState(() => new Animated.Value(0));
+
+  const animatePress = (pressed) => {
+    Animated.parallel([
+      Animated.spring(pressScale, {
+        toValue: pressed ? 0.82 : 1,
+        speed: pressed ? 40 : 18,
+        bounciness: pressed ? 0 : 10,
+        useNativeDriver: true,
+      }),
+      Animated.spring(pressRotate, {
+        toValue: pressed ? 1 : 0,
+        speed: pressed ? 40 : 18,
+        bounciness: pressed ? 0 : 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const transform = [
+    { scale: pressScale },
+    ...(rotateOnPress
+      ? [
+          {
+            rotate: pressRotate.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["0deg", "45deg"],
+            }),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={() => animatePress(true)}
+      onPressOut={() => animatePress(false)}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Animated.View style={{ transform }}>
+        <Ionicons name={icon} size={size} color={color || theme.accent} />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
 export function IconHeader({ title, leftItems = [], rightItems = [] }) {
   const { theme } = useContext(GlobalContext);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const renderItem = ({ icon, label, onPress, color, size = 24 }) => (
-    <TouchableOpacity
-      key={label}
-      onPress={onPress}
-      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <Ionicons name={icon} size={size} color={color || theme.accent} />
-    </TouchableOpacity>
-  );
+  const renderItem = (item) => <IconHeaderButton key={item.label} {...item} />;
 
   return (
     <View
@@ -88,7 +156,7 @@ export function IconHeader({ title, leftItems = [], rightItems = [] }) {
       >
         {title}
       </Text>
-      <View style={styles.iconHeaderSide}>
+      <View style={[styles.iconHeaderSide, styles.iconHeaderSideRight]}>
         {(Array.isArray(rightItems) ? rightItems : []).map(renderItem)}
       </View>
     </View>
@@ -132,14 +200,18 @@ export function HeaderWithButton({
         },
       ]}
     >
-      {/* LEFT: optional Select All / Clear */}
-      {showLeftButton ? (
+      {/* LEFT: optional Select All / Clear — absolute, centered in the title band */}
+      {showLeftButton && (
         <TouchableOpacity
           onPress={onLeftPress}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel={leftButtonLabel}
-          style={styles.leftBtnWrap} // ✅ limits visual width only (does NOT change layout positions)
+          style={[
+            styles.headerSideButton,
+            styles.leftBtnWrap,
+            { top: insets.top + HEADER_BAND_EXTRA_HALF, bottom: HEADER_BAND_EXTRA_HALF },
+          ]}
         >
           <Text
             style={[styles.editButton, { fontSize: buttonFont, color: theme.accent }]}
@@ -149,19 +221,15 @@ export function HeaderWithButton({
             {leftButtonLabel}
           </Text>
         </TouchableOpacity>
-      ) : (
-        // Spacer to keep the centered title truly centered when left button is hidden
-        <View style={{ width: 90 }} />
       )}
 
-      {/* CENTER: title, centered in the same band as the buttons */}
+      {/* CENTER: in-flow title defines the band height, so its full line box is visible */}
       <View
         pointerEvents="none"
         style={[
           styles.headerTitleWrap,
           {
-            top: insets.top + HEADER_BAND_EXTRA_HALF,
-            bottom: HEADER_BAND_EXTRA_HALF,
+            paddingHorizontal: showLeftButton ? TITLE_LEFT_BUTTON_INSET : TITLE_RIGHT_BUTTON_INSET,
           },
         ]}
       >
@@ -180,19 +248,21 @@ export function HeaderWithButton({
         </Text>
       </View>
 
-      {/* RIGHT: existing button (Edit / Done) */}
+      {/* RIGHT: existing button (Edit / Done) — absolute, centered in the title band */}
       <TouchableOpacity
         onPress={onPress}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         accessibilityRole="button"
         accessibilityLabel={buttonLabel}
-        style={styles.rightBtnWrap} // ✅ optional: also cap right side so it doesn't balloon
+        style={[
+          styles.headerSideButton,
+          styles.rightBtnWrap,
+          { top: insets.top + HEADER_BAND_EXTRA_HALF, bottom: HEADER_BAND_EXTRA_HALF },
+        ]}
       >
-        <View>
-          <Text style={[styles.editButton, { fontSize: buttonFont, color: theme.accent }]}>
-            {buttonLabel}
-          </Text>
-        </View>
+        <Text style={[styles.editButton, { fontSize: buttonFont, color: theme.accent }]}>
+          {buttonLabel}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -222,18 +292,17 @@ export function HeaderWithHiddenButton({ title, onPress, hideButton = true }) {
             onPress={onPress}
             accessibilityRole="button"
             accessibilityLabel={t("header.goBack")}
+            style={[
+              styles.headerSideButton,
+              styles.backBtnWrap,
+              { top: insets.top + HEADER_BAND_EXTRA_HALF, bottom: HEADER_BAND_EXTRA_HALF },
+            ]}
           >
             <Ionicons name="arrow-back" size={24} color={theme.accent} />
           </TouchableOpacity>
           <View
             pointerEvents="none"
-            style={[
-              styles.headerTitleWrap,
-              {
-                top: insets.top + HEADER_BAND_EXTRA_HALF,
-                bottom: HEADER_BAND_EXTRA_HALF,
-              },
-            ]}
+            style={[styles.headerTitleWrap, { paddingHorizontal: TITLE_BACK_ICON_INSET }]}
           >
             <Text
               style={[
@@ -275,33 +344,32 @@ export function HeaderWithHiddenButton({ title, onPress, hideButton = true }) {
 const styles = StyleSheet.create({
   header: {
     paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: HEADER_HORIZONTAL_PADDING,
     borderBottomWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between", // ✅ unchanged
+    justifyContent: "center", // the title is the only in-flow child and defines the band
   },
   plain_header: {
     paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: HEADER_HORIZONTAL_PADDING,
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "center",
   },
   hide_header: {
     paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: HEADER_HORIZONTAL_PADDING,
     borderBottomWidth: 1,
     flexDirection: "row",
-    justifyContent: "flex-start",
+    alignItems: "center",
+    justifyContent: "center", // the title is the only in-flow child and defines the band
   },
   headerText: {
     fontWeight: "600",
   },
   headerTitleWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -310,13 +378,24 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end", // ✅ you asked to keep this
   },
 
-  // ✅ visual constraints only (doesn't affect the absolute-centered title)
+  // Side controls are absolutely positioned and stretched to the title band
+  // (top/bottom are supplied by the component to match the header padding),
+  // then vertically centered via justifyContent.
+  headerSideButton: {
+    position: "absolute",
+    justifyContent: "center",
+  },
   leftBtnWrap: {
-    maxWidth: 90, // keep Select All/Clear from looking huge
+    left: HEADER_HORIZONTAL_PADDING,
+    maxWidth: LEFT_BUTTON_MAX_WIDTH, // keep Select All/Clear from looking huge
   },
   rightBtnWrap: {
-    maxWidth: 70, // optional: keeps "Done" / "Edit" tidy
+    right: HEADER_HORIZONTAL_PADDING,
+    maxWidth: RIGHT_BUTTON_MAX_WIDTH, // keeps "Done" / "Edit" tidy
     alignItems: "flex-end",
+  },
+  backBtnWrap: {
+    left: HEADER_HORIZONTAL_PADDING,
   },
   iconHeaderRow: {
     paddingVertical: 12,
@@ -331,6 +410,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 18,
     minWidth: 56,
+  },
+  iconHeaderSideRight: {
+    justifyContent: "flex-end",
   },
   iconHeaderTitle: {
     flex: 1,

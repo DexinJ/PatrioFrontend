@@ -20,14 +20,19 @@ export default function SectionHeaderPill({
 
   const tint = isDanger ? theme?.danger : isWarning ? theme?.warning : theme?.textSecondary;
   const pillBg = isDanger ? theme?.danger : isWarning ? theme?.warning : theme?.textSecondary;
+  // White keeps contrast on the saturated danger/warning pills; the neutral
+  // pill uses the theme background so its text stays readable in dark mode.
+  const pillFg = isDanger || isWarning ? "#fff" : theme?.background ?? "#fff";
 
   return (
     <View style={[styles.wrap, style, { backgroundColor: theme?.background }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {typeof count === "number" && (
           <View style={[styles.pill, { backgroundColor: pillBg }]}>
-            <Ionicons name="warning" size={fontSize * 1.0} color="#fff" />
-            <Text style={[styles.pillText, { fontSize: fontSize * 0.86 }]}>{count}</Text>
+            <Ionicons name="warning" size={fontSize * 1.0} color={pillFg} />
+            <Text style={[styles.pillText, { color: pillFg, fontSize: fontSize * 0.86 }]}>
+              {count}
+            </Text>
           </View>
         )}
 
@@ -69,7 +74,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   pillText: {
-    color: "#fff",
     fontWeight: "900",
   },
 });

@@ -79,17 +79,28 @@ const PRIVACY_POLICY_URL = String(
 const LOCAL_AI_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 const AI_PROVIDER_URLS = [
-  { labelKey: "settings.providers.openai", value: "https://api.openai.com/v1" },
   {
+    id: "openai",
+    labelKey: "settings.providers.openai",
+    value: "https://api.openai.com/v1",
+  },
+  {
+    id: "openrouter",
     labelKey: "settings.providers.openrouter",
     value: "https://openrouter.ai/api/v1",
   },
-  { labelKey: "settings.providers.groq", value: "https://api.groq.com/openai/v1" },
   {
+    id: "groq",
+    labelKey: "settings.providers.groq",
+    value: "https://api.groq.com/openai/v1",
+  },
+  {
+    id: "together",
     labelKey: "settings.providers.togetherAi",
     value: "https://api.together.xyz/v1",
   },
 ];
+const CUSTOM_AI_PROVIDER_ID = "custom";
 
 const APPLE_AI_UNSUPPORTED_STATUSES = new Set([
   "device_not_eligible",
@@ -489,6 +500,9 @@ export default function SettingsScreen() {
   const [deletePasswordModalVisible, setDeletePasswordModalVisible] =
     useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [resetConfirmModalVisible, setResetConfirmModalVisible] =
+    useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
   const [showPlanDetails, setShowPlanDetails] = useState(false);
   const [showAvailablePlans, setShowAvailablePlans] = useState(false);
   const [showUrgencyThresholds, setShowUrgencyThresholds] = useState(false);
@@ -614,26 +628,45 @@ export default function SettingsScreen() {
   const loadingAiProviderSettings =
     !storageHydrated || aiProviderSettingsBaseUrl !== normalizedAiBaseUrl;
 
+  const selectedAiProviderId = useMemo(() => {
+    const normalized = normalizeAiBaseUrl(aiBaseUrl);
+    const preset = AI_PROVIDER_URLS.find(
+      (item) => normalizeAiBaseUrl(item.value) === normalized
+    );
+    return preset ? preset.id : CUSTOM_AI_PROVIDER_ID;
+  }, [aiBaseUrl]);
+
   const aiProviderItems = useMemo(() => {
-    const normalizedUrl = normalizeAiBaseUrl(aiBaseUrl);
-    const translatedDefaults = AI_PROVIDER_URLS.map((item) => ({
-      label: t(item.labelKey),
-      value: item.value,
-    }));
-    if (
-      !normalizedUrl ||
-      AI_PROVIDER_URLS.some((item) => item.value === normalizedUrl)
-    ) {
-      return translatedDefaults;
-    }
     return [
+      ...AI_PROVIDER_URLS.map((item) => ({
+        label: t(item.labelKey),
+        value: item.id,
+      })),
       {
-        label: t("settings.providers.custom", { url: normalizedUrl }),
-        value: normalizedUrl,
+        label: t("settings.providers.custom"),
+        value: CUSTOM_AI_PROVIDER_ID,
       },
-      ...translatedDefaults,
     ];
-  }, [aiBaseUrl, t]);
+  }, [t]);
+
+  const handleAiProviderSelect = useCallback(
+    (nextId) => {
+      if (nextId === CUSTOM_AI_PROVIDER_ID) {
+        setAiBaseUrl((current) =>
+          AI_PROVIDER_URLS.some(
+            (item) =>
+              normalizeAiBaseUrl(item.value) === normalizeAiBaseUrl(current)
+          )
+            ? ""
+            : current
+        );
+        return;
+      }
+      const preset = AI_PROVIDER_URLS.find((item) => item.id === nextId);
+      if (preset) setAiBaseUrl(preset.value);
+    },
+    [setAiBaseUrl]
+  );
 
   useEffect(() => {
     if (!storageHydrated) return undefined;
@@ -898,6 +931,15 @@ export default function SettingsScreen() {
         );
       }
     }
+  };
+
+  const resetConfirmReady =
+    resetConfirmText.trim().toLowerCase() === "reset";
+  const confirmResetData = () => {
+    if (!resetConfirmReady) return;
+    setResetConfirmModalVisible(false);
+    setResetConfirmText("");
+    void handleClearAllData();
   };
 
   const updateReminderToggle = async (section, key, enabled) => {
@@ -2380,6 +2422,7 @@ export default function SettingsScreen() {
                 </View>
               </View>
             </Modal>
+
               </>
             ) : null}
           </View>
@@ -2984,23 +3027,7 @@ export default function SettingsScreen() {
 
               <CustomButton
                 title={t("settings.resetDataOnDevice")}
-                onPress={() => {
-                  Alert.alert(
-                    t("settings.resetDeviceDataAlertTitle"),
-                    t("settings.resetDeviceDataAlertMessage"),
-                    [
-                      {
-                        text: t("common.cancel"),
-                        style: "cancel",
-                      },
-                      {
-                        text: t("settings.resetDeviceDataButton"),
-                        style: "destructive",
-                        onPress: handleClearAllData,
-                      },
-                    ]
-                  );
-                }}
+                onPress={() => setResetConfirmModalVisible(true)}
                 fontSize={fontSize}
                 color={theme.danger}
               />
@@ -3125,10 +3152,10 @@ export default function SettingsScreen() {
               </Text>
               <DropDownPicker
                 open={aiProviderOpen}
-                value={aiBaseUrl}
+                value={selectedAiProviderId}
                 items={aiProviderItems}
                 setOpen={setAiProviderOpen}
-                setValue={setAiBaseUrl}
+                onChangeValue={handleAiProviderSelect}
                 disabled={savingAi || testingAi}
                 placeholder={t("settings.apiProviderPlaceholder")}
                 listMode="SCROLLVIEW"
@@ -3148,7 +3175,12 @@ export default function SettingsScreen() {
                 style={stylesWithFont.aiInput}
                 value={aiBaseUrl}
                 onChangeText={setAiBaseUrl}
-                editable={!savingAi && !testingAi && !loadingAiProviderSettings}
+                editable={
+                  !savingAi &&
+                  !testingAi &&
+                  !loadingAiProviderSettings &&
+                  selectedAiProviderId === CUSTOM_AI_PROVIDER_ID
+                }
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="url"
@@ -3226,6 +3258,59 @@ export default function SettingsScreen() {
     }
   };
 
+  const renderResetConfirmModal = () => (
+    <Modal
+      visible={resetConfirmModalVisible}
+      animationType="fade"
+      transparent
+      onRequestClose={() => {
+        setResetConfirmModalVisible(false);
+        setResetConfirmText("");
+      }}
+    >
+      <View style={stylesWithFont.modalBackground}>
+        <View style={stylesWithFont.modalContainer}>
+          <Text style={stylesWithFont.accountCardTitle}>
+            {t("settings.resetDeviceDataAlertTitle")}
+          </Text>
+          <Text style={stylesWithFont.accountCardSubtitle}>
+            {t("settings.resetDeviceDataAlertMessage")}
+          </Text>
+          <Text style={stylesWithFont.accountInputLabel}>
+            {t("settings.resetTypeToConfirm")}
+          </Text>
+          <TextInput
+            style={stylesWithFont.accountInput}
+            value={resetConfirmText}
+            onChangeText={setResetConfirmText}
+            placeholder={t("settings.resetConfirmPlaceholder")}
+            placeholderTextColor={theme.textPlaceholder}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={confirmResetData}
+            autoFocus
+          />
+          <CustomButton
+            title={t("settings.resetDeviceDataButton")}
+            onPress={resetConfirmReady ? confirmResetData : null}
+            fontSize={fontSize}
+            color={theme.danger}
+          />
+          <CustomButton
+            title={t("common.cancel")}
+            onPress={() => {
+              setResetConfirmModalVisible(false);
+              setResetConfirmText("");
+            }}
+            fontSize={fontSize}
+            color={theme.textSecondary}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View
       style={{
@@ -3255,6 +3340,8 @@ export default function SettingsScreen() {
           </ScrollView>
         )}
       </Animated.View>
+
+      {renderResetConfirmModal()}
     </View>
   );
 }

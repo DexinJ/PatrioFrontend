@@ -2,10 +2,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Pressable,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import "react-native-get-random-values";
-import { useAuth } from "../../auth/useAuth";
 import { GptProvider } from "../../api/gpt";
+import { useAuth } from "../../auth/useAuth";
+import ConversationDrawer from "../../components/ConversationListModal";
 import { IconHeader } from "../../components/Header";
 import {
   AccountSessionProvider,
@@ -39,9 +48,10 @@ function ChatTabHeader() {
       ]}
       rightItems={[
         {
-          icon: "add",
+          icon: "add-circle-outline",
           label: t("conversations.newChat"),
           onPress: () => createConversation(),
+          rotateOnPress: true,
         },
       ]}
     />
@@ -218,6 +228,17 @@ function ThemedTabs() {
     theme,
   } = useContext(GlobalContext);
   const { beginAccountTeardown, initializing } = useAccountSession();
+  const {
+    conversationsVisible,
+    setConversationsVisible,
+    conversations,
+    activeConversationId,
+    selectConversation,
+    createConversation,
+  } = useContext(ChatContext);
+  const { width: windowWidth } = useWindowDimensions();
+  const drawerWidth = Math.min(windowWidth * 0.82, 380);
+  const [drawerProgress] = useState(() => new Animated.Value(0));
   const mountedRef = useRef(false);
   const recoveryLogoutLockedRef = useRef(false);
   const [recoveryLogoutError, setRecoveryLogoutError] = useState("");
@@ -229,6 +250,15 @@ function ThemedTabs() {
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    Animated.timing(drawerProgress, {
+      toValue: conversationsVisible ? 1 : 0,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [conversationsVisible, drawerProgress]);
 
   const logoutFromRecovery = async () => {
     if (recoveryLogoutLockedRef.current) return;
@@ -389,62 +419,109 @@ function ThemedTabs() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: true,
-        tabBarActiveTintColor: theme.actionButton,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarStyle: { backgroundColor: theme.card, borderColor: theme.border, },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          headerShown: false,
-          title: t("tabs.home"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <Animated.View
+        style={{
+          flex: 1,
+          transform: [
+            {
+              translateX: drawerProgress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, drawerWidth],
+              }),
+            },
+          ],
+        }}
+      >
+        <Tabs
+          screenOptions={{
+            headerShown: true,
+            tabBarActiveTintColor: theme.actionButton,
+            tabBarInactiveTintColor: theme.textSecondary,
+            tabBarStyle: { backgroundColor: theme.card, borderColor: theme.border, },
+          }}
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              headerShown: false,
+              title: t("tabs.home"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="home-outline" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="chat"
+            options={{
+              header: () => <ChatTabHeader />,
+              title: t("tabs.chat"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="chatbubble-outline" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="fridge"
+            options={{
+              title: t("tabs.fridge"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="cube-outline" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="list"
+            options={{
+              title: t("tabs.shoppingList"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="cart-outline" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: t("tabs.settings"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="settings-outline" size={size} color={color} />
+              ),
+            }}
+          />
+        </Tabs>
+      </Animated.View>
+
+      <ConversationDrawer
+        progress={drawerProgress}
+        open={conversationsVisible}
+        drawerWidth={drawerWidth}
+        onClose={() => setConversationsVisible(false)}
+        conversations={conversations}
+        activeConversationId={activeConversationId}
+        onSelect={(id) => {
+          selectConversation(id);
+          setConversationsVisible(false);
+        }}
+        onNewChat={() => {
+          createConversation();
+          setConversationsVisible(false);
         }}
       />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          header: () => <ChatTabHeader />,
-          title: t("tabs.chat"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-outline" size={size} color={color} />
-          ),
+
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          width: 20,
+          left: drawerProgress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-30, drawerWidth - 30],
+          }),
         }}
       />
-      <Tabs.Screen
-        name="fridge"
-        options={{
-          title: t("tabs.fridge"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cube-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="list"
-        options={{
-          title: t("tabs.shoppingList"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cart-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t("tabs.settings"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+    </View>
   );
 }
 

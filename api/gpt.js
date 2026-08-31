@@ -65,18 +65,32 @@ const categoriesField = {
   additionalProperties: false,
 };
 
+const expiresInDaysField = {
+  type: "integer",
+  minimum: 1,
+  description:
+    "Your estimate of how many whole days from today the item will stay good (e.g. raw chicken 2, milk 7, frozen meat 180). Prefer this over expiresAt; never invent a calendar date.",
+};
+
+const expiresAtField = {
+  ...stringField,
+  description:
+    "Optional absolute expiration date only when the user states one (e.g. '2026-09-01'). Never invent a calendar date.",
+};
+
 const proposedFridgeItemField = objectSchema(
   {
     name: stringField,
     quantity: stringField,
     categories: categoriesField,
-    expiresAt: stringField,
+    expiresInDays: expiresInDaysField,
+    expiresAt: expiresAtField,
   },
-  ["name", "categories", "expiresAt"]
+  ["name", "categories"]
 );
 
 export const DIRECT_AI_TOOLS = [
-  ["addFridgeItem", "Add an item to the fridge.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField, expiresAt: stringField }, ["name", "categories", "expiresAt"])],
+  ["addFridgeItem", "Add an item to the fridge.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField, expiresInDays: expiresInDaysField, expiresAt: expiresAtField }, ["name", "categories"])],
   ["addShoppingItem", "Add an item to the shopping list.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField }, ["name", "categories"])],
   ["removeFridgeItem", "Remove a named fridge item.", objectSchema({ name: stringField }, ["name"])],
   ["removeShoppingItem", "Remove a named shopping-list item.", objectSchema({ name: stringField }, ["name"])],
@@ -1287,11 +1301,15 @@ ${toolDescriptions}`;
     const activityToken = Symbol("chat-stream");
     activeStreamsRef.current.add(activityToken);
     setReceiving(true);
+    setWaiting(true);
     try {
       return await runStreamMessage(request);
     } finally {
       activeStreamsRef.current.delete(activityToken);
-      if (activeStreamsRef.current.size === 0) setReceiving(false);
+      if (activeStreamsRef.current.size === 0) {
+        setReceiving(false);
+        setWaiting(false);
+      }
     }
   };
 

@@ -34,7 +34,7 @@ export async function buildVoiceUploadFormData(
   // and streams the file URI instead of serializing the object as text.
   formData.append("file", {
     uri: recordingUri,
-    type: "audio/mp4",
+    type: "audio/m4a",
     name: "recording.m4a",
   });
   return formData;

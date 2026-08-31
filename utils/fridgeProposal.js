@@ -65,6 +65,7 @@ function legacyActionFingerprint(action) {
         item?.expirationDate ??
         item?.expiration_date
     ),
+    expiresInDays: clean(item?.expiresInDays),
   }));
 
   return JSON.stringify({

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createMarkdownParser,
+  markdownToPlainText,
   parseMarkdownFlow,
 } from "../utils/markdownFlow.js";
 
@@ -16,6 +17,43 @@ test("plain text becomes one text block", () => {
 
 test("empty source produces no blocks", () => {
   assert.deepEqual(parseMarkdownFlow("", parser), []);
+});
+
+test("markdownToPlainText strips inline formatting and link URLs", () => {
+  assert.equal(
+    markdownToPlainText(
+      "Hello **bold** and *italic* and ~~strike~~ and `code` and [link](https://example.com)."
+    ),
+    "Hello bold and italic and strike and code and link."
+  );
+});
+
+test("markdownToPlainText keeps headings, list markers, code, and quotes", () => {
+  const source = [
+    "# Title",
+    "",
+    "- first item",
+    "- second item",
+    "",
+    "```",
+    "const x = 1;",
+    "```",
+    "",
+    "> quoted",
+  ].join("\n");
+  const plain = markdownToPlainText(source);
+  assert.match(plain, /^Title/);
+  assert.match(plain, /• first item/);
+  assert.match(plain, /• second item/);
+  assert.match(plain, /const x = 1;/);
+  assert.match(plain, /quoted/);
+});
+
+test("markdownToPlainText handles empty and invalid input", () => {
+  assert.equal(markdownToPlainText(""), "");
+  assert.equal(markdownToPlainText("   \n  "), "");
+  assert.equal(markdownToPlainText(null), "");
+  assert.equal(markdownToPlainText("just text"), "just text");
 });
 
 test("inline styling is captured as nested segments", () => {

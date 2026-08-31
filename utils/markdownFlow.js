@@ -323,6 +323,41 @@ function segmentsToPlainText(segments) {
   return out;
 }
 
+/**
+ * markdownToPlainText(source)
+ * Strips markdown formatting and returns the message as clean plain text,
+ * used when copying or sharing assistant chat messages.
+ */
+export function markdownToPlainText(source) {
+  try {
+    const blocks = parseMarkdownFlow(source, createMarkdownParser());
+    return blocksToPlainText(blocks).replace(/\n{3,}/g, "\n\n").trim();
+  } catch (_error) {
+    return String(source ?? "").trim();
+  }
+}
+
+function blocksToPlainText(blocks) {
+  const parts = [];
+  for (const block of blocks) {
+    switch (block.type) {
+      case "text":
+      case "heading":
+        parts.push(segmentsToPlainText(block.segments));
+        break;
+      case "code":
+        parts.push(block.content);
+        break;
+      case "quote":
+        parts.push(blocksToPlainText(block.blocks));
+        break;
+      default:
+        break;
+    }
+  }
+  return parts.join("\n");
+}
+
 function findClose(tokens, openIndex) {
   const openType = tokens[openIndex].type;
   const closeType = openType.replace("_open", "_close");

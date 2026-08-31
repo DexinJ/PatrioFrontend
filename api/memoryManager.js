@@ -121,7 +121,8 @@ export async function loadChatData(uid, setMessages, setSummary) {
 
 // --- Clear all chat data ---
 export async function clearChatData(uid, setMessages, setSummary) {
-  const { chatMessages, chatSummary } = getUserStorageKeys(uid);
+  const { chatMessages, chatSummary, chatConversations } =
+    getUserStorageKeys(uid);
   const generationKey = String(uid || "").trim();
 
   if (generationKey) {
@@ -135,7 +136,7 @@ export async function clearChatData(uid, setMessages, setSummary) {
   try {
     await cancelActiveChatWork();
     await Promise.all([
-      AsyncStorage.multiRemove([chatMessages, chatSummary]),
+      AsyncStorage.multiRemove([chatMessages, chatSummary, chatConversations]),
       deleteChatAttachments(uid),
     ]);
     setMessages?.([]);

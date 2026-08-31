@@ -82,7 +82,7 @@ function buildMarkdownStyles(theme, fontSize) {
   return styles;
 }
 
-function renderInlineSegments(segments, styles, keyPrefix) {
+function renderInlineSegments(segments, styles, keyPrefix, onLongPress) {
   return segments.map((segment, index) => {
     const key = `${keyPrefix}-${index}`;
 
@@ -100,19 +100,19 @@ function renderInlineSegments(segments, styles, keyPrefix) {
       case "strong":
         return (
           <Text key={key} style={styles.strong}>
-            {renderInlineSegments(segment.children, styles, key)}
+            {renderInlineSegments(segment.children, styles, key, onLongPress)}
           </Text>
         );
       case "em":
         return (
           <Text key={key} style={styles.em}>
-            {renderInlineSegments(segment.children, styles, key)}
+            {renderInlineSegments(segment.children, styles, key, onLongPress)}
           </Text>
         );
       case "s":
         return (
           <Text key={key} style={styles.s}>
-            {renderInlineSegments(segment.children, styles, key)}
+            {renderInlineSegments(segment.children, styles, key, onLongPress)}
           </Text>
         );
       case "link":
@@ -121,8 +121,9 @@ function renderInlineSegments(segments, styles, keyPrefix) {
             key={key}
             style={styles.link}
             onPress={() => openUrl(segment.href)}
+            onLongPress={onLongPress}
           >
-            {renderInlineSegments(segment.children, styles, key)}
+            {renderInlineSegments(segment.children, styles, key, onLongPress)}
           </Text>
         );
       default:
@@ -131,7 +132,7 @@ function renderInlineSegments(segments, styles, keyPrefix) {
   });
 }
 
-function renderBlocks(blocks, styles) {
+function renderBlocks(blocks, styles, selectable, onLongPress) {
   const elements = [];
   let run = [];
   let elementKey = 0;
@@ -140,7 +141,12 @@ function renderBlocks(blocks, styles) {
   const flushRun = () => {
     if (run.length) {
       elements.push(
-        <Text key={`run-${elementKey}`} selectable style={styles.body}>
+        <Text
+          key={`run-${elementKey}`}
+          selectable={selectable}
+          onLongPress={onLongPress}
+          style={styles.body}
+        >
           {run}
         </Text>
       );
@@ -162,7 +168,8 @@ function renderBlocks(blocks, styles) {
           ...renderInlineSegments(
             block.segments,
             styles,
-            `item-${runItemKey}`
+            `item-${runItemKey}`,
+            onLongPress
           )
         );
         runItemKey += 1;
@@ -174,7 +181,7 @@ function renderBlocks(blocks, styles) {
         runItemKey += 1;
         run.push(
           <Text key={key} style={styles[`heading${block.level}`]}>
-            {renderInlineSegments(block.segments, styles, key)}
+            {renderInlineSegments(block.segments, styles, key, onLongPress)}
           </Text>
         );
         break;
@@ -184,7 +191,11 @@ function renderBlocks(blocks, styles) {
         flushRun();
         elements.push(
           <View key={`code-${elementKey}`} style={styles.codeBlockView}>
-            <Text selectable style={styles.codeBlockText}>
+            <Text
+              selectable={selectable}
+              onLongPress={onLongPress}
+              style={styles.codeBlockText}
+            >
               {block.content}
             </Text>
           </View>
@@ -202,7 +213,7 @@ function renderBlocks(blocks, styles) {
         flushRun();
         elements.push(
           <View key={`quote-${elementKey}`} style={styles.blockquote}>
-            {renderBlocks(block.blocks, styles)}
+            {renderBlocks(block.blocks, styles, selectable, onLongPress)}
           </View>
         );
         elementKey += 1;
@@ -217,15 +228,21 @@ function renderBlocks(blocks, styles) {
   return elements;
 }
 
-function MarkdownSegment({ source, parser, styles }) {
+function MarkdownSegment({ source, parser, styles, selectable, onLongPress }) {
   const blocks = useMemo(
     () => parseMarkdownFlow(source, parser),
     [source, parser]
   );
-  return <>{renderBlocks(blocks, styles)}</>;
+  return <>{renderBlocks(blocks, styles, selectable, onLongPress)}</>;
 }
 
-function MarkdownText({ text, theme, fontSize = 16 }) {
+function MarkdownText({
+  text,
+  theme,
+  fontSize = 16,
+  selectable = true,
+  onLongPress,
+}) {
   const parser = useMemo(() => createMarkdownParser(), []);
   const segments = useMemo(() => splitMessageSegments(text), [text]);
   const styles = useMemo(
@@ -248,6 +265,8 @@ function MarkdownText({ text, theme, fontSize = 16 }) {
             source={segment.value}
             parser={parser}
             styles={styles}
+            selectable={selectable}
+            onLongPress={onLongPress}
           />
         )
       )}

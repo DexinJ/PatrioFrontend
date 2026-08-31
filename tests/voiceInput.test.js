@@ -43,7 +43,7 @@ test("native transcription uploads retain the React Native file descriptor", asy
       "file",
       {
         uri: "file:///cache/recording.m4a",
-        type: "audio/mp4",
+        type: "audio/m4a",
         name: "recording.m4a",
       },
     ],

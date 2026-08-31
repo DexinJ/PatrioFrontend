@@ -42,13 +42,6 @@ import PlusMenu from "./PlusMenu";
 
 const MAX_RECORDING_SECONDS = 60;
 const TRANSCRIPTION_TIMEOUT_MS = 90_000;
-const VOICE_RECORDING_PRESET = {
-  ...RecordingPresets.LOW_QUALITY,
-  extension: ".m4a",
-  sampleRate: 16_000,
-  numberOfChannels: 1,
-  bitRate: 32_000,
-};
 
 async function releaseRecordingFile(uri) {
   const normalizedUri = typeof uri === "string" ? uri.trim() : "";
@@ -84,7 +77,7 @@ export default function MessageInput({ value, onChangeText, onSend }) {
   const lifecycleGenerationRef = useRef(0);
   const recordingAttemptRef = useRef(0);
 
-  const audioRecorder = useAudioRecorder(VOICE_RECORDING_PRESET);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const composerLayout = calculateComposerLayout({
     contentHeight:

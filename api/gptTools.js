@@ -11,6 +11,7 @@ import {
   normalizeFridgeProposalCategories,
   normalizeFridgeProposalQuantity,
 } from "../utils/fridgeProposal";
+import { normalizeShelfLifeDays } from "../utils/expiryPredictor";
 import { normalizeRecipePreferencePatch } from "../utils/recipePreferences";
 
 // Compatibility guard for gateways that predate explicit client ownership and
@@ -43,7 +44,7 @@ export function useGPTTools() {
   const {
     fridgeItems,
     shoppingListItems,
-    addToFridge, // addToFridge(name, quantity, tagIds, expiresAt?)
+    addToFridge, // addToFridge(name, quantity, tagIds, expiresAt?, expiresInDays?)
     addToShoppingList, // addToShoppingList(name, quantity, tagIds)
     removeFromFridge,
     removeFromShoppingList,
@@ -159,18 +160,6 @@ export function useGPTTools() {
     return expiresAt;
   };
 
-  const validateExpiresAtRequired = (expiresAt) => {
-    const v = normalizeExpiresAt(expiresAt);
-    if (!v) {
-      return {
-        ok: false,
-        message:
-          "Missing expiresAt. Please ask the user for an expiration date (e.g., '2026-02-01' or 'in 5 days').",
-      };
-    }
-    return { ok: true, value: v };
-  };
-
   const getItemTagLabels = (item) => {
     const ids = Array.isArray(item?.tagIds) ? item.tagIds : [];
     return ids.map(tagIdToLabel).filter(Boolean);
@@ -180,25 +169,36 @@ export function useGPTTools() {
   // Tools
   // -----------------------------
   return {
-    // ✅ requires expiresAt
-    addFridgeItem: async ({ name, quantity = "1", categories, expiresAt }) => {
+    // Expiry is optional: prefer an AI day estimate, then a valid absolute
+    // date, then the app's tag-based prediction.
+    addFridgeItem: async ({
+      name,
+      quantity = "1",
+      categories,
+      expiresAt,
+      expiresInDays,
+    }) => {
       const n = String(name || "").trim();
       if (!n) return { success: false, message: "Missing item name." };
 
       const v = validateTypedCategories(categories);
       if (!v.ok) return { success: false, message: v.message };
 
-      const ex = validateExpiresAtRequired(expiresAt);
-      if (!ex.ok) return { success: false, message: ex.message };
-
       const tagIds = categoriesToPresetTagIds(categories);
-      addToFridge(n, String(quantity || "1"), tagIds, ex.value);
+      const ex = normalizeExpiresAt(expiresAt);
+      const exDays = normalizeShelfLifeDays(expiresInDays);
+
+      addToFridge(n, String(quantity || "1"), tagIds, ex, exDays);
+
+      const expiryNote = exDays
+        ? `shelf life: ${exDays} day${exDays === 1 ? "" : "s"}`
+        : ex
+          ? `expires: ${String(ex)}`
+          : "estimated expiry from its category";
 
       return {
         success: true,
-        message: `${quantity} ${n} added to fridge (expires: ${String(
-          ex.value
-        )}).${formatAcceptedCategories(categories, tagIds)}`,
+        message: `${quantity} ${n} added to fridge (${expiryNote}).${formatAcceptedCategories(categories, tagIds)}`,
       };
     },
 
@@ -415,7 +415,15 @@ export function useGPTTools() {
             quantity: normalizeFridgeProposalQuantity(it?.quantity),
             categories: normalizeFridgeProposalCategories(it?.categories),
 
-            // ✅ pass through; addToFridge decides precedence & prediction
+            // The AI estimates shelf life in whole days; the app anchors it
+            // at commit time. Falls back to a plausible absolute date, then
+            // to the tag-based predictor.
+            expiresInDays:
+              normalizeShelfLifeDays(
+                it?.expiresInDays ??
+                  it?.expires_in_days ??
+                  it?.shelfLifeDays
+              ) ?? undefined,
             expiresAt:
               it?.expiresAt ??
               it?.expires_at ??

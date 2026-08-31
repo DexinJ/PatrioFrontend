@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import i18next from "i18next";
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Animated,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -34,8 +34,10 @@ function formatRelativeTime(iso) {
   return new Date(timestamp).toLocaleDateString();
 }
 
-export default function ConversationListModal({
-  visible,
+export default function ConversationDrawer({
+  progress,
+  open,
+  drawerWidth,
   onClose,
   conversations = [],
   activeConversationId = null,
@@ -45,10 +47,45 @@ export default function ConversationListModal({
   const { t } = useTranslation();
   const { theme } = useContext(GlobalContext);
   const insets = useSafeAreaInsets();
+  const [addButtonScale] = useState(() => new Animated.Value(1));
+  const [addButtonRotate] = useState(() => new Animated.Value(0));
+  const [newChatRowScale] = useState(() => new Animated.Value(1));
   const items = useMemo(
     () => (Array.isArray(conversations) ? conversations : []),
     [conversations]
   );
+
+  const animateAddButton = (pressed) => {
+    Animated.parallel([
+      Animated.spring(addButtonScale, {
+        toValue: pressed ? 0.82 : 1,
+        speed: pressed ? 40 : 18,
+        bounciness: pressed ? 0 : 10,
+        useNativeDriver: true,
+      }),
+      Animated.spring(addButtonRotate, {
+        toValue: pressed ? 1 : 0,
+        speed: pressed ? 40 : 18,
+        bounciness: pressed ? 0 : 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const animateNewChatRow = (pressed) => {
+    Animated.spring(newChatRowScale, {
+      toValue: pressed ? 0.97 : 1,
+      speed: pressed ? 40 : 18,
+      bounciness: pressed ? 0 : 10,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const translateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-drawerWidth, 0],
+  });
+  const drawerPointerEvents = open ? "auto" : "none";
 
   const renderRow = ({ item }) => {
     const isActive = item.id === activeConversationId;
@@ -87,89 +124,110 @@ export default function ConversationListModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
+    <>
+      <Animated.View
+        pointerEvents={drawerPointerEvents}
+        style={StyleSheet.absoluteFill}
+      >
         <Pressable
-          style={styles.backdrop}
+          style={styles.backdropTouch}
           onPress={onClose}
+          accessibilityRole="button"
           accessibilityLabel={t("conversations.closeConversations")}
         />
-        <View
-          style={[
-            styles.drawer,
-            {
-              backgroundColor: theme.card,
-              paddingTop: insets.top + 8,
-              paddingBottom: insets.bottom + 12,
-            },
-          ]}
-        >
-          <View style={styles.drawerHeader}>
-            <Text style={[styles.drawerTitle, { color: theme.textPrimary }]}>
-              {t("conversations.chats")}
-            </Text>
-            <TouchableOpacity
-              onPress={onNewChat}
-              accessibilityRole="button"
-              accessibilityLabel={t("conversations.newChat")}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="add" size={26} color={theme.accent} />
-            </TouchableOpacity>
-          </View>
+      </Animated.View>
 
+      <Animated.View
+        pointerEvents={drawerPointerEvents}
+        style={[
+          styles.drawer,
+          {
+            width: drawerWidth,
+            backgroundColor: theme.card,
+            paddingTop: insets.top + 8,
+            paddingBottom: insets.bottom + 12,
+            transform: [{ translateX }],
+          },
+        ]}
+      >
+        <View style={styles.drawerHeader}>
+          <Text style={[styles.drawerTitle, { color: theme.textPrimary }]}>
+            {t("conversations.chats")}
+          </Text>
           <TouchableOpacity
             onPress={onNewChat}
+            onPressIn={() => animateAddButton(true)}
+            onPressOut={() => animateAddButton(false)}
             accessibilityRole="button"
-            accessibilityLabel={t("conversations.startNewChat")}
-            style={[
-              styles.newChatRow,
-              { backgroundColor: theme.inputBackground },
-            ]}
+            accessibilityLabel={t("conversations.newChat")}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Animated.View
+              style={{
+                transform: [
+                  { scale: addButtonScale },
+                  {
+                    rotate: addButtonRotate.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0deg", "45deg"],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <Ionicons name="add" size={26} color={theme.accent} />
+            </Animated.View>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          onPress={onNewChat}
+          onPressIn={() => animateNewChatRow(true)}
+          onPressOut={() => animateNewChatRow(false)}
+          accessibilityRole="button"
+          accessibilityLabel={t("conversations.startNewChat")}
+          style={[
+            styles.newChatRow,
+            { backgroundColor: theme.inputBackground },
+          ]}
+        >
+          <Animated.View
+            style={[styles.newChatRowInner, { transform: [{ scale: newChatRowScale }] }]}
           >
             <Ionicons name="create-outline" size={20} color={theme.accent} />
             <Text style={[styles.newChatText, { color: theme.accent }]}>
               {t("conversations.newChat")}
             </Text>
-          </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
 
-          {items.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              {t("conversations.noConversations")}
-            </Text>
-          ) : (
-            <FlatList
-              data={items}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={renderRow}
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-            />
-          )}
-        </View>
-      </View>
-    </Modal>
+        {items.length === 0 ? (
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+            {t("conversations.noConversations")}
+          </Text>
+        ) : (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderRow}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
+      </Animated.View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  backdropTouch: {
     flex: 1,
-    flexDirection: "row",
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
   },
   drawer: {
-    width: "82%",
-    maxWidth: 380,
-    height: "100%",
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -195,6 +253,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 10,
+  },
+  newChatRowInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   newChatText: {
     fontSize: 15,

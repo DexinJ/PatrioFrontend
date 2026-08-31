@@ -177,8 +177,8 @@
     "deleteItemsQuestion_other": "删除后无法恢复，确定删除这 {{count}} 件吗？"
   },
   "chat": {
-    "newChat": "新聊天",
     "startNewChat": "开始新聊天",
+    "photoChat": "照片对话",
     "switchedToNewConversation": "已切换到新对话。",
     "chatDescription": "问问 Pantrio：今天吃什么、冰箱里还有什么、清单怎么安排。",
     "savedPreferences": "已保存你的菜谱偏好：\n{{summary}}",
@@ -240,6 +240,12 @@
     "useVoiceInput": "使用语音输入",
     "sendMessageHint": "发送聊天框里的文字。",
     "openVoiceControls": "打开语音转文字。"
+  },
+  "chatActions": {
+    "title": "消息操作",
+    "copy": "复制",
+    "share": "分享",
+    "selected": "已选中消息"
   },
   "messageList": {
     "foundItems_one": "我找到了 {{count}} 件：",
@@ -518,7 +524,7 @@
       "openrouter": "OpenRouter",
       "groq": "Groq",
       "togetherAi": "Together AI",
-      "custom": "自定义（{{url}}）"
+      "custom": "自定义 API"
     },
     "signInProviders": {
       "apple": "Apple",
@@ -660,6 +666,8 @@
     "resetDeviceDataAlertTitle": "重置本机数据？",
     "resetDeviceDataAlertMessage": "将清除本机保存的冰箱物品、购物清单、聊天记录、设置、提醒和自定义 AI 密钥。不会删除 Pantrio 账号，此操作不可恢复。",
     "resetDeviceDataButton": "重置数据",
+    "resetTypeToConfirm": "请输入“reset”以继续",
+    "resetConfirmPlaceholder": "reset",
     "clearChatMessages": "清空聊天记录",
     "clearChatAlertTitle": "清空聊天记录？",
     "clearChatAlertMessage": "将清除本机保存的聊天消息、摘要和附件，此操作不可恢复。",

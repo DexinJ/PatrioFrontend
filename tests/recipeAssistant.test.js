@@ -214,7 +214,11 @@ test("custom-provider tools retain recipe capabilities and recipe-safe descripti
       byName.get("proposeAddAllToFridge").parameters.properties.items.items
         .required
     ),
-    ["name", "categories", "expiresAt"]
+    ["name", "categories"]
+  );
+  assert.ok(
+    byName.get("proposeAddAllToFridge").parameters.properties.items.items
+      .properties.expiresInDays
   );
   assert.match(byName.get("recommendRecipes").description, /Call once/i);
 });

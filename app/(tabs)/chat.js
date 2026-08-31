@@ -3,17 +3,18 @@ import i18next from "i18next";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Animated,
+  Easing,
   Keyboard,
   KeyboardAvoidingView,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { useGpt } from "../../api/gpt";
-import ConversationListModal from "../../components/ConversationListModal";
 import MessageInput from "../../components/MessageInput";
 import MessageList from "../../components/MessageList";
 import { ChatContext, GlobalContext } from "../../context/GlobalContext";
@@ -51,7 +52,7 @@ function getChatErrorMessage(error) {
   return i18next.t("chat.errors.couldNotComplete");
 }
 
-function ChatEmptyState({ theme, onNewChat }) {
+function ChatEmptyState({ theme }) {
   const { t } = useTranslation();
   return (
     <View style={styles.emptyState}>
@@ -66,22 +67,6 @@ function ChatEmptyState({ theme, onNewChat }) {
       <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
         {t("chat.chatDescription")}
       </Text>
-      <TouchableOpacity
-        onPress={onNewChat}
-        accessibilityRole="button"
-        accessibilityLabel={t("chat.startNewChat")}
-        style={[
-          styles.emptyButton,
-          { backgroundColor: theme.actionButton },
-        ]}
-      >
-        <Ionicons name="add" size={20} color={theme.actionButtonText} />
-        <Text
-          style={[styles.emptyButtonText, { color: theme.actionButtonText }]}
-        >
-          {t("chat.newChat")}
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -98,19 +83,15 @@ export default function ChatScreen() {
   const {
     messages,
     setMessages,
-    setWaiting,
     waiting,
-    conversations,
     activeConversationId,
-    conversationsVisible,
-    setConversationsVisible,
-    selectConversation,
-    createConversation,
   } = useContext(ChatContext);
   const mountedRef = useRef(false);
   const sendGenerationRef = useRef(0);
   const appliedUiActionsRef = useRef(new Set());
   const claimedFridgeProposalActionsRef = useRef(new Set());
+  const [chatTransition] = useState(() => new Animated.Value(1));
+  const prevConversationRef = useRef(activeConversationId);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -119,6 +100,18 @@ export default function ChatScreen() {
       sendGenerationRef.current += 1;
     };
   }, []);
+
+  useEffect(() => {
+    if (prevConversationRef.current === activeConversationId) return;
+    prevConversationRef.current = activeConversationId;
+    chatTransition.setValue(0);
+    Animated.timing(chatTransition, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [activeConversationId, chatTransition]);
 
   useFocusEffect(
     useCallback(() => {
@@ -142,7 +135,6 @@ export default function ChatScreen() {
     const generation = sendGenerationRef.current + 1;
     sendGenerationRef.current = generation;
     setInput("");
-    setWaiting(true);
 
     if (message.text || message.imageUri) {
       try {
@@ -169,14 +161,6 @@ export default function ChatScreen() {
             content: [{ type: "output_text", text: errorMessage }],
           },
         ]);
-      } finally {
-        if (mountedRef.current && sendGenerationRef.current === generation) {
-          setWaiting(false);
-        }
-      }
-    } else {
-      if (mountedRef.current && sendGenerationRef.current === generation) {
-        setWaiting(false);
       }
     }
   };
@@ -250,7 +234,14 @@ export default function ChatScreen() {
         it?.expiration_date ??
         undefined;
   
-      additions.push({ name, quantity, categories, expiresAt });
+      additions.push({
+        name,
+        quantity,
+        categories,
+        expiresAt,
+        expiresInDays:
+          it?.expiresInDays ?? it?.expires_in_days ?? it?.shelfLifeDays,
+      });
     }
 
     if (additions.length === 0) return;
@@ -308,46 +299,58 @@ export default function ChatScreen() {
       behavior="padding"
       keyboardVerticalOffset={insets.top}
     >
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.background,
-            paddingBottom: keyboardVisible ? insets.bottom : 0,
-          },
-        ]}
+      <TouchableWithoutFeedback
+        onPress={Keyboard.dismiss}
+        accessible={false}
       >
-        <View style={{ flex: 1 }}>
-          {messages.length === 0 && !waiting ? (
-            <ChatEmptyState theme={theme} onNewChat={createConversation} />
-          ) : (
-            <MessageList messages={messages} onUiAction={handleUiAction} />
-          )}
+        <View
+          style={[
+            styles.container,
+            {
+              backgroundColor: theme.background,
+              paddingBottom: keyboardVisible ? insets.bottom : 0,
+            },
+          ]}
+        >
+          <View style={{ flex: 1 }}>
+            <Animated.View
+              style={[
+                styles.contentTransition,
+                {
+                  opacity: chatTransition,
+                  transform: [
+                    {
+                      translateY: chatTransition.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [14, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              {messages.length === 0 && !waiting ? (
+                <ChatEmptyState theme={theme} />
+              ) : (
+                <MessageList messages={messages} onUiAction={handleUiAction} />
+              )}
+            </Animated.View>
 
-          <MessageInput value={input} onChangeText={setInput} onSend={handleSend} />
+            <MessageInput
+              value={input}
+              onChangeText={setInput}
+              onSend={handleSend}
+            />
+          </View>
         </View>
-
-        <ConversationListModal
-          visible={conversationsVisible}
-          onClose={() => setConversationsVisible(false)}
-          conversations={conversations}
-          activeConversationId={activeConversationId}
-          onSelect={(id) => {
-            selectConversation(id);
-            setConversationsVisible(false);
-          }}
-          onNewChat={() => {
-            createConversation();
-            setConversationsVisible(false);
-          }}
-        />
-      </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  contentTransition: { flex: 1 },
   emptyState: {
     flex: 1,
     alignItems: "center",
@@ -364,18 +367,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
-  },
-  emptyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  emptyButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
   },
 });

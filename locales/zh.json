@@ -185,6 +185,10 @@
     "savedPreferencesShort": "已保存你的菜谱偏好。",
     "addedToFridge_one": "✅ 已把 {{count}} 件加进冰箱。",
     "addedToFridge_other": "✅ 已把 {{count}} 件加进冰箱。",
+    "appliedFridgeChanges_one": "✅ 已应用 {{count}} 项冰箱修改。",
+    "appliedFridgeChanges_other": "✅ 已应用 {{count}} 项冰箱修改。",
+    "addedToShoppingList_one": "✅ 已把 {{count}} 件加进购物清单。",
+    "addedToShoppingList_other": "✅ 已把 {{count}} 件加进购物清单。",
     "skipped": "⚠️ 跳过：{{names}}",
     "errors": {
       "quotaExhausted": "今天的 AI 额度已用完。",
@@ -241,12 +245,6 @@
     "sendMessageHint": "发送聊天框里的文字。",
     "openVoiceControls": "打开语音转文字。"
   },
-  "chatActions": {
-    "title": "消息操作",
-    "copy": "复制",
-    "share": "分享",
-    "selected": "已选中消息"
-  },
   "messageList": {
     "foundItems_one": "我找到了 {{count}} 件：",
     "foundItems_other": "我找到了 {{count}} 件：",
@@ -288,6 +286,16 @@
     "replacePreferences": "要替换这些菜谱偏好吗？",
     "savePreferences": "要保存这些菜谱偏好吗？",
     "savePreferencesButton": "保存偏好",
+    "reviewBulkChanges": "确认冰箱修改",
+    "fridgeChanges_one": "{{count}} 项冰箱修改",
+    "fridgeChanges_other": "{{count}} 项冰箱修改",
+    "removeItem": "移除",
+    "skippedChanges": "已跳过：{{names}}",
+    "changesApplied": "修改已应用",
+    "addMissingIngredients": "把缺少的食材加入购物清单",
+    "missingItems_one": "{{count}} 件缺少的食材",
+    "missingItems_other": "{{count}} 件缺少的食材",
+    "addedToShoppingList": "已加入购物清单",
     "confirmItems": "确认物品",
     "hideTags": "收起标签",
     "editTags": "编辑标签"
@@ -603,6 +611,7 @@
     "languageA11y": "应用语言，当前为 {{language}}",
     "languagePickerTitle": "应用语言",
     "languageSelectA11y": "选择{{language}}",
+    "sectionToggleA11y": "展开或收起此分区。",
     "recipeSuggestions": "菜谱推荐",
     "recipeProfile": "菜谱偏好",
     "recipeProfileBody": "推荐菜谱时优先使用这些默认偏好，多个条目用逗号分隔；聊天中的一次性要求可临时覆盖。",

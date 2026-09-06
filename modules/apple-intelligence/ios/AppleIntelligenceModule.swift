@@ -19,7 +19,8 @@ private struct AppleIntelligenceTurn {
       "", "addFridgeItem", "addShoppingItem", "removeFridgeItem",
       "removeShoppingItem", "findInFridge", "findInShoppingList",
       "getFridgeContents", "getShoppingListContents", "streamlineLists",
-      "proposeAddAllToFridge", "recommendRecipes",
+      "proposeAddAllToFridge", "updateFridgeItem", "proposeBulkFridgeUpdate",
+      "proposeAddMissingIngredientsToShoppingList", "recommendRecipes",
       "proposeRecipePreferenceUpdate",
     ])
   )

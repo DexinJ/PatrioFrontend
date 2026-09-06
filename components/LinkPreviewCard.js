@@ -134,7 +134,6 @@ function LinkPreviewCard({ url, theme }) {
       <View style={styles.body}>
         {!!meta.title && (
           <Text
-            selectable
             style={[styles.title, { color: theme.textPrimary }]}
             numberOfLines={2}
           >
@@ -143,7 +142,6 @@ function LinkPreviewCard({ url, theme }) {
         )}
         {!!meta.description && (
           <Text
-            selectable
             style={[styles.desc, { color: theme.textSecondary }]}
             numberOfLines={3}
           >
@@ -152,7 +150,6 @@ function LinkPreviewCard({ url, theme }) {
         )}
 
         <Text
-          selectable
           style={[styles.domain, { color: theme.textSecondary }]}
           numberOfLines={1}
         >

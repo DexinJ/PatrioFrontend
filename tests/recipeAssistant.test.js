@@ -133,6 +133,49 @@ test("recipe intent detection covers direct requests without hijacking images or
   );
 });
 
+test("recipe intent detection covers short meal follow-ups in supported languages", () => {
+  const recipeAnswer = {
+    role: "assistant",
+    content: [
+      {
+        type: "output_text",
+        text: "Here are the recipes I found: Chicken Stir Fry, ...",
+      },
+    ],
+  };
+
+  for (const [text, options] of [
+    ["breakfast", {}],
+    ["make me breakfast", {}],
+    ["breakfast suggestions", {}],
+    ["早餐食谱", { language: "zh" }],
+    ["来点早餐", { language: "zh" }],
+    ["make a dessert", {}],
+    ["换一个", { language: "zh", history: [recipeAnswer] }],
+    ["more ideas", { history: [recipeAnswer] }],
+  ]) {
+    assert.equal(
+      inferChatIntent({ text, ...options }),
+      "recipe_recommendation",
+      text
+    );
+  }
+
+  assert.equal(inferChatIntent({ text: "more" }), "chat");
+  assert.equal(inferChatIntent({ text: "breakfast" }), "recipe_recommendation");
+  assert.equal(
+    inferChatIntent({
+      text: "other",
+      imageUri: "file:///fridge.jpg",
+    }),
+    "chat"
+  );
+  assert.equal(
+    inferChatIntent({ text: "普通聊天", language: "zh" }),
+    "chat"
+  );
+});
+
 test("frontend recipe context bounds inventory and selected ingredients", () => {
   const preferences = { explicit: { preferredCuisines: ["Thai"] } };
   const inventory = Array.from({ length: 125 }, (_, index) => ({
@@ -194,6 +237,9 @@ test("custom-provider tools retain recipe capabilities and recipe-safe descripti
     "getShoppingListContents",
     "streamlineLists",
     "proposeAddAllToFridge",
+    "updateFridgeItem",
+    "proposeBulkFridgeUpdate",
+    "proposeAddMissingIngredientsToShoppingList",
     "recommendRecipes",
     "proposeRecipePreferenceUpdate",
   ]);
@@ -220,6 +266,27 @@ test("custom-provider tools retain recipe capabilities and recipe-safe descripti
     byName.get("proposeAddAllToFridge").parameters.properties.items.items
       .properties.expiresInDays
   );
+  const expiryFieldHolders = {
+    addFridgeItem: byName.get("addFridgeItem").parameters.properties,
+    proposeAddAllToFridge: byName.get("proposeAddAllToFridge").parameters
+      .properties.items.items.properties,
+    updateFridgeItem: byName.get("updateFridgeItem").parameters.properties
+      .updates.properties,
+    proposeBulkFridgeUpdate: byName.get("proposeBulkFridgeUpdate").parameters
+      .properties.changes.items.properties.update.properties,
+  };
+  for (const [name, properties] of Object.entries(expiryFieldHolders)) {
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(properties, "expiresAt"),
+      false,
+      `${name} hides expiresAt`
+    );
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(properties, "expiresInDays"),
+      true,
+      `${name} exposes expiresInDays`
+    );
+  }
   assert.match(byName.get("recommendRecipes").description, /Call once/i);
 });
 

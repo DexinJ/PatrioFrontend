@@ -270,6 +270,40 @@ function NumberPreferenceEditor({
   );
 }
 
+function CollapsibleSection({
+  title,
+  expanded,
+  onToggle,
+  children,
+  styles,
+  theme,
+  fontSize,
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <View>
+      <TouchableOpacity
+        style={styles.collapsibleSectionHeader}
+        activeOpacity={0.75}
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityHint={t("settings.sectionToggleA11y")}
+        accessibilityState={{ expanded }}
+      >
+        <Text style={styles.sectionHeaderLabel}>{title}</Text>
+        <Ionicons
+          name={expanded ? "chevron-up" : "chevron-down"}
+          size={Math.max(16, fontSize)}
+          color={theme.textSecondary}
+        />
+      </TouchableOpacity>
+      {expanded ? children : null}
+    </View>
+  );
+}
+
 function getSubscriptionStatusLabel(status) {
   const labelKey =
     APPLE_SUBSCRIPTION_STATUS_LABELS[status] ||
@@ -506,6 +540,9 @@ export default function SettingsScreen() {
   const [showPlanDetails, setShowPlanDetails] = useState(false);
   const [showAvailablePlans, setShowAvailablePlans] = useState(false);
   const [showUrgencyThresholds, setShowUrgencyThresholds] = useState(false);
+  const [expandedSections, setExpandedSections] = useState(
+    () => new Set()
+  );
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [aiApiKey, setAiApiKey] = useState("");
   const [aiProviderSettingsBaseUrl, setAiProviderSettingsBaseUrl] = useState(null);
@@ -518,6 +555,13 @@ export default function SettingsScreen() {
   const aiBaseUrl = aiBaseUrlDraft ?? configuredAiBaseUrl;
   const aiModel = aiModelDraft ?? configuredAiModel;
   const [aiProviderOpen, setAiProviderOpen] = useState(false);
+  const selectedAiProviderId = useMemo(() => {
+    const normalized = normalizeAiBaseUrl(aiBaseUrl);
+    const preset = AI_PROVIDER_URLS.find(
+      (item) => normalizeAiBaseUrl(item.value) === normalized
+    );
+    return preset ? preset.id : CUSTOM_AI_PROVIDER_ID;
+  }, [aiBaseUrl]);
   const aiProvider = resolveAiProvider(
     settings?.advanced?.aiProvider,
     settings?.advanced?.useCustomAi
@@ -526,6 +570,22 @@ export default function SettingsScreen() {
   const [testingAi, setTestingAi] = useState(false);
   const [appleAvailability, setAppleAvailability] = useState(null);
   const [checkingAppleAi, setCheckingAppleAi] = useState(false);
+
+  const isSectionExpanded = useCallback(
+    (key) => expandedSections.has(key),
+    [expandedSections]
+  );
+  const toggleSection = useCallback((key) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
 
   const router = useRouter();
   const fontSize = settings?.ux?.fontSize ?? 16;
@@ -627,14 +687,6 @@ export default function SettingsScreen() {
   const normalizedConfiguredAiBaseUrl = normalizeAiBaseUrl(configuredAiBaseUrl);
   const loadingAiProviderSettings =
     !storageHydrated || aiProviderSettingsBaseUrl !== normalizedAiBaseUrl;
-
-  const selectedAiProviderId = useMemo(() => {
-    const normalized = normalizeAiBaseUrl(aiBaseUrl);
-    const preset = AI_PROVIDER_URLS.find(
-      (item) => normalizeAiBaseUrl(item.value) === normalized
-    );
-    return preset ? preset.id : CUSTOM_AI_PROVIDER_ID;
-  }, [aiBaseUrl]);
 
   const aiProviderItems = useMemo(() => {
     return [
@@ -2460,474 +2512,492 @@ export default function SettingsScreen() {
               </View>
             </TouchableOpacity>
 
-            <Text style={stylesWithFont.menuSectionLabel}>
-              {t("settings.appearance")}
-            </Text>
-            <View style={stylesWithFont.settingRow}>
-              <Text style={stylesWithFont.label}>
-                {t("settings.useSystemTheme")}
-              </Text>
-
-              <Switch
-                accessibilityLabel={t("settings.useSystemThemeA11y")}
-                value={!!settings?.ux?.systemTheme}
-                onValueChange={(val) =>
-                  updateSetting("ux", "systemTheme", val)
-                }
-                trackColor={{
-                  true: theme.actionButton,
-                  false: theme.border,
-                }}
-              />
-            </View>
-
-            <View
-              style={[
-                stylesWithFont.settingRow,
-                settings?.ux?.systemTheme ? stylesWithFont.disabledSetting : null,
-              ]}
+            <CollapsibleSection
+              title={t("settings.appearance")}
+              expanded={isSectionExpanded("appearance")}
+              onToggle={() => toggleSection("appearance")}
+              styles={stylesWithFont}
+              theme={theme}
+              fontSize={fontSize}
             >
-              <View style={stylesWithFont.settingCopy}>
-                <Text style={stylesWithFont.label}>
-                  {t("settings.darkMode")}
-                </Text>
-                {settings?.ux?.systemTheme ? (
-                  <Text style={stylesWithFont.helpText}>
-                    {t("settings.darkModeBody")}
-                  </Text>
-                ) : null}
-              </View>
-
-              <Switch
-                accessibilityLabel={t("settings.darkModeA11y")}
-                value={!!settings?.ux?.darkMode}
-                disabled={!!settings?.ux?.systemTheme}
-                onValueChange={(val) =>
-                  updateSetting("ux", "darkMode", val)
-                }
-                trackColor={{
-                  true: theme.actionButton,
-                  false: theme.border,
-                }}
-              />
-            </View>
-
-            <View style={stylesWithFont.settingRow}>
-              <View style={stylesWithFont.settingCopy}>
-                <Text style={stylesWithFont.label}>
-                  {t("settings.chatgptStyleChat")}
-                </Text>
-                <Text style={stylesWithFont.helpText}>
-                  {t("settings.chatgptStyleChatBody")}
-                </Text>
-              </View>
-
-              <Switch
-                accessibilityLabel={t("settings.chatgptStyleChat")}
-                value={!!settings?.chat?.chatgptStyle}
-                onValueChange={(val) =>
-                  updateSetting("chat", "chatgptStyle", val)
-                }
-                trackColor={{
-                  true: theme.actionButton,
-                  false: theme.border,
-                }}
-              />
-            </View>
-
-            <View style={stylesWithFont.settingRow}>
-              <View style={stylesWithFont.sliderSetting}>
-                <Text style={stylesWithFont.label}>
-                  {t("settings.fontSizeLabel")} {displayedFontSize}
-                </Text>
-
-                <Slider
-                  accessibilityLabel={t("settings.fontSizeA11y")}
-                  accessibilityValue={{
-                    min: 12,
-                    max: 24,
-                    now: displayedFontSize,
-                    text: t("settings.fontSizeValue", {
-                      size: displayedFontSize,
-                    }),
-                  }}
-                  style={{ width: "100%", marginTop: 8 }}
-                  value={displayedFontSize}
-                  onValueChange={setFontSizeDraft}
-                  onSlidingComplete={(val) => {
-                    updateSetting("ux", "fontSize", val);
-                    setFontSizeDraft(null);
-                  }}
-                  minimumValue={12}
-                  maximumValue={24}
-                  step={1}
-                  minimumTrackTintColor={theme.accent}
-                  maximumTrackTintColor={theme.border}
-                />
-              </View>
-            </View>
-
-            <Text style={stylesWithFont.menuSectionLabel}>
-              {t("settings.recipeSuggestions")}
-            </Text>
-            <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.accountCardTitle}>
-                {t("settings.recipeProfile")}
-              </Text>
-              <Text style={stylesWithFont.helpText}>
-                {t("settings.recipeProfileBody")}
-              </Text>
-            </View>
-
-            <PreferenceListEditor
-              key={`preferred-cuisines:${commaSeparatedList(
-                explicitRecipePreferences.preferredCuisines
-              )}`}
-              label={t("settings.preferredCuisines")}
-              help={t("settings.preferredCuisinesHelp")}
-              value={explicitRecipePreferences.preferredCuisines}
-              onChange={(preferredCuisines) =>
-                updateExplicitRecipePreferences({ preferredCuisines })
-              }
-              placeholder={t("settings.preferredCuisinesPlaceholder")}
-              styles={stylesWithFont}
-              theme={theme}
-            />
-
-            <PreferenceListEditor
-              key={`dietary-patterns:${commaSeparatedList(
-                explicitRecipePreferences.dietaryPatterns
-              )}`}
-              label={t("settings.dietaryPatterns")}
-              help={t("settings.dietaryPatternsHelp")}
-              value={explicitRecipePreferences.dietaryPatterns}
-              onChange={(dietaryPatterns) =>
-                updateExplicitRecipePreferences({ dietaryPatterns })
-              }
-              placeholder={t("settings.dietaryPatternsPlaceholder")}
-              styles={stylesWithFont}
-              theme={theme}
-            />
-
-            <PreferenceListEditor
-              key={`disliked-cuisines:${commaSeparatedList(
-                explicitRecipePreferences.dislikedCuisines
-              )}`}
-              label={t("settings.cuisinesToAvoid")}
-              help={t("settings.cuisinesToAvoidHelp")}
-              value={explicitRecipePreferences.dislikedCuisines}
-              onChange={(dislikedCuisines) =>
-                updateExplicitRecipePreferences({ dislikedCuisines })
-              }
-              placeholder={t("settings.cuisinesToAvoidPlaceholder")}
-              styles={stylesWithFont}
-              theme={theme}
-            />
-
-            <PreferenceListEditor
-              key={`allergens:${commaSeparatedList(
-                explicitRecipePreferences.allergens
-              )}`}
-              label={t("settings.allergens")}
-              help={t("settings.allergensHelp")}
-              value={explicitRecipePreferences.allergens}
-              onChange={(allergens) =>
-                updateExplicitRecipePreferences({ allergens })
-              }
-              placeholder={t("settings.allergensPlaceholder")}
-              styles={stylesWithFont}
-              theme={theme}
-            />
-
-            <PreferenceListEditor
-              key={`excluded-ingredients:${commaSeparatedList(
-                explicitRecipePreferences.excludedIngredients
-              )}`}
-              label={t("settings.alwaysExcludeIngredients")}
-              help={t("settings.alwaysExcludeIngredientsHelp")}
-              value={explicitRecipePreferences.excludedIngredients}
-              onChange={(excludedIngredients) =>
-                updateExplicitRecipePreferences({ excludedIngredients })
-              }
-              placeholder={t("settings.alwaysExcludeIngredientsPlaceholder")}
-              styles={stylesWithFont}
-              theme={theme}
-            />
-
-            <PreferenceListEditor
-              key={`disliked-ingredients:${commaSeparatedList(
-                explicitRecipePreferences.dislikedIngredients
-              )}`}
-              label={t("settings.dislikedIngredients")}
-              help={t("settings.dislikedIngredientsHelp")}
-              value={explicitRecipePreferences.dislikedIngredients}
-              onChange={(dislikedIngredients) =>
-                updateExplicitRecipePreferences({ dislikedIngredients })
-              }
-              placeholder={t("settings.dislikedIngredientsPlaceholder")}
-              styles={stylesWithFont}
-              theme={theme}
-            />
-
-            <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.accountCardTitle}>
-                {t("settings.mealStyle")}
-              </Text>
-              <Text style={stylesWithFont.helpText}>
-                {t("settings.mealStyleBody")}
-              </Text>
-              <View style={stylesWithFont.preferenceChoiceRow}>
-                {RECIPE_ENERGY_OPTIONS.map((option) => {
-                  const selected =
-                    explicitRecipePreferences.preferredEnergy === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        stylesWithFont.preferenceChoice,
-                        selected && stylesWithFont.preferenceChoiceSelected,
-                      ]}
-                      onPress={() =>
-                        updateExplicitRecipePreferences({
-                          preferredEnergy: option.value,
-                        })
-                      }
-                      accessibilityRole="radio"
-                      accessibilityLabel={t("settings.mealStyleA11y", {
-                        option: t(option.labelKey),
-                      })}
-                      accessibilityState={{ selected }}
-                    >
-                      <Text
-                        style={[
-                          stylesWithFont.preferenceChoiceText,
-                          selected &&
-                            stylesWithFont.preferenceChoiceTextSelected,
-                        ]}
-                      >
-                        {t(option.labelKey)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={stylesWithFont.settingColumn}>
-              <NumberPreferenceEditor
-                key={`max-calories:${String(
-                  explicitRecipePreferences.maxCaloriesPerServing ?? ""
-                )}`}
-                label={t("settings.maxCaloriesPerServing")}
-                help={t("settings.maxCaloriesHelp")}
-                value={explicitRecipePreferences.maxCaloriesPerServing}
-                onChange={(maxCaloriesPerServing) =>
-                  updateExplicitRecipePreferences({ maxCaloriesPerServing })
-                }
-                placeholder={t("settings.maxCaloriesPlaceholder")}
-                minimum={100}
-                maximum={2500}
-                styles={stylesWithFont}
-                theme={theme}
-              />
-              <NumberPreferenceEditor
-                key={`max-prep:${String(
-                  explicitRecipePreferences.maxPrepMinutes ?? ""
-                )}`}
-                label={t("settings.maxRecipeTime")}
-                help={t("settings.maxRecipeTimeHelp")}
-                value={explicitRecipePreferences.maxPrepMinutes}
-                onChange={(maxPrepMinutes) =>
-                  updateExplicitRecipePreferences({ maxPrepMinutes })
-                }
-                placeholder={t("settings.maxRecipeTimePlaceholder")}
-                minimum={5}
-                maximum={480}
-                styles={stylesWithFont}
-                theme={theme}
-              />
-              <NumberPreferenceEditor
-                key={`default-servings:${String(
-                  explicitRecipePreferences.defaultServings ?? 2
-                )}`}
-                label={t("settings.defaultServings")}
-                help={t("settings.defaultServingsHelp")}
-                value={explicitRecipePreferences.defaultServings ?? 2}
-                onChange={(defaultServings) =>
-                  updateExplicitRecipePreferences({ defaultServings })
-                }
-                placeholder={t("settings.defaultServingsPlaceholder")}
-                minimum={1}
-                maximum={12}
-                allowEmpty={false}
-                fallback={2}
-                styles={stylesWithFont}
-                theme={theme}
-              />
-            </View>
-
-            <View style={stylesWithFont.settingColumn}>
-              <Text style={stylesWithFont.helpText}>
-                {t("settings.resetRecipePreferencesBody")}
-              </Text>
-              <CustomButton
-                title={t("settings.resetRecipePreferencesTitle")}
-                onPress={confirmRecipePreferenceReset}
-                fontSize={fontSize}
-                color={theme.danger}
-              />
-            </View>
-
-            <Text style={stylesWithFont.menuSectionLabel}>
-              {t("settings.notifications")}
-            </Text>
-            <View style={stylesWithFont.settingRow}>
-              <Text style={stylesWithFont.label}>
-                {t("settings.dailyReminders")}
-              </Text>
-
-              <Switch
-                accessibilityLabel={t("settings.dailyRemindersA11y")}
-                value={
-                  !!settings?.notifications?.dailyReminders
-                }
-                onValueChange={(val) =>
-                  void updateReminderToggle(
-                    "notifications",
-                    "dailyReminders",
-                    val
-                  )
-                }
-                trackColor={{
-                  true: theme.actionButton,
-                  false: theme.border,
-                }}
-              />
-            </View>
-
-            <Text style={stylesWithFont.menuSectionLabel}>
-              {t("settings.expirationReminders")}
-            </Text>
-            <View style={stylesWithFont.settingRow}>
-              <Text style={stylesWithFont.label}>
-                {t("settings.expirationAlerts")}
-              </Text>
-
-              <Switch
-                accessibilityLabel={t("settings.expirationAlertsA11y")}
-                value={
-                  !!settings?.expiration?.expirationAlerts
-                }
-                onValueChange={(val) =>
-                  void updateReminderToggle(
-                    "expiration",
-                    "expirationAlerts",
-                    val
-                  )
-                }
-                trackColor={{
-                  true: theme.accent,
-                  false: theme.border,
-                }}
-              />
-            </View>
-
-            <View style={stylesWithFont.settingRow}>
-              <View style={stylesWithFont.sliderSetting}>
-                <Text style={stylesWithFont.label}>
-                  {t("settings.notify")} {remindDays}{" "}
-                  {t("settings.daysBefore")}
-                </Text>
-
-                <Slider
-                  accessibilityLabel={t("settings.remindDaysBeforeA11y")}
-                  accessibilityValue={{
-                    min: 1,
-                    max: 31,
-                    now: remindDays,
-                    text: t("settings.remindDaysBefore", {
-                      count: remindDays,
-                    }),
-                  }}
-                  style={{ width: "100%", marginTop: 8 }}
-                  value={settings?.expiration?.remindDays ?? 5}
-                  onSlidingComplete={(val) =>
-                    updateSetting("expiration", "remindDays", val)
-                  }
-                  onValueChange={(val) => setRemindDays(val)}
-                  minimumValue={1}
-                  maximumValue={31}
-                  step={1}
-                  minimumTrackTintColor={theme.accent}
-                  maximumTrackTintColor={theme.border}
-                />
-              </View>
-            </View>
-
-            <View style={stylesWithFont.settingRow}>
-              <View style={stylesWithFont.settingCopy}>
-                <Text style={stylesWithFont.label}>
-                  {t("settings.customUrgencyThresholds")}
-                </Text>
-                <Text style={stylesWithFont.helpText}>
-                  {customUrgency
-                    ? t("settings.customUrgencyOn")
-                    : t("settings.customUrgencyOff")}
-                </Text>
-              </View>
-
-              <Switch
-                accessibilityLabel={t("settings.customUrgencyThresholdsA11y")}
-                value={customUrgency}
-                onValueChange={(val) =>
-                  updateSetting("expiration", "customUrgency", val)
-                }
-                trackColor={{
-                  true: theme.accent,
-                  false: theme.border,
-                }}
-              />
-            </View>
-
-            {customUrgency ? (
-              <>
-                <TouchableOpacity
-                  style={stylesWithFont.settingRow}
-                  onPress={() =>
-                    setShowUrgencyThresholds((visible) => !visible)
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={t("settings.advancedThresholdsA11y")}
-                  accessibilityState={{ expanded: showUrgencyThresholds }}
-                >
-                  <View style={stylesWithFont.settingCopy}>
-                    <Text style={stylesWithFont.accountCardTitle}>
-                      {t("settings.advancedThresholds")}
-                    </Text>
-                    <Text style={stylesWithFont.helpText}>
-                      {t("settings.advancedThresholdsBody")}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={
-                      showUrgencyThresholds
-                        ? "chevron-up"
-                        : "chevron-down"
-                    }
-                    size={fontSize * 1.1}
-                    color={theme.textSecondary}
-                  />
-                </TouchableOpacity>
-
-                {showUrgencyThresholds ? renderUrgencySliders() : null}
-              </>
-            ) : (
               <View style={stylesWithFont.settingRow}>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.useSystemTheme")}
+                </Text>
+
+                <Switch
+                  accessibilityLabel={t("settings.useSystemThemeA11y")}
+                  value={!!settings?.ux?.systemTheme}
+                  onValueChange={(val) =>
+                    updateSetting("ux", "systemTheme", val)
+                  }
+                  trackColor={{
+                    true: theme.actionButton,
+                    false: theme.border,
+                  }}
+                />
+              </View>
+
+              <View
+                style={[
+                  stylesWithFont.settingRow,
+                  settings?.ux?.systemTheme
+                    ? stylesWithFont.disabledSetting
+                    : null,
+                ]}
+              >
+                <View style={stylesWithFont.settingCopy}>
+                  <Text style={stylesWithFont.label}>
+                    {t("settings.darkMode")}
+                  </Text>
+                  {settings?.ux?.systemTheme ? (
+                    <Text style={stylesWithFont.helpText}>
+                      {t("settings.darkModeBody")}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <Switch
+                  accessibilityLabel={t("settings.darkModeA11y")}
+                  value={!!settings?.ux?.darkMode}
+                  disabled={!!settings?.ux?.systemTheme}
+                  onValueChange={(val) =>
+                    updateSetting("ux", "darkMode", val)
+                  }
+                  trackColor={{
+                    true: theme.actionButton,
+                    false: theme.border,
+                  }}
+                />
+              </View>
+
+              <View style={stylesWithFont.settingRow}>
+                <View style={stylesWithFont.settingCopy}>
+                  <Text style={stylesWithFont.label}>
+                    {t("settings.chatgptStyleChat")}
+                  </Text>
+                  <Text style={stylesWithFont.helpText}>
+                    {t("settings.chatgptStyleChatBody")}
+                  </Text>
+                </View>
+
+                <Switch
+                  accessibilityLabel={t("settings.chatgptStyleChat")}
+                  value={!!settings?.chat?.chatgptStyle}
+                  onValueChange={(val) =>
+                    updateSetting("chat", "chatgptStyle", val)
+                  }
+                  trackColor={{
+                    true: theme.actionButton,
+                    false: theme.border,
+                  }}
+                />
+              </View>
+
+              <View style={stylesWithFont.settingRow}>
+                <View style={stylesWithFont.sliderSetting}>
+                  <Text style={stylesWithFont.label}>
+                    {t("settings.fontSizeLabel")} {displayedFontSize}
+                  </Text>
+
+                  <Slider
+                    accessibilityLabel={t("settings.fontSizeA11y")}
+                    accessibilityValue={{
+                      min: 12,
+                      max: 24,
+                      now: displayedFontSize,
+                      text: t("settings.fontSizeValue", {
+                        size: displayedFontSize,
+                      }),
+                    }}
+                    style={{ width: "100%", marginTop: 8 }}
+                    value={displayedFontSize}
+                    onValueChange={setFontSizeDraft}
+                    onSlidingComplete={(val) => {
+                      updateSetting("ux", "fontSize", val);
+                      setFontSizeDraft(null);
+                    }}
+                    minimumValue={12}
+                    maximumValue={24}
+                    step={1}
+                    minimumTrackTintColor={theme.accent}
+                    maximumTrackTintColor={theme.border}
+                  />
+                </View>
+              </View>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title={t("settings.recipeSuggestions")}
+              expanded={isSectionExpanded("recipeSuggestions")}
+              onToggle={() => toggleSection("recipeSuggestions")}
+              styles={stylesWithFont}
+              theme={theme}
+              fontSize={fontSize}
+            >
+              <View style={stylesWithFont.settingColumn}>
+                <Text style={stylesWithFont.accountCardTitle}>
+                  {t("settings.recipeProfile")}
+                </Text>
                 <Text style={stylesWithFont.helpText}>
-                  {t("settings.urgencyPreset")}
+                  {t("settings.recipeProfileBody")}
                 </Text>
               </View>
-            )}
+
+              <PreferenceListEditor
+                key={`preferred-cuisines:${commaSeparatedList(
+                  explicitRecipePreferences.preferredCuisines
+                )}`}
+                label={t("settings.preferredCuisines")}
+                help={t("settings.preferredCuisinesHelp")}
+                value={explicitRecipePreferences.preferredCuisines}
+                onChange={(preferredCuisines) =>
+                  updateExplicitRecipePreferences({ preferredCuisines })
+                }
+                placeholder={t("settings.preferredCuisinesPlaceholder")}
+                styles={stylesWithFont}
+                theme={theme}
+              />
+
+              <PreferenceListEditor
+                key={`dietary-patterns:${commaSeparatedList(
+                  explicitRecipePreferences.dietaryPatterns
+                )}`}
+                label={t("settings.dietaryPatterns")}
+                help={t("settings.dietaryPatternsHelp")}
+                value={explicitRecipePreferences.dietaryPatterns}
+                onChange={(dietaryPatterns) =>
+                  updateExplicitRecipePreferences({ dietaryPatterns })
+                }
+                placeholder={t("settings.dietaryPatternsPlaceholder")}
+                styles={stylesWithFont}
+                theme={theme}
+              />
+
+              <PreferenceListEditor
+                key={`disliked-cuisines:${commaSeparatedList(
+                  explicitRecipePreferences.dislikedCuisines
+                )}`}
+                label={t("settings.cuisinesToAvoid")}
+                help={t("settings.cuisinesToAvoidHelp")}
+                value={explicitRecipePreferences.dislikedCuisines}
+                onChange={(dislikedCuisines) =>
+                  updateExplicitRecipePreferences({ dislikedCuisines })
+                }
+                placeholder={t("settings.cuisinesToAvoidPlaceholder")}
+                styles={stylesWithFont}
+                theme={theme}
+              />
+
+              <PreferenceListEditor
+                key={`allergens:${commaSeparatedList(
+                  explicitRecipePreferences.allergens
+                )}`}
+                label={t("settings.allergens")}
+                help={t("settings.allergensHelp")}
+                value={explicitRecipePreferences.allergens}
+                onChange={(allergens) =>
+                  updateExplicitRecipePreferences({ allergens })
+                }
+                placeholder={t("settings.allergensPlaceholder")}
+                styles={stylesWithFont}
+                theme={theme}
+              />
+
+              <PreferenceListEditor
+                key={`excluded-ingredients:${commaSeparatedList(
+                  explicitRecipePreferences.excludedIngredients
+                )}`}
+                label={t("settings.alwaysExcludeIngredients")}
+                help={t("settings.alwaysExcludeIngredientsHelp")}
+                value={explicitRecipePreferences.excludedIngredients}
+                onChange={(excludedIngredients) =>
+                  updateExplicitRecipePreferences({ excludedIngredients })
+                }
+                placeholder={t("settings.alwaysExcludeIngredientsPlaceholder")}
+                styles={stylesWithFont}
+                theme={theme}
+              />
+
+              <PreferenceListEditor
+                key={`disliked-ingredients:${commaSeparatedList(
+                  explicitRecipePreferences.dislikedIngredients
+                )}`}
+                label={t("settings.dislikedIngredients")}
+                help={t("settings.dislikedIngredientsHelp")}
+                value={explicitRecipePreferences.dislikedIngredients}
+                onChange={(dislikedIngredients) =>
+                  updateExplicitRecipePreferences({ dislikedIngredients })
+                }
+                placeholder={t("settings.dislikedIngredientsPlaceholder")}
+                styles={stylesWithFont}
+                theme={theme}
+              />
+
+              <View style={stylesWithFont.settingColumn}>
+                <Text style={stylesWithFont.accountCardTitle}>
+                  {t("settings.mealStyle")}
+                </Text>
+                <Text style={stylesWithFont.helpText}>
+                  {t("settings.mealStyleBody")}
+                </Text>
+                <View style={stylesWithFont.preferenceChoiceRow}>
+                  {RECIPE_ENERGY_OPTIONS.map((option) => {
+                    const selected =
+                      explicitRecipePreferences.preferredEnergy ===
+                      option.value;
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          stylesWithFont.preferenceChoice,
+                          selected && stylesWithFont.preferenceChoiceSelected,
+                        ]}
+                        onPress={() =>
+                          updateExplicitRecipePreferences({
+                            preferredEnergy: option.value,
+                          })
+                        }
+                        accessibilityRole="radio"
+                        accessibilityLabel={t("settings.mealStyleA11y", {
+                          option: t(option.labelKey),
+                        })}
+                        accessibilityState={{ selected }}
+                      >
+                        <Text
+                          style={[
+                            stylesWithFont.preferenceChoiceText,
+                            selected &&
+                              stylesWithFont.preferenceChoiceTextSelected,
+                          ]}
+                        >
+                          {t(option.labelKey)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={stylesWithFont.settingColumn}>
+                <NumberPreferenceEditor
+                  key={`max-calories:${String(
+                    explicitRecipePreferences.maxCaloriesPerServing ?? ""
+                  )}`}
+                  label={t("settings.maxCaloriesPerServing")}
+                  help={t("settings.maxCaloriesHelp")}
+                  value={explicitRecipePreferences.maxCaloriesPerServing}
+                  onChange={(maxCaloriesPerServing) =>
+                    updateExplicitRecipePreferences({ maxCaloriesPerServing })
+                  }
+                  placeholder={t("settings.maxCaloriesPlaceholder")}
+                  minimum={100}
+                  maximum={2500}
+                  styles={stylesWithFont}
+                  theme={theme}
+                />
+                <NumberPreferenceEditor
+                  key={`max-prep:${String(
+                    explicitRecipePreferences.maxPrepMinutes ?? ""
+                  )}`}
+                  label={t("settings.maxRecipeTime")}
+                  help={t("settings.maxRecipeTimeHelp")}
+                  value={explicitRecipePreferences.maxPrepMinutes}
+                  onChange={(maxPrepMinutes) =>
+                    updateExplicitRecipePreferences({ maxPrepMinutes })
+                  }
+                  placeholder={t("settings.maxRecipeTimePlaceholder")}
+                  minimum={5}
+                  maximum={480}
+                  styles={stylesWithFont}
+                  theme={theme}
+                />
+                <NumberPreferenceEditor
+                  key={`default-servings:${String(
+                    explicitRecipePreferences.defaultServings ?? 2
+                  )}`}
+                  label={t("settings.defaultServings")}
+                  help={t("settings.defaultServingsHelp")}
+                  value={explicitRecipePreferences.defaultServings ?? 2}
+                  onChange={(defaultServings) =>
+                    updateExplicitRecipePreferences({ defaultServings })
+                  }
+                  placeholder={t("settings.defaultServingsPlaceholder")}
+                  minimum={1}
+                  maximum={12}
+                  allowEmpty={false}
+                  fallback={2}
+                  styles={stylesWithFont}
+                  theme={theme}
+                />
+              </View>
+
+              <View style={stylesWithFont.settingColumn}>
+                <Text style={stylesWithFont.helpText}>
+                  {t("settings.resetRecipePreferencesBody")}
+                </Text>
+                <CustomButton
+                  title={t("settings.resetRecipePreferencesTitle")}
+                  onPress={confirmRecipePreferenceReset}
+                  fontSize={fontSize}
+                  color={theme.danger}
+                />
+              </View>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title={t("settings.notifications")}
+              expanded={isSectionExpanded("notifications")}
+              onToggle={() => toggleSection("notifications")}
+              styles={stylesWithFont}
+              theme={theme}
+              fontSize={fontSize}
+            >
+              <View style={stylesWithFont.settingRow}>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.dailyReminders")}
+                </Text>
+
+                <Switch
+                  accessibilityLabel={t("settings.dailyRemindersA11y")}
+                  value={!!settings?.notifications?.dailyReminders}
+                  onValueChange={(val) =>
+                    void updateReminderToggle(
+                      "notifications",
+                      "dailyReminders",
+                      val
+                    )
+                  }
+                  trackColor={{
+                    true: theme.actionButton,
+                    false: theme.border,
+                  }}
+                />
+              </View>
+
+              <Text style={stylesWithFont.menuSectionLabel}>
+                {t("settings.expirationReminders")}
+              </Text>
+
+              <View style={stylesWithFont.settingRow}>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.expirationAlerts")}
+                </Text>
+
+                <Switch
+                  accessibilityLabel={t("settings.expirationAlertsA11y")}
+                  value={!!settings?.expiration?.expirationAlerts}
+                  onValueChange={(val) =>
+                    void updateReminderToggle(
+                      "expiration",
+                      "expirationAlerts",
+                      val
+                    )
+                  }
+                  trackColor={{
+                    true: theme.accent,
+                    false: theme.border,
+                  }}
+                />
+              </View>
+
+              <View style={stylesWithFont.settingRow}>
+                <View style={stylesWithFont.sliderSetting}>
+                  <Text style={stylesWithFont.label}>
+                    {t("settings.notify")} {remindDays}{" "}
+                    {t("settings.daysBefore")}
+                  </Text>
+
+                  <Slider
+                    accessibilityLabel={t("settings.remindDaysBeforeA11y")}
+                    accessibilityValue={{
+                      min: 1,
+                      max: 31,
+                      now: remindDays,
+                      text: t("settings.remindDaysBefore", {
+                        count: remindDays,
+                      }),
+                    }}
+                    style={{ width: "100%", marginTop: 8 }}
+                    value={settings?.expiration?.remindDays ?? 5}
+                    onSlidingComplete={(val) =>
+                      updateSetting("expiration", "remindDays", val)
+                    }
+                    onValueChange={(val) => setRemindDays(val)}
+                    minimumValue={1}
+                    maximumValue={31}
+                    step={1}
+                    minimumTrackTintColor={theme.accent}
+                    maximumTrackTintColor={theme.border}
+                  />
+                </View>
+              </View>
+
+              <View style={stylesWithFont.settingRow}>
+                <View style={stylesWithFont.settingCopy}>
+                  <Text style={stylesWithFont.label}>
+                    {t("settings.customUrgencyThresholds")}
+                  </Text>
+                  <Text style={stylesWithFont.helpText}>
+                    {customUrgency
+                      ? t("settings.customUrgencyOn")
+                      : t("settings.customUrgencyOff")}
+                  </Text>
+                </View>
+
+                <Switch
+                  accessibilityLabel={t("settings.customUrgencyThresholdsA11y")}
+                  value={customUrgency}
+                  onValueChange={(val) =>
+                    updateSetting("expiration", "customUrgency", val)
+                  }
+                  trackColor={{
+                    true: theme.accent,
+                    false: theme.border,
+                  }}
+                />
+              </View>
+
+              {customUrgency ? (
+                <>
+                  <TouchableOpacity
+                    style={stylesWithFont.settingRow}
+                    onPress={() =>
+                      setShowUrgencyThresholds((visible) => !visible)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={t("settings.advancedThresholdsA11y")}
+                    accessibilityState={{ expanded: showUrgencyThresholds }}
+                  >
+                    <View style={stylesWithFont.settingCopy}>
+                      <Text style={stylesWithFont.accountCardTitle}>
+                        {t("settings.advancedThresholds")}
+                      </Text>
+                      <Text style={stylesWithFont.helpText}>
+                        {t("settings.advancedThresholdsBody")}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={
+                        showUrgencyThresholds
+                          ? "chevron-up"
+                          : "chevron-down"
+                      }
+                      size={fontSize * 1.1}
+                      color={theme.textSecondary}
+                    />
+                  </TouchableOpacity>
+
+                  {showUrgencyThresholds ? renderUrgencySliders() : null}
+                </>
+              ) : (
+                <View style={stylesWithFont.settingRow}>
+                  <Text style={stylesWithFont.helpText}>
+                    {t("settings.urgencyPreset")}
+                  </Text>
+                </View>
+              )}
+            </CollapsibleSection>
 
             <Modal
               visible={languageModalVisible}
@@ -3155,7 +3225,7 @@ export default function SettingsScreen() {
                 value={selectedAiProviderId}
                 items={aiProviderItems}
                 setOpen={setAiProviderOpen}
-                onChangeValue={handleAiProviderSelect}
+                onSelectItem={(item) => handleAiProviderSelect(item?.value)}
                 disabled={savingAi || testingAi}
                 placeholder={t("settings.apiProviderPlaceholder")}
                 listMode="SCROLLVIEW"
@@ -3178,8 +3248,7 @@ export default function SettingsScreen() {
                 editable={
                   !savingAi &&
                   !testingAi &&
-                  !loadingAiProviderSettings &&
-                  selectedAiProviderId === CUSTOM_AI_PROVIDER_ID
+                  !loadingAiProviderSettings
                 }
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -3403,6 +3472,24 @@ const dynamicStyles = (theme, fontSize) =>
       marginBottom: 12,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.border,
+    },
+    collapsibleSectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 15,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      marginBottom: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
+    },
+    sectionHeaderLabel: {
+      flex: 1,
+      fontSize: fontSize + 1,
+      fontWeight: "600",
+      color: theme.textPrimary,
     },
 
     settingColumn: {

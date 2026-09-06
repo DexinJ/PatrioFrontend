@@ -26,6 +26,10 @@ import {
   releaseFridgeProposalAction,
 } from "../../utils/fridgeProposal";
 import {
+  claimBulkProposalAction,
+  markBulkProposalActionConsumed,
+} from "../../utils/bulkProposal";
+import {
   applyRecipePreferenceProposal,
   formatRecipePreferencePatch,
   normalizeRecipePreferencePatch,
@@ -78,8 +82,16 @@ export default function ChatScreen() {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const { streamMessage } = useGpt();
-  const { theme, settings, addManyToFridge, updateRecipePreferences } =
-    useContext(GlobalContext);
+  const {
+    theme,
+    settings,
+    fridgeItems,
+    addManyToFridge,
+    addManyToShoppingList,
+    editFridgeItem,
+    removeManyFromFridge,
+    updateRecipePreferences,
+  } = useContext(GlobalContext);
   const {
     messages,
     setMessages,
@@ -199,6 +211,134 @@ export default function ChatScreen() {
               text: summary
                 ? t("chat.savedPreferences", { summary })
                 : t("chat.savedPreferencesShort"),
+            },
+          ],
+        },
+      ]);
+      return;
+    }
+    if (action?.kind === "bulk_fridge_update") {
+      const changes = Array.isArray(action.changes) ? action.changes : [];
+      if (changes.length === 0) return;
+      if (
+        !claimBulkProposalAction(
+          claimedFridgeProposalActionsRef.current,
+          action
+        )
+      ) {
+        return;
+      }
+
+      const knownIds = new Set(
+        (Array.isArray(fridgeItems) ? fridgeItems : []).map((item) => item?.id)
+      );
+      const seenIds = new Set();
+      let applied = 0;
+      const failed = [];
+      for (const change of changes) {
+        const id = String(change?.id || "").trim();
+        const label = String(change?.name || "").trim() || t("common.unnamed");
+        if (!id || seenIds.has(id) || !knownIds.has(id)) {
+          failed.push(label);
+          continue;
+        }
+        seenIds.add(id);
+        const update =
+          change?.update && typeof change.update === "object"
+            ? change.update
+            : {};
+        if (!change?.remove && Object.keys(update).length === 0) {
+          failed.push(label);
+          continue;
+        }
+        try {
+          if (change?.remove === true) {
+            removeManyFromFridge([id]);
+          } else {
+            editFridgeItem(id, update);
+          }
+          applied += 1;
+        } catch (error) {
+          if (__DEV__) console.log({ bulkFridgeUpdateError: error?.message || error });
+          failed.push(label);
+        }
+      }
+
+      if (!mountedRef.current) return;
+      setMessages((prev) => [
+        ...markBulkProposalActionConsumed(prev, action),
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "output_text",
+              text:
+                t("chat.appliedFridgeChanges", { count: applied }) +
+                (failed.length
+                  ? `\n${t("chat.skipped", {
+                      names: failed.join(", "),
+                    })}`
+                  : ""),
+            },
+          ],
+        },
+      ]);
+      return;
+    }
+    if (action?.kind === "add_missing_to_shopping_list") {
+      const items = Array.isArray(action.items) ? action.items : [];
+      if (items.length === 0) return;
+
+      const additions = items
+        .map((it) => ({
+          name: String(it?.name ?? "").trim(),
+          quantity: String(it?.quantity ?? "1").trim() || "1",
+          categories: it?.categories,
+        }))
+        .filter((it) => it.name);
+      if (additions.length === 0) return;
+      if (
+        !claimFridgeProposalAction(
+          claimedFridgeProposalActionsRef.current,
+          action
+        )
+      ) {
+        return;
+      }
+
+      let added = 0;
+      const failed = [];
+      try {
+        added = addManyToShoppingList(additions).length;
+      } catch (error) {
+        releaseFridgeProposalAction(
+          claimedFridgeProposalActionsRef.current,
+          action
+        );
+        const reason = String(error?.message || error);
+        failed.push(...additions.map(({ name }) => name));
+        if (__DEV__) console.log({ shoppingListAddError: reason });
+      }
+
+      if (!mountedRef.current) return;
+      setMessages((prev) => [
+        ...(failed.length === 0
+          ? markFridgeProposalActionConsumed(prev, action)
+          : Array.isArray(prev)
+            ? prev
+            : []),
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "output_text",
+              text:
+                t("chat.addedToShoppingList", { count: added }) +
+                (failed.length
+                  ? `\n${t("chat.skipped", {
+                      names: failed.join(", "),
+                    })}`
+                  : ""),
             },
           ],
         },

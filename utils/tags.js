@@ -41,18 +41,31 @@ export function findPresetTagId({ input, tags, tagById }) {
 
 /**
  * normalizeToPresetTagIds({ categories, tags, tagById })
- * - categories can be: array, "a,b,c", single string, null
+ * - categories can be: array, "a,b,c", single string,
+ *   a typed object { storage, urgency, food_type, state? }, or null
  * - returns a deduped array of tagIds
  */
 export function normalizeToPresetTagIds({ categories, tags, tagById }) {
   if (!categories) return [];
 
+  const isTypedObject =
+    categories && typeof categories === "object" && !Array.isArray(categories);
+
   const list = Array.isArray(categories)
     ? categories
-    : String(categories)
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean);
+    : isTypedObject
+      ? ["storage", "urgency", "food_type", "state"]
+          .map((key) => categories[key])
+          .filter(
+            (value) =>
+              value !== undefined &&
+              value !== null &&
+              String(value).trim() !== ""
+          )
+      : String(categories)
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean);
 
   const ids = list
     .map((x) => findPresetTagId({ input: x, tags, tagById }))

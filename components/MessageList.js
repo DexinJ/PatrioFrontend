@@ -13,9 +13,6 @@ import {
   Easing,
 } from "react-native";
 import MessageBubble from "./MessageBubble";
-import ChatMessageActionsMenu, {
-  useChatMessageActions,
-} from "./ChatMessageActionsMenu";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useTranslation } from "react-i18next";
@@ -25,6 +22,10 @@ import {
   normalizeFridgeProposalCategories,
   normalizeFridgeProposalQuantity,
 } from "../utils/fridgeProposal";
+import {
+  bulkProposalActionKey,
+  isBulkProposalActionConsumed,
+} from "../utils/bulkProposal";
 import { translateTagLabel } from "../utils/tagTranslation";
 
 function toDisplayText(value) {
@@ -182,6 +183,136 @@ function ActionCard({ action, onPress }) {
           <Text style={{ fontWeight: "700", color: TextPrimary }}>
             {toDisplayText(normalizedAction.title) ||
               t("messageList.savePreferencesButton")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (normalizedAction.kind === "bulk_fridge_update") {
+    const changes = Array.isArray(normalizedAction.changes)
+      ? normalizedAction.changes
+      : [];
+    const title =
+      toDisplayText(normalizedAction.title) ||
+      t("messageList.reviewBulkChanges");
+    const consumed = isBulkProposalActionConsumed(normalizedAction);
+    const skipped = Array.isArray(normalizedAction.skipped)
+      ? normalizedAction.skipped
+      : [];
+
+    return (
+      <View
+        style={{
+          padding: 12,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: Border,
+          marginVertical: 6,
+        }}
+      >
+        <Text style={{ fontWeight: "600", marginBottom: 6, color: TextPrimary }}>
+          {t("messageList.fridgeChanges", { count: changes.length })}
+        </Text>
+        {changes.slice(0, 8).map((change, idx) => {
+          const label =
+            toDisplayText(change?.summary) ||
+            (change?.remove
+              ? `${t("messageList.removeItem")}: ${toDisplayText(change?.name) || ""}`
+              : toDisplayText(change?.name) || t("common.unnamed"));
+          return (
+            <Text key={idx} style={{ marginBottom: 2, color: TextPrimary }}>
+              • {label}
+            </Text>
+          );
+        })}
+        {changes.length > 8 ? (
+          <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
+            {t("messageList.more", { count: changes.length - 8 })}
+          </Text>
+        ) : null}
+        {skipped.length > 0 ? (
+          <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
+            {t("messageList.skippedChanges", { names: skipped.join(", ") })}
+          </Text>
+        ) : null}
+
+        <TouchableOpacity
+          onPress={consumed ? undefined : onPress}
+          disabled={consumed}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: consumed }}
+          style={{
+            marginTop: 10,
+            paddingVertical: 10,
+            borderRadius: 10,
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: TextPrimary,
+            opacity: consumed ? 0.55 : 1,
+          }}
+        >
+          <Text style={{ fontWeight: "700", color: TextPrimary }}>
+            {consumed ? t("messageList.changesApplied") : title}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (normalizedAction.kind === "add_missing_to_shopping_list") {
+    const items = Array.isArray(normalizedAction.items)
+      ? normalizedAction.items
+      : [];
+    const title =
+      toDisplayText(normalizedAction.title) ||
+      t("messageList.addMissingIngredients");
+    const consumed = isFridgeProposalActionConsumed(normalizedAction);
+
+    return (
+      <View
+        style={{
+          padding: 12,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: Border,
+          marginVertical: 6,
+        }}
+      >
+        <Text style={{ fontWeight: "600", marginBottom: 6, color: TextPrimary }}>
+          {t("messageList.missingItems", { count: items.length })}
+        </Text>
+        {items.slice(0, 8).map((it, idx) => (
+          <Text key={idx} style={{ marginBottom: 2, color: TextPrimary }}>
+            • {toDisplayText(it?.name) || t("common.unnamed")}
+            {toDisplayText(it?.quantity) && toDisplayText(it.quantity) !== "1"
+              ? ` — ${toDisplayText(it.quantity)}`
+              : ""}
+          </Text>
+        ))}
+        {items.length > 8 ? (
+          <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
+            {t("messageList.more", { count: items.length - 8 })}
+          </Text>
+        ) : null}
+
+        <TouchableOpacity
+          onPress={consumed ? undefined : onPress}
+          disabled={consumed}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: consumed }}
+          style={{
+            marginTop: 10,
+            paddingVertical: 10,
+            borderRadius: 10,
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: TextPrimary,
+            opacity: consumed ? 0.55 : 1,
+          }}
+        >
+          <Text style={{ fontWeight: "700", color: TextPrimary }}>
+            {consumed ? t("messageList.addedToShoppingList") : title}
           </Text>
         </TouchableOpacity>
       </View>
@@ -834,7 +965,6 @@ export default function MessageList({ messages, onUiAction }) {
   const { waiting } = useContext(ChatContext);
   const [modalVisible, setModalVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
-  const messageActions = useChatMessageActions();
 
   const openActionModal = (action) => {
     if (isFridgeProposalActionConsumed(action)) return;
@@ -883,7 +1013,9 @@ export default function MessageList({ messages, onUiAction }) {
             action:
               action?.kind === "add_all_to_fridge"
                 ? { ...action, actionKey: fridgeProposalActionKey(action) }
-                : action,
+                : action?.kind === "bulk_fridge_update"
+                  ? { ...action, actionKey: bulkProposalActionKey(action) }
+                  : action,
             key,
           };
         }
@@ -922,7 +1054,9 @@ export default function MessageList({ messages, onUiAction }) {
         renderItem={({ item }) => {
           if (item.kind === "ui_action") {
             const actionPress =
-              item.action?.kind === "recipe_preference_update"
+              item.action?.kind === "recipe_preference_update" ||
+              item.action?.kind === "bulk_fridge_update" ||
+              item.action?.kind === "add_missing_to_shopping_list"
                 ? () => onUiAction?.(item.action)
                 : () => openActionModal(item.action);
             return <ActionCard action={item.action} onPress={actionPress} />;
@@ -933,10 +1067,6 @@ export default function MessageList({ messages, onUiAction }) {
               text={item.text}
               imageUri={item.imageUri}
               isUser={item.isUser}
-              selected={messageActions.selectedId === item.key}
-              onLongPress={() =>
-                messageActions.openFor({ id: item.key, text: item.text })
-              }
             />
           );
         }}
@@ -957,16 +1087,6 @@ export default function MessageList({ messages, onUiAction }) {
         action={pendingAction}
         onClose={closeActionModal}
         onConfirm={confirmActionModal}
-      />
-
-      <ChatMessageActionsMenu
-        visible={!!messageActions.target}
-        selectionMode={messageActions.selectionMode}
-        onCopy={messageActions.copy}
-        onSelectAll={messageActions.selectAll}
-        onShare={messageActions.share}
-        onDismiss={messageActions.dismiss}
-        theme={theme}
       />
     </>
   );

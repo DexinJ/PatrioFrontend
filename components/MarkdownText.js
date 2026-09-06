@@ -1,13 +1,15 @@
 // components/MarkdownText.js
-// Renders assistant markdown as one selectable <Text> run per message (with
-// nested <Text> for inline styling) so iOS lets the user drag selection
-// handles across paragraphs and formatted spans, like on a web page. Native
-// selection can't cross <View> boundaries, so code blocks, blockquotes, and
-// horizontal rules are rendered as their own blocks (their text is still
-// individually selectable).
+// Renders assistant markdown as one selectable text run per message (with
+// nested <Text> for inline styling). On iOS the selectable runs are backed by
+// a real UITextView (via @bsky.app/react-native-uitextview), so long-press
+// shows the system edit menu with native selection handles; Android keeps its
+// native Text selection. Selection can't cross <View> boundaries, so code
+// blocks, blockquotes, and horizontal rules are rendered as their own blocks
+// (their text is still individually selectable).
 
 import { memo, useMemo } from "react";
-import { Linking, Text, View } from "react-native";
+import { Linking, View } from "react-native";
+import { UITextView as Text } from "@bsky.app/react-native-uitextview";
 
 import LinkPreviewCard from "./LinkPreviewCard";
 import {
@@ -82,7 +84,7 @@ function buildMarkdownStyles(theme, fontSize) {
   return styles;
 }
 
-function renderInlineSegments(segments, styles, keyPrefix, onLongPress) {
+function renderInlineSegments(segments, styles, keyPrefix) {
   return segments.map((segment, index) => {
     const key = `${keyPrefix}-${index}`;
 
@@ -100,19 +102,19 @@ function renderInlineSegments(segments, styles, keyPrefix, onLongPress) {
       case "strong":
         return (
           <Text key={key} style={styles.strong}>
-            {renderInlineSegments(segment.children, styles, key, onLongPress)}
+            {renderInlineSegments(segment.children, styles, key)}
           </Text>
         );
       case "em":
         return (
           <Text key={key} style={styles.em}>
-            {renderInlineSegments(segment.children, styles, key, onLongPress)}
+            {renderInlineSegments(segment.children, styles, key)}
           </Text>
         );
       case "s":
         return (
           <Text key={key} style={styles.s}>
-            {renderInlineSegments(segment.children, styles, key, onLongPress)}
+            {renderInlineSegments(segment.children, styles, key)}
           </Text>
         );
       case "link":
@@ -121,9 +123,8 @@ function renderInlineSegments(segments, styles, keyPrefix, onLongPress) {
             key={key}
             style={styles.link}
             onPress={() => openUrl(segment.href)}
-            onLongPress={onLongPress}
           >
-            {renderInlineSegments(segment.children, styles, key, onLongPress)}
+            {renderInlineSegments(segment.children, styles, key)}
           </Text>
         );
       default:
@@ -132,7 +133,7 @@ function renderInlineSegments(segments, styles, keyPrefix, onLongPress) {
   });
 }
 
-function renderBlocks(blocks, styles, selectable, onLongPress) {
+function renderBlocks(blocks, styles, selectable) {
   const elements = [];
   let run = [];
   let elementKey = 0;
@@ -144,7 +145,7 @@ function renderBlocks(blocks, styles, selectable, onLongPress) {
         <Text
           key={`run-${elementKey}`}
           selectable={selectable}
-          onLongPress={onLongPress}
+          uiTextView={selectable}
           style={styles.body}
         >
           {run}
@@ -168,8 +169,7 @@ function renderBlocks(blocks, styles, selectable, onLongPress) {
           ...renderInlineSegments(
             block.segments,
             styles,
-            `item-${runItemKey}`,
-            onLongPress
+            `item-${runItemKey}`
           )
         );
         runItemKey += 1;
@@ -181,7 +181,7 @@ function renderBlocks(blocks, styles, selectable, onLongPress) {
         runItemKey += 1;
         run.push(
           <Text key={key} style={styles[`heading${block.level}`]}>
-            {renderInlineSegments(block.segments, styles, key, onLongPress)}
+            {renderInlineSegments(block.segments, styles, key)}
           </Text>
         );
         break;
@@ -193,7 +193,7 @@ function renderBlocks(blocks, styles, selectable, onLongPress) {
           <View key={`code-${elementKey}`} style={styles.codeBlockView}>
             <Text
               selectable={selectable}
-              onLongPress={onLongPress}
+              uiTextView={selectable}
               style={styles.codeBlockText}
             >
               {block.content}
@@ -213,7 +213,7 @@ function renderBlocks(blocks, styles, selectable, onLongPress) {
         flushRun();
         elements.push(
           <View key={`quote-${elementKey}`} style={styles.blockquote}>
-            {renderBlocks(block.blocks, styles, selectable, onLongPress)}
+            {renderBlocks(block.blocks, styles, selectable)}
           </View>
         );
         elementKey += 1;
@@ -228,12 +228,12 @@ function renderBlocks(blocks, styles, selectable, onLongPress) {
   return elements;
 }
 
-function MarkdownSegment({ source, parser, styles, selectable, onLongPress }) {
+function MarkdownSegment({ source, parser, styles, selectable }) {
   const blocks = useMemo(
     () => parseMarkdownFlow(source, parser),
     [source, parser]
   );
-  return <>{renderBlocks(blocks, styles, selectable, onLongPress)}</>;
+  return <>{renderBlocks(blocks, styles, selectable)}</>;
 }
 
 function MarkdownText({
@@ -241,7 +241,6 @@ function MarkdownText({
   theme,
   fontSize = 16,
   selectable = true,
-  onLongPress,
 }) {
   const parser = useMemo(() => createMarkdownParser(), []);
   const segments = useMemo(() => splitMessageSegments(text), [text]);
@@ -266,7 +265,6 @@ function MarkdownText({
             parser={parser}
             styles={styles}
             selectable={selectable}
-            onLongPress={onLongPress}
           />
         )
       )}

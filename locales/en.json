@@ -185,6 +185,10 @@
     "savedPreferencesShort": "Saved your recipe preferences.",
     "addedToFridge_one": "✅ Added {{count}} item to fridge.",
     "addedToFridge_other": "✅ Added {{count}} items to fridge.",
+    "appliedFridgeChanges_one": "✅ Applied {{count}} fridge change.",
+    "appliedFridgeChanges_other": "✅ Applied {{count}} fridge changes.",
+    "addedToShoppingList_one": "✅ Added {{count}} item to shopping list.",
+    "addedToShoppingList_other": "✅ Added {{count}} items to shopping list.",
     "skipped": "⚠️ Skipped: {{names}}",
     "errors": {
       "quotaExhausted": "You have used today’s Pantrio AI allowance.",
@@ -196,12 +200,6 @@
       "upstreamUnavailable": "Pantrio AI is temporarily unavailable. Please try again.",
       "couldNotComplete": "Pantrio AI could not complete that request."
     }
-  },
-  "chatActions": {
-    "title": "Message actions",
-    "copy": "Copy",
-    "share": "Share",
-    "selected": "Selected message"
   },
   "conversations": {
     "chats": "Chats",
@@ -288,6 +286,16 @@
     "replacePreferences": "Replace these recipe preferences?",
     "savePreferences": "Save these recipe preferences?",
     "savePreferencesButton": "Save preferences",
+    "reviewBulkChanges": "Review fridge changes",
+    "fridgeChanges_one": "{{count}} fridge change",
+    "fridgeChanges_other": "{{count}} fridge changes",
+    "removeItem": "Remove",
+    "skippedChanges": "Skipped: {{names}}",
+    "changesApplied": "Changes applied",
+    "addMissingIngredients": "Add missing ingredients to shopping list",
+    "missingItems_one": "{{count}} missing ingredient",
+    "missingItems_other": "{{count}} missing ingredients",
+    "addedToShoppingList": "Added to shopping list",
     "confirmItems": "Confirm items",
     "hideTags": "Hide tags",
     "editTags": "Edit tags"
@@ -603,6 +611,7 @@
     "languageA11y": "App language, currently {{language}}",
     "languagePickerTitle": "App language",
     "languageSelectA11y": "Select {{language}}",
+    "sectionToggleA11y": "Opens or closes this section.",
     "recipeSuggestions": "Recipe suggestions",
     "recipeProfile": "Your recipe profile",
     "recipeProfileBody": "Pantrio uses these saved defaults when recommending recipes. Separate multiple entries with commas. A request in chat can temporarily override soft preferences.",

@@ -2,18 +2,23 @@ import { memo, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
+  Keyboard,
   Linking,
-  Platform,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { UITextView as SelectableText } from "@bsky.app/react-native-uitextview";
 import ImageViewing from "./ImageViewer";
 import MarkdownText from "./MarkdownText";
 import { getLinkPreview } from "link-preview-js";
 import { useTranslation } from "react-i18next";
 import { GlobalContext } from "../context/GlobalContext";
+import { markdownToPlainText } from "../utils/markdownFlow";
 import {
   canFetchLinkPreview,
   shouldAutoLoadLinkPreview,
@@ -37,18 +42,16 @@ function getDomain(url) {
   }
 }
 
-function MessageBubble({ text, imageUri, isUser, selected = false, onLongPress }) {
+function MessageBubble({ text, imageUri, isUser }) {
   const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
   const fontSize = settings?.ux?.fontSize || 16;
   const incognito = Boolean(settings?.privacy?.incognito);
   const chatgptStyle = Boolean(settings?.chat?.chatgptStyle);
   const autoLoadPreview = shouldAutoLoadLinkPreview({ incognito });
-  // iOS: custom actions menu (long-press), so the native copy-only menu must
-  // stay off. Android: keep native text selection with selection handles.
-  const useCustomTextMenu = Platform.OS === "ios";
 
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [selectModeVisible, setSelectModeVisible] = useState(false);
   const mountedRef = useRef(false);
   const displayText = toDisplayText(text);
   const safeImageUri = typeof imageUri === "string" ? imageUri : "";
@@ -65,6 +68,10 @@ function MessageBubble({ text, imageUri, isUser, selected = false, onLongPress }
     if (safeImageUri) setPreviewVisible(true);
   };
   const closePreview = () => setPreviewVisible(false);
+  const openSelectMode = () => {
+    if (displayText) setSelectModeVisible(true);
+  };
+  const closeSelectMode = () => setSelectModeVisible(false);
 
   // --- Extract URLs (dedupe, keep order) ---
   const urls = useMemo(() => {
@@ -182,143 +189,216 @@ function MessageBubble({ text, imageUri, isUser, selected = false, onLongPress }
 
   // --- Case 2: text + link previews (Google-ish cards OUTSIDE bubble) ---
   return (
-    <View
-      style={[
-        styles.messageGroup,
-        chatgptStyle ? styles.messageGroupChatgpt : null,
-        isUser ? styles.userAlign : styles.aiAlign,
-      ]}
-    >
-      {/* --- Bubble (text only) --- */}
+    <>
       <View
         style={[
-          styles.bubble,
-          { backgroundColor: isUser ? theme.userBubble : theme.aiBubble },
-          isUser ? styles.userBubble : styles.aiBubble,
-          chatgptStyle && !isUser ? styles.aiBubbleChatgpt : null,
-          selected && { borderColor: theme.accent, borderWidth: 1.5 },
+          styles.messageGroup,
+          chatgptStyle ? styles.messageGroupChatgpt : null,
+          isUser ? styles.userAlign : styles.aiAlign,
         ]}
       >
+        {/* --- Bubble (text only). Plain non-selectable text keeps scrolling
+               responsive; holding the bubble opens the selectable-text modal. --- */}
         {displayText ? (
-          isUser ? (
-            <Text
-              selectable={!useCustomTextMenu}
-              onLongPress={useCustomTextMenu ? onLongPress : undefined}
-              style={[styles.text, { fontSize, color: theme.textPrimary }]}
-            >
-              {displayText}
-            </Text>
-          ) : (
-            <MarkdownText
-              text={displayText}
-              theme={theme}
-              fontSize={fontSize}
-              selectable={!useCustomTextMenu}
-              onLongPress={useCustomTextMenu ? onLongPress : undefined}
-            />
-          )
-        ) : null}
-      </View>
-
-      {/* Link preview cards OUTSIDE the bubble: user messages only, since
-          assistant messages render preview cards inline via MarkdownText. */}
-      {isUser && !!urls.length && (
-        <View style={[styles.linkList, isUser ? styles.userAlign : styles.aiAlign]}>
-          {urls.map((url) => {
-            const meta = metaByUrl.get(url);
-            const loading = meta?.status === "loading";
-            const loaded = meta?.status === "loaded";
-            return (
+          <Pressable
+            onPress={Keyboard.dismiss}
+            onLongPress={openSelectMode}
+            delayLongPress={450}
+          >
             <View
-              key={url}
               style={[
-                styles.linkCard,
-                {
-                  backgroundColor: theme.inputBackground,
-                  borderColor: theme.border ?? "rgba(0,0,0,0.12)",
-                },
+                styles.bubble,
+                { backgroundColor: isUser ? theme.userBubble : theme.aiBubble },
+                isUser ? styles.userBubble : styles.aiBubble,
+                chatgptStyle && !isUser ? styles.aiBubbleChatgpt : null,
               ]}
             >
-              <View style={styles.linkBody}>
-                {!!meta?.title && (
-                  <Text
-                    selectable
-                    style={[styles.linkTitle, { color: theme.textPrimary }]}
-                    numberOfLines={2}
-                  >
-                    {meta.title}
-                  </Text>
-                )}
-
-                {!!meta?.description && (
-                  <Text
-                    selectable
-                    style={[styles.linkDesc, { color: theme.textSecondary }]}
-                    numberOfLines={3}
-                  >
-                    {meta.description}
-                  </Text>
-                )}
-
+              {isUser ? (
                 <Text
-                  selectable
-                  style={[styles.linkDomain, { color: theme.textSecondary }]}
-                  numberOfLines={1}
+                  style={[styles.text, { fontSize, color: theme.textPrimary }]}
                 >
-                  {getDomain(url)}
+                  {displayText}
                 </Text>
-                {!loaded && (
-                  <Text style={[styles.linkHint, { color: theme.textSecondary }]}>
-                    {loading
-                      ? t("linkPreview.loadingPreview")
-                      : meta?.status === "blocked"
-                        ? t("linkPreview.blockedForSafety")
-                        : meta?.status === "failed"
-                          ? t("linkPreview.previewUnavailable")
-                          : incognito
-                            ? t("linkPreview.incognitoOff")
-                            : autoLoadPreview
-                              ? t("linkPreview.loadingPreview")
-                              : t("linkPreview.loadsWhenRequested")}
-                  </Text>
-                )}
-                <View style={styles.linkActions}>
-                  {!loaded && meta?.status !== "blocked" && (
-                    <TouchableOpacity
-                      onPress={() => loadPreview(url)}
-                      disabled={loading}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("linkPreview.loadPreview", {
-                        url: getDomain(url),
-                      })}
-                      accessibilityHint={t("linkPreview.contactsWebsite")}
-                      accessibilityState={{ disabled: loading, busy: loading }}
-                    >
-                      <Text style={[styles.linkAction, { color: theme.accent }]}>
-                        {loading
-                          ? t("linkPreview.loadingEllipsis")
-                          : t("linkPreview.loadPreviewButton")}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={() => openLink(url)}
-                    accessibilityRole="link"
-                    accessibilityLabel={t("linkPreview.open", {
-                      url: getDomain(url),
-                    })}
-                  >
-                    <Text style={[styles.linkAction, { color: theme.accent }]}>
-                      {t("linkPreview.openLink")}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              ) : (
+                <MarkdownText
+                  text={displayText}
+                  theme={theme}
+                  fontSize={fontSize}
+                  selectable={false}
+                />
+              )}
             </View>
-          );})}
+          </Pressable>
+        ) : null}
+
+        {/* Link preview cards OUTSIDE the bubble: user messages only, since
+            assistant messages render preview cards inline via MarkdownText. */}
+        {isUser && !!urls.length && (
+          <View
+            style={[styles.linkList, isUser ? styles.userAlign : styles.aiAlign]}
+          >
+            {urls.map((url) => {
+              const meta = metaByUrl.get(url);
+              const loading = meta?.status === "loading";
+              const loaded = meta?.status === "loaded";
+              return (
+                <View
+                  key={url}
+                  style={[
+                    styles.linkCard,
+                    {
+                      backgroundColor: theme.inputBackground,
+                      borderColor: theme.border ?? "rgba(0,0,0,0.12)",
+                    },
+                  ]}
+                >
+                  <View style={styles.linkBody}>
+                    {!!meta?.title && (
+                      <Text
+                        style={[
+                          styles.linkTitle,
+                          { color: theme.textPrimary },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {meta.title}
+                      </Text>
+                    )}
+
+                    {!!meta?.description && (
+                      <Text
+                        style={[
+                          styles.linkDesc,
+                          { color: theme.textSecondary },
+                        ]}
+                        numberOfLines={3}
+                      >
+                        {meta.description}
+                      </Text>
+                    )}
+
+                    <Text
+                      style={[
+                        styles.linkDomain,
+                        { color: theme.textSecondary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {getDomain(url)}
+                    </Text>
+                    {!loaded && (
+                      <Text
+                        style={[
+                          styles.linkHint,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {loading
+                          ? t("linkPreview.loadingPreview")
+                          : meta?.status === "blocked"
+                            ? t("linkPreview.blockedForSafety")
+                            : meta?.status === "failed"
+                              ? t("linkPreview.previewUnavailable")
+                              : incognito
+                                ? t("linkPreview.incognitoOff")
+                                : autoLoadPreview
+                                  ? t("linkPreview.loadingPreview")
+                                  : t("linkPreview.loadsWhenRequested")}
+                      </Text>
+                    )}
+                    <View style={styles.linkActions}>
+                      {!loaded && meta?.status !== "blocked" && (
+                        <TouchableOpacity
+                          onPress={() => loadPreview(url)}
+                          disabled={loading}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("linkPreview.loadPreview", {
+                            url: getDomain(url),
+                          })}
+                          accessibilityHint={t("linkPreview.contactsWebsite")}
+                          accessibilityState={{
+                            disabled: loading,
+                            busy: loading,
+                          }}
+                        >
+                          <Text
+                            style={[styles.linkAction, { color: theme.accent }]}
+                          >
+                            {loading
+                              ? t("linkPreview.loadingEllipsis")
+                              : t("linkPreview.loadPreviewButton")}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        onPress={() => openLink(url)}
+                        accessibilityRole="link"
+                        accessibilityLabel={t("linkPreview.open", {
+                          url: getDomain(url),
+                        })}
+                      >
+                        <Text style={[styles.linkAction, { color: theme.accent }]}>
+                          {t("linkPreview.openLink")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+
+      {/* --- Selectable-text modal: long-press a bubble to open it. --- */}
+      <Modal
+        visible={selectModeVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={closeSelectMode}
+      >
+        <View style={styles.selectOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={closeSelectMode}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.close")}
+          />
+          <View
+            style={[styles.selectCard, { backgroundColor: theme.card }]}
+          >
+            <View style={styles.selectCardHeader}>
+              <TouchableOpacity
+                onPress={closeSelectMode}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.close")}
+              >
+                <Text style={[styles.selectClose, { color: theme.accent }]}>
+                  {t("common.close")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.selectScroll}
+              contentContainerStyle={styles.selectScrollContent}
+            >
+              <SelectableText
+                selectable
+                uiTextView
+                style={[
+                  styles.selectText,
+                  { fontSize, color: theme.textPrimary },
+                ]}
+              >
+                {isUser ? displayText : markdownToPlainText(displayText)}
+              </SelectableText>
+            </ScrollView>
+          </View>
         </View>
-      )}
-    </View>
+      </Modal>
+    </>
   );
 }
 
@@ -417,6 +497,43 @@ const styles = StyleSheet.create({
   linkAction: {
     fontSize: 13,
     fontWeight: "700",
+  },
+
+  selectOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    padding: 18,
+  },
+  selectCard: {
+    width: "100%",
+    maxWidth: 520,
+    maxHeight: "85%",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  selectCardHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingTop: 6,
+    paddingHorizontal: 8,
+  },
+  selectClose: {
+    fontWeight: "700",
+    fontSize: 15,
+    padding: 6,
+  },
+  selectScroll: {
+    flexShrink: 1,
+  },
+  selectScrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+  },
+  selectText: {
+    flexShrink: 1,
+    lineHeight: 24,
   },
 });
 

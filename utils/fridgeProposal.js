@@ -130,7 +130,8 @@ export function markFridgeProposalActionConsumed(
   return (Array.isArray(messages) ? messages : []).map((message) => {
     const action = message?.type === "ui_action" ? message.action : null;
     if (
-      action?.kind !== "add_all_to_fridge" ||
+      (action?.kind !== "add_all_to_fridge" &&
+        action?.kind !== "add_missing_to_shopping_list") ||
       fridgeProposalActionKey(action) !== targetKey ||
       isFridgeProposalActionConsumed(action)
     ) {

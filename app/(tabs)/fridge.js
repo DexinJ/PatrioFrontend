@@ -339,16 +339,13 @@ export default function FridgeScreen() {
         : t("fridge.findRecipesWithItems");
 
       const prompt = `
-Recommend 5 quick recipes using as many of these selected fridge items as practical:
+Recommend 4 quick recipes using as many of these selected fridge items as practical:
 ${ingredientLines}
 
-For each recipe:
-- Linked title
-- Why it fits these ingredients and saved preferences
-- Verified time and calories per serving when available
-- Missing ingredients
-- 2–4 short steps
-- 1–2 optional add-ins (common staples)
+For each recipe, list the linked title followed by one or two short lines with
+the calories per serving when available (append "(est.)" when AI-estimated)
+and the missing ingredients (or "none"). Keep the list to what recommendRecipes
+returns; never add steps, explanations, or invented details.
 `.trim();
 
       try {

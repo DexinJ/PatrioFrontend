@@ -41,6 +41,8 @@ const APPLE_AI_ISOLATED_TOOL_NAMES = new Set([
   "recommendRecipes",
   "proposeRecipePreferenceUpdate",
   "proposeAddAllToFridge",
+  "proposeBulkFridgeUpdate",
+  "proposeAddMissingIngredientsToShoppingList",
 ]);
 // const MAX_IMAGE_REQUEST_URI_LENGTH = 4 * 1024 * 1024;
 const GptContext = createContext(null);
@@ -56,10 +58,30 @@ const stringField = { type: "string" };
 const categoriesField = {
   type: "object",
   properties: {
-    storage: stringField,
-    urgency: stringField,
-    food_type: stringField,
-    state: stringField,
+    storage: { ...stringField, enum: ["Fridge", "Freezer", "Pantry"] },
+    urgency: {
+      ...stringField,
+      enum: ["Expired", "Eat first", "Use soon", "Lasts a while", "Long keeper"],
+    },
+    food_type: {
+      ...stringField,
+      enum: [
+        "Produce",
+        "Dairy",
+        "Meat",
+        "Seafood",
+        "Prepared",
+        "Condiments",
+        "Beverages",
+        "Snacks",
+        "Bakery",
+        "Frozen",
+      ],
+    },
+    state: {
+      ...stringField,
+      enum: ["Opened", "Unopened", "Raw", "Cooked", "Cut", "Whole"],
+    },
   },
   required: ["storage", "urgency", "food_type"],
   additionalProperties: false,
@@ -69,13 +91,7 @@ const expiresInDaysField = {
   type: "integer",
   minimum: 1,
   description:
-    "Your estimate of how many whole days from today the item will stay good (e.g. raw chicken 2, milk 7, frozen meat 180). Prefer this over expiresAt; never invent a calendar date.",
-};
-
-const expiresAtField = {
-  ...stringField,
-  description:
-    "Optional absolute expiration date only when the user states one (e.g. '2026-09-01'). Never invent a calendar date.",
+    "How many whole days from today the item will stay good (e.g. raw chicken 2, milk 7, frozen meat 180). Always use whole days for expiry; the app converts this to an expiration date when the change is applied. Never pass calendar dates.",
 };
 
 const proposedFridgeItemField = objectSchema(
@@ -84,13 +100,22 @@ const proposedFridgeItemField = objectSchema(
     quantity: stringField,
     categories: categoriesField,
     expiresInDays: expiresInDaysField,
-    expiresAt: expiresAtField,
   },
   ["name", "categories"]
 );
 
+const fridgeEditPatchField = objectSchema(
+  {
+    name: stringField,
+    quantity: stringField,
+    categories: categoriesField,
+    expiresInDays: expiresInDaysField,
+  },
+  []
+);
+
 export const DIRECT_AI_TOOLS = [
-  ["addFridgeItem", "Add an item to the fridge.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField, expiresInDays: expiresInDaysField, expiresAt: expiresAtField }, ["name", "categories"])],
+  ["addFridgeItem", "Add an item to the fridge. Estimate its shelf life in whole days with expiresInDays (e.g. raw chicken 2, milk 7, frozen meat 180).", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField, expiresInDays: expiresInDaysField }, ["name", "categories"])],
   ["addShoppingItem", "Add an item to the shopping list.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField }, ["name", "categories"])],
   ["removeFridgeItem", "Remove a named fridge item.", objectSchema({ name: stringField }, ["name"])],
   ["removeShoppingItem", "Remove a named shopping-list item.", objectSchema({ name: stringField }, ["name"])],
@@ -100,6 +125,9 @@ export const DIRECT_AI_TOOLS = [
   ["getShoppingListContents", "Get all shopping-list items.", objectSchema({})],
   ["streamlineLists", "Normalize and optionally retag list items.", objectSchema({ scope: { type: "string", enum: ["shopping", "fridge", "both"] }, retag: { type: "boolean" }, dryRun: { type: "boolean" } })],
   ["proposeAddAllToFridge", "After the user attaches a fridge image, or explicitly asks to add a listed batch, show one confirmation card. Nothing is added to the fridge until the user confirms on the card. Never use for recipes, recipe ingredients, meal ideas, or ordinary bullet lists.", objectSchema({ items: { type: "array", minItems: 1, items: proposedFridgeItemField }, title: stringField }, ["items"])],
+  ["updateFridgeItem", "Edit a single fridge item: rename it, change its quantity, categories, or expiry (expiry is a whole-day estimate in expiresInDays). Resolve the item by id when available, otherwise by exact name. For changes to several items, use proposeBulkFridgeUpdate instead.", objectSchema({ id: stringField, name: stringField, updates: { ...fridgeEditPatchField, required: [] } }, ["updates"])],
+  ["proposeBulkFridgeUpdate", "Show one confirmation card for multiple fridge changes (rename, quantity, categories, expiry in whole-day expiresInDays, or removal). Resolve each entry by id when available, otherwise by exact name. Nothing is changed until the user confirms on the card.", objectSchema({ changes: { type: "array", minItems: 1, maxItems: 40, items: objectSchema({ id: stringField, name: stringField, update: { ...fridgeEditPatchField, required: [] }, remove: { type: "boolean" } }, []) }, title: stringField }, ["changes"])],
+  ["proposeAddMissingIngredientsToShoppingList", "After recommendRecipes returns, propose adding the recommended recipes' missing ingredients to the shopping list. Shows one confirmation card; nothing is added until the user confirms. Never use for the fridge and never call before recommendRecipes.", objectSchema({ items: { type: "array", minItems: 1, items: objectSchema({ name: stringField, quantity: stringField, categories: categoriesField }, ["name"]) }, title: stringField }, ["items"])],
 ].map(([name, description, parameters]) => ({
   type: "function",
   function: { name, description, parameters },
@@ -812,7 +840,7 @@ const useGptRuntime = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ overrides, recipeContext }),
+        body: JSON.stringify({ overrides, recipeContext, compactForChat: true }),
       },
       { signal }
     );
@@ -848,11 +876,22 @@ const useGptRuntime = () => {
     const conversation = [...messages];
     let recipeRecommendationCompleted = false;
     let toolsLockedAfterIsolatedAction = false;
+    let recipeFollowUpUsed = false;
+    const recipeFollowUpTool = DIRECT_AI_TOOLS.find(
+      (tool) =>
+        tool?.function?.name === "proposeAddMissingIngredientsToShoppingList"
+    );
 
     for (let step = 0; step < 6; step += 1) {
       assertCurrentLifecycle(lifecycleGeneration);
       const recipeToolPolicy = toolsLockedAfterIsolatedAction
-        ? {}
+        ? recipeRecommendationCompleted && !recipeFollowUpUsed && recipeFollowUpTool
+          ? {
+              tools: [recipeFollowUpTool],
+              tool_choice: "auto",
+              parallel_tool_calls: false,
+            }
+          : {}
         : customRecipeToolPolicy(
             intent === "recipe_recommendation" || recipeRecommendationCompleted
               ? "recipe_recommendation"
@@ -900,8 +939,14 @@ const useGptRuntime = () => {
       const fridgeProposalCall = calls.find(
         (call) => call?.function?.name === "proposeAddAllToFridge"
       );
+      const bulkEditProposalCall = calls.find(
+        (call) => call?.function?.name === "proposeBulkFridgeUpdate"
+      );
       const isolatedToolCall =
-        recipeRecommendationCall || preferenceProposalCall || fridgeProposalCall;
+        recipeRecommendationCall ||
+        preferenceProposalCall ||
+        fridgeProposalCall ||
+        bulkEditProposalCall;
       if (isolatedToolCall) {
         toolsLockedAfterIsolatedAction = true;
       }
@@ -910,6 +955,9 @@ const useGptRuntime = () => {
         const name = call?.function?.name || "";
         if (name === "recommendRecipes") {
           recipeRecommendationCompleted = true;
+        }
+        if (name === "proposeAddMissingIngredientsToShoppingList") {
+          recipeFollowUpUsed = true;
         }
         const parsed = safeJsonParse(call?.function?.arguments || "{}");
         const handler =
@@ -930,7 +978,7 @@ const useGptRuntime = () => {
                   ok: false,
                   skipped: true,
                   reason:
-                    "Recipe and preference actions are isolated from other tool actions.",
+                    "Confirmation actions are isolated from other tool actions.",
                 }
               : handler
                 ? await handler(parsed.ok ? parsed.value : {})
@@ -975,18 +1023,23 @@ const useGptRuntime = () => {
 
 You can use the app tools listed below. Choose type "tool" whenever you need to read or change app data. Choose type "final" only when you can answer the user without another tool. Never claim that an action succeeded until its tool result says it succeeded. Use only an exact tool name from this list.
 
-${toolDescriptions}`;
+    ${toolDescriptions}`;
     let recipeRecommendationCompleted = false;
     let toolsLockedAfterIsolatedAction = false;
+    let recipeFollowUpUsed = false;
 
     for (let step = 0; step < 6; step += 1) {
       assertCurrentLifecycle(lifecycleGeneration);
       const recipeToolRequired =
         intent === "recipe_recommendation" && !recipeRecommendationCompleted;
+      const recipeFollowUpAvailable =
+        recipeRecommendationCompleted && !recipeFollowUpUsed;
       const turnInstructions = recipeToolRequired
         ? `${instructions}\n\nFor this recipe request, your next step must be the recommendRecipes tool.`
         : toolsLockedAfterIsolatedAction
-          ? `${instructions}\n\nThe requested isolated action is complete. Return a final answer now without calling another tool.`
+          ? recipeFollowUpAvailable
+            ? `${instructions}\n\nYou may make one follow-up tool call: proposeAddMissingIngredientsToShoppingList, to propose adding the recommended recipes' missing ingredients to the shopping list. After it returns, return a final answer without calling another tool.`
+            : `${instructions}\n\nThe requested isolated action is complete. Return a final answer now without calling another tool.`
           : instructions;
       const prompt = conversation
         .map((message) => `${message.role}: ${message.content}`)
@@ -1028,7 +1081,12 @@ ${toolDescriptions}`;
 
       try {
         assertCurrentLifecycle(lifecycleGeneration);
-        result = toolsLockedAfterIsolatedAction
+        const followUpAllowed =
+          toolsLockedAfterIsolatedAction &&
+          recipeRecommendationCompleted &&
+          !recipeFollowUpUsed &&
+          name === "proposeAddMissingIngredientsToShoppingList";
+        result = toolsLockedAfterIsolatedAction && !followUpAllowed
           ? {
               ok: false,
               skipped: true,
@@ -1053,6 +1111,9 @@ ${toolDescriptions}`;
         pendingActionMessageIdRef.current = result.actionId;
       }
       if (name === "recommendRecipes") recipeRecommendationCompleted = true;
+      if (name === "proposeAddMissingIngredientsToShoppingList") {
+        recipeFollowUpUsed = true;
+      }
       if (isolatedTool) toolsLockedAfterIsolatedAction = true;
       conversation.push({
         role: "assistant",
@@ -1097,11 +1158,6 @@ ${toolDescriptions}`;
     if (!normalizedText.trim() && !normalizedImageUri.trim()) {
       throw new Error("A chat message must include text or an image.");
     }
-    const requestIntent = inferChatIntent({
-      text: normalizedText,
-      imageUri: normalizedImageUri,
-      intent,
-    });
     const recipeContext = buildRecipeContext({
       fridgeItems,
       settings,
@@ -1113,6 +1169,15 @@ ${toolDescriptions}`;
       role: "user",
       text: normalizedDisplayText || normalizedText,
       imageUri: normalizedImageUri,
+    });
+    const requestIntent = inferChatIntent({
+      text: normalizedText,
+      imageUri: normalizedImageUri,
+      intent,
+      history: Array.isArray(updatedMessages)
+        ? updatedMessages.slice(0, -1)
+        : [],
+      language,
     });
     const selectedProvider = resolveAiProvider(
       settings?.advanced?.aiProvider,

@@ -3,6 +3,9 @@ export const MAX_RUNTIME_CHAT_BYTES = 2 * 1024 * 1024;
 export const MAX_PERSISTED_CHAT_MESSAGES = 100;
 export const MAX_PERSISTED_CHAT_BYTES = 768 * 1024;
 export const MAX_CHAT_TITLE_LENGTH = 40;
+export const MAX_CONVERSATION_ATTACHMENT_URIS = 500;
+export const CONVERSATION_STATUS_ACTIVE = "active";
+export const CONVERSATION_STATUS_ARCHIVED = "archived";
 
 const MAX_TEXT_CHARACTERS = 60_000;
 const DATA_IMAGE_PREFIX = "data:image/";
@@ -27,6 +30,21 @@ export function makeChatTitleFromText(value) {
   return `${collapsed.slice(0, MAX_CHAT_TITLE_LENGTH).trimEnd()}…`;
 }
 
+function normalizeAttachmentUris(value) {
+  if (!Array.isArray(value)) return [];
+  const uris = [];
+  const seen = new Set();
+  for (const uri of value) {
+    if (typeof uri !== "string") continue;
+    const trimmed = uri.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    uris.push(trimmed);
+    if (uris.length >= MAX_CONVERSATION_ATTACHMENT_URIS) break;
+  }
+  return uris.sort();
+}
+
 // Normalizes a stored conversation list, dropping malformed/duplicate ids.
 export function normalizeConversationList(value) {
   if (!Array.isArray(value)) return [];
@@ -38,11 +56,21 @@ export function normalizeConversationList(value) {
     const id = typeof item.id === "string" ? item.id.trim() : "";
     if (!id || seen.has(id)) continue;
     seen.add(id);
+    const archived =
+      item.status === CONVERSATION_STATUS_ARCHIVED || item.archived === true;
     conversations.push({
       id,
       title: typeof item.title === "string" ? item.title : "",
       createdAt: typeof item.createdAt === "string" ? item.createdAt : "",
       updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : "",
+      status: archived
+        ? CONVERSATION_STATUS_ARCHIVED
+        : CONVERSATION_STATUS_ACTIVE,
+      archivedAt:
+        archived && typeof item.archivedAt === "string"
+          ? item.archivedAt
+          : null,
+      attachmentUris: normalizeAttachmentUris(item.attachmentUris),
     });
   }
 
@@ -53,13 +81,93 @@ export function normalizeConversationList(value) {
 // { version, activeConversationId, conversations }.
 export function normalizeChatIndex(value) {
   if (!isPlainRecord(value)) return null;
+  const version =
+    Number.isSafeInteger(value.version) && value.version >= 1
+      ? value.version
+      : 1;
   return {
+    version,
     activeConversationId:
       typeof value.activeConversationId === "string"
         ? value.activeConversationId
         : null,
     conversations: normalizeConversationList(value.conversations),
   };
+}
+
+export function isArchivedConversation(item) {
+  return Boolean(
+    item &&
+      (item.status === CONVERSATION_STATUS_ARCHIVED ||
+        item.archived === true ||
+        Boolean(item.archivedAt))
+  );
+}
+
+export function filterConversationsByStatus(list, status) {
+  return (Array.isArray(list) ? list : []).filter((item) =>
+    status === CONVERSATION_STATUS_ARCHIVED
+      ? isArchivedConversation(item)
+      : !isArchivedConversation(item)
+  );
+}
+
+function withConversationUpdate(list, id, update) {
+  const source = Array.isArray(list) ? list : [];
+  const index = source.findIndex((item) => item?.id === id);
+  if (index < 0) return source;
+  const current = source[index];
+  const next = { ...current, ...update };
+  if (JSON.stringify(next) === JSON.stringify(current)) return source;
+  const copy = source.slice();
+  copy[index] = next;
+  return copy;
+}
+
+export function archiveConversationInList(list, id, archivedAtIso) {
+  const archivedAt =
+    typeof archivedAtIso === "string" && archivedAtIso.trim()
+      ? archivedAtIso
+      : new Date().toISOString();
+  return withConversationUpdate(list, id, {
+    status: CONVERSATION_STATUS_ARCHIVED,
+    archivedAt,
+  });
+}
+
+export function restoreConversationInList(list, id) {
+  return withConversationUpdate(list, id, {
+    status: CONVERSATION_STATUS_ACTIVE,
+    archivedAt: null,
+  });
+}
+
+export function removeConversationFromList(list, id) {
+  const source = Array.isArray(list) ? list : [];
+  if (!source.some((item) => item?.id === id)) return source;
+  return source.filter((item) => item?.id !== id);
+}
+
+export function setConversationAttachmentUris(list, id, uris) {
+  return withConversationUpdate(list, id, {
+    attachmentUris: normalizeAttachmentUris(uris),
+  });
+}
+
+export function unionConversationAttachmentUris(list) {
+  const uris = new Set();
+  for (const item of Array.isArray(list) ? list : []) {
+    for (const uri of Array.isArray(item?.attachmentUris)
+      ? item.attachmentUris
+      : []) {
+      if (typeof uri === "string" && uri.trim()) uris.add(uri.trim());
+    }
+  }
+  return [...uris].sort();
+}
+
+export function attachmentSignatureFor(list) {
+  return JSON.stringify(unionConversationAttachmentUris(list));
 }
 
 function boundedText(value) {

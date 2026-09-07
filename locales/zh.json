@@ -212,7 +212,17 @@
     "minutesAgo": "{{count}} 分钟前",
     "hoursAgo": "{{count}} 小时前",
     "daysAgo": "{{count}} 天前",
-    "justNow": "刚刚"
+    "justNow": "刚刚",
+    "chatMenu": "聊天选项",
+    "rowActions": "{{title}} 的聊天选项",
+    "archiveChat": "归档",
+    "restoreChat": "恢复",
+    "deleteChat": "删除",
+    "deleteChatTitle": "删除聊天？",
+    "deleteChatBody": "将永久删除「{{title}}」及其图片，此操作无法撤销。",
+    "archivedSection": "已归档（{{count}}）",
+    "openArchived": "查看已归档聊天",
+    "hideArchived": "收起已归档聊天"
   },
   "voiceInput": {
     "micPermissionTitle": "需要麦克风权限",

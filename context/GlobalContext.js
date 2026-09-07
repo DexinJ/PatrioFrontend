@@ -18,7 +18,12 @@ import { v4 as uuidv4 } from "uuid";
 import { API_BASE_URL } from "../api/backendConfig";
 import { resolveAiProvider } from "../api/aiProviderPolicy";
 import { fetchWithTimeout } from "../api/fetchWithTimeout";
-import { loadChatData } from "../api/memoryManager";
+import {
+  loadChatData,
+  loadConversationChatData,
+  removeConversationChatData,
+  saveConversationChatData,
+} from "../api/memoryManager";
 import { pruneChatAttachments } from "../api/chatAttachments";
 import { syncLocalReminders } from "../api/reminderScheduler";
 import { migrateLegacyCustomAiProviderSettings } from "../api/aiProviderSettings";
@@ -29,6 +34,7 @@ import {
   listUserDataPurgeIntents,
   markUserDataPurgePending,
   migrateLegacyAsyncStorageForUser,
+  removeAllUserConversationPayload,
 } from "../api/storageKeys";
 import {
   completePendingUserDataPurge,
@@ -72,13 +78,20 @@ import {
 } from "../utils/tags";
 import {
   boundRuntimeChatMessages,
+  CONVERSATION_STATUS_ACTIVE,
+  archiveConversationInList,
   collectChatAttachmentUris,
+  filterConversationsByStatus,
+  isArchivedConversation,
   makeChatTitleFromText,
   normalizeChatIndex,
-  prepareChatMessagesForPersistence,
+  removeConversationFromList,
   replaceChatImagesWithPlaceholders,
+  restoreConversationInList,
+  setConversationAttachmentUris,
   shouldClearChatOnIncognitoExit,
   shouldPersistChat,
+  unionConversationAttachmentUris,
 } from "../utils/chatStoragePolicy";
 import {
   buildReminderSyncSignature,
@@ -613,11 +626,28 @@ export const GlobalProvider = ({
   const [activeConversationId, setActiveConversationIdState] = useState(null);
   const activeConversationIdRef = useRef(null);
   activeConversationIdRef.current = activeConversationId;
-  // In-memory payloads keyed by conversation id. Persistence of each
-  // conversation is a follow-up phase; the active conversation continues to
-  // use the existing chatMessages/chatSummary storage.
+  const conversationsRef = useRef([]);
+  conversationsRef.current = conversations;
+  const [conversationLoading, setConversationLoading] = useState(false);
+  // In-memory payloads keyed by conversation id. The active payload is loaded
+  // at startup (or lazily on selection) and each conversation persists to its
+  // own storage keys via the chat persistence engine below.
   const conversationDataRef = useRef(new Map());
   const [conversationsVisible, setConversationsVisible] = useState(false);
+  // Guards for async chat storage. The generation is bumped on reset/delete so
+  // in-flight saves and loads cannot resurrect a removed conversation. The
+  // payload queue serializes writes/removals per user so a delete always lands
+  // after any earlier save for the same conversation.
+  const chatStorageGenerationRef = useRef(0);
+  const chatPayloadQueueRef = useRef(Promise.resolve());
+  const storageOwnerUidRef = useRef(null);
+  const incognitoEnabledRef = useRef(false);
+  const chatPersistenceOpsRef = useRef(null);
+  const enqueueChatPayloadOperation = (operation) => {
+    const run = () => Promise.resolve().then(operation);
+    chatPayloadQueueRef.current = chatPayloadQueueRef.current.then(run, run);
+    return chatPayloadQueueRef.current;
+  };
   const [messages, setMessagesState] = useState([]);
   const setMessages = useCallback((valueOrUpdater) => {
     setMessagesState((previous) => {
@@ -650,10 +680,52 @@ export const GlobalProvider = ({
     });
   }, []);
 
+  const flushOutgoingConversation = useCallback(() => {
+    const outgoingId = activeConversationIdRef.current;
+    if (!outgoingId) return;
+    const snapshot = conversationDataRef.current.get(outgoingId);
+    if (!snapshot) return;
+    const expectedGeneration = chatStorageGenerationRef.current;
+    enqueueChatPayloadOperation(() =>
+      chatPersistenceOpsRef.current?.persistConversation?.({
+        conversationId: outgoingId,
+        messages: snapshot.messages,
+        summary: snapshot.summary,
+        expectedGeneration,
+      })
+    );
+  }, []);
+
+  const openConversationInternal = useCallback(
+    (id, { flushOutgoing = true } = {}) => {
+      if (!id || id === activeConversationIdRef.current) return;
+      if (flushOutgoing) {
+        saveActiveConversationToRef();
+        flushOutgoingConversation();
+      }
+      cancelActiveChatWork("Switched to another conversation.");
+      const data = conversationDataRef.current.get(id);
+      const hasCachedPayload = Boolean(data);
+      setActiveConversationIdState(id);
+      setMessages(data?.messages || []);
+      setSummary(data?.summary || "");
+      setReceiving(false);
+      setWaiting(false);
+      setConversationLoading(!hasCachedPayload);
+    },
+    [
+      flushOutgoingConversation,
+      saveActiveConversationToRef,
+      setMessages,
+      setSummary,
+    ]
+  );
+
   const createConversation = useCallback(() => {
     const id = uuidv4();
     const now = new Date().toISOString();
     saveActiveConversationToRef();
+    flushOutgoingConversation();
     cancelActiveChatWork(i18next.t("conversations.switchedToNewConversation"));
     setConversations((previous) => [
       {
@@ -661,41 +733,149 @@ export const GlobalProvider = ({
         title: i18next.t("conversations.newChat"),
         createdAt: now,
         updatedAt: now,
+        status: CONVERSATION_STATUS_ACTIVE,
+        archivedAt: null,
+        attachmentUris: [],
       },
       ...previous,
     ]);
     setActiveConversationIdState(id);
+    setConversationLoading(false);
     setMessages([]);
     setSummary("");
     setReceiving(false);
     setWaiting(false);
-  }, [saveActiveConversationToRef, setMessages, setSummary]);
+  }, [flushOutgoingConversation, saveActiveConversationToRef, setMessages, setSummary]);
 
   const selectConversation = useCallback(
     (id) => {
-      if (!id || id === activeConversationIdRef.current) return;
-      saveActiveConversationToRef();
-      cancelActiveChatWork("Switched to another conversation.");
-      const data = conversationDataRef.current.get(id);
-      setActiveConversationIdState(id);
-      setMessages(data?.messages || []);
-      setSummary(data?.summary || "");
-      setReceiving(false);
-      setWaiting(false);
+      openConversationInternal(id);
     },
-    [saveActiveConversationToRef, setMessages, setSummary]
+    [openConversationInternal]
   );
 
   const resetConversations = useCallback(() => {
     cancelActiveChatWork("Chat history was cleared.");
+    chatStorageGenerationRef.current += 1;
+    setConversationLoading(false);
     conversationDataRef.current.clear();
     setConversations([]);
+    activeConversationIdRef.current = null;
     setActiveConversationIdState(null);
     setMessages([]);
     setSummary("");
     setReceiving(false);
     setWaiting(false);
   }, [setMessages, setSummary]);
+
+  const activateNextConversation = useCallback(
+    (available) => {
+      const candidates = filterConversationsByStatus(available, "active");
+      if (candidates.length > 0) {
+        openConversationInternal(candidates[0].id, { flushOutgoing: false });
+      } else {
+        createConversation();
+      }
+    },
+    [createConversation, openConversationInternal]
+  );
+
+  const archiveConversation = useCallback(
+    (id) => {
+      const list = Array.isArray(conversationsRef.current)
+        ? conversationsRef.current
+        : [];
+      const conversation = list.find((item) => item.id === id);
+      if (!conversation || isArchivedConversation(conversation)) return;
+
+      const wasActive = activeConversationIdRef.current === id;
+      if (wasActive) {
+        saveActiveConversationToRef();
+        flushOutgoingConversation();
+      }
+
+      const nextList = archiveConversationInList(
+        list,
+        id,
+        new Date().toISOString()
+      );
+      setConversations(nextList);
+
+      if (wasActive) {
+        activeConversationIdRef.current = null;
+        setActiveConversationIdState(null);
+        setConversationLoading(false);
+        setMessages([]);
+        setSummary("");
+        setReceiving(false);
+        setWaiting(false);
+        activateNextConversation(nextList);
+      }
+    },
+    [
+      activateNextConversation,
+      flushOutgoingConversation,
+      saveActiveConversationToRef,
+      setMessages,
+      setSummary,
+    ]
+  );
+
+  const restoreConversation = useCallback(
+    (id) => {
+      const list = Array.isArray(conversationsRef.current)
+        ? conversationsRef.current
+        : [];
+      const conversation = list.find((item) => item.id === id);
+      if (!conversation || !isArchivedConversation(conversation)) return;
+
+      setConversations(restoreConversationInList(list, id));
+      if (!activeConversationIdRef.current) {
+        openConversationInternal(id, { flushOutgoing: false });
+      }
+    },
+    [openConversationInternal]
+  );
+
+  const deleteConversation = useCallback(
+    (id) => {
+      const list = Array.isArray(conversationsRef.current)
+        ? conversationsRef.current
+        : [];
+      if (!id || !list.some((item) => item.id === id)) return;
+
+      const wasActive = activeConversationIdRef.current === id;
+      chatStorageGenerationRef.current += 1;
+      if (chatSaveTimerRef.current) {
+        clearTimeout(chatSaveTimerRef.current);
+        chatSaveTimerRef.current = null;
+      }
+
+      const remaining = removeConversationFromList(list, id);
+      conversationDataRef.current.delete(id);
+      setConversations(remaining);
+
+      if (wasActive) {
+        activeConversationIdRef.current = null;
+        setActiveConversationIdState(null);
+        setConversationLoading(false);
+        setMessages([]);
+        setSummary("");
+        setReceiving(false);
+        setWaiting(false);
+        activateNextConversation(remaining);
+      }
+
+      enqueueChatPayloadOperation(() =>
+        chatPersistenceOpsRef.current?.removeConversation?.({
+          conversationId: id,
+          remainingConversations: remaining,
+          expectedGeneration: chatStorageGenerationRef.current,
+        })
+      );
+    },
+    [activateNextConversation, setMessages, setSummary]
+  );
 
   const activeConversationTitle = useMemo(() => {
     if (!activeConversationId) return "Chat";
@@ -767,6 +947,7 @@ export const GlobalProvider = ({
   // Use authUser passed from _layout.
   const user = authUser;
   const storageOwnerUid = user?.uid || null;
+  storageOwnerUidRef.current = storageOwnerUid;
 
   // ---------------------------
   // Smart chat persistence refs
@@ -1025,44 +1206,134 @@ export const GlobalProvider = ({
           mergeStoredSettings(previous, parsedSettings)
         );
       }
+      let chatHydrationError = null;
       if (!chatError) {
+        const chatIndexVersion = storedChatIndex?.version || 1;
         const storedConversations = storedChatIndex?.conversations || [];
         const nowIso = new Date().toISOString();
         conversationDataRef.current.clear();
+        setConversationLoading(false);
+
+        const storageKeys = getUserStorageKeys(storageOwnerUid);
+        const removeLegacySlot = async () => {
+          try {
+            await AsyncStorage.multiRemove([
+              storageKeys.chatMessages,
+              storageKeys.chatSummary,
+            ]);
+          } catch (error) {
+            // The legacy slot may remain; v2 loads never consult it, so this is
+            // only storage hygiene and must not fail hydration.
+            console.warn("Could not remove the legacy chat slot:", error);
+          }
+        };
+        const migrateLegacySlot = async (conversationId, payload) => {
+          const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+          const summary = String(payload?.summary || "").trim();
+          if (messages.length === 0 && !summary) {
+            await removeLegacySlot();
+            return null;
+          }
+          try {
+            await saveConversationChatData(storageOwnerUid, conversationId, {
+              messages,
+              summary,
+            });
+            await removeLegacySlot();
+            return null;
+          } catch (error) {
+            console.warn("Could not migrate the legacy chat payload:", error);
+            return error;
+          }
+        };
+        const readConversationPayload = async (conversationId) => {
+          try {
+            return await loadConversationChatData(
+              storageOwnerUid,
+              conversationId
+            );
+          } catch (error) {
+            // A corrupt per-conversation payload is tolerated as an empty
+            // conversation rather than blocking the whole chat slice.
+            console.warn(
+              "Could not read conversation payload:",
+              error?.message || error
+            );
+            return { messages: [], summary: "" };
+          }
+        };
+
+        let activeId = null;
+        let activePayload = { messages: [], summary: "" };
+        let hydratedList = [];
 
         if (storedConversations.length === 0) {
           // Legacy single-conversation storage: seed one conversation. The
           // rename effect gives it a real title from its first message.
-          conversationDataRef.current.set("default", {
-            messages: chatData.messages,
-            summary: chatData.summary,
-          });
-          setConversations([
+          activeId = "default";
+          activePayload = {
+            messages: Array.isArray(chatData?.messages) ? chatData.messages : [],
+            summary: chatData?.summary || "",
+          };
+          hydratedList = [
             {
               id: "default",
               title: i18next.t("tabs.chat"),
               createdAt: nowIso,
               updatedAt: nowIso,
+              status: CONVERSATION_STATUS_ACTIVE,
+              archivedAt: null,
+              attachmentUris: collectChatAttachmentUris(
+                activePayload.messages
+              ),
             },
-          ]);
-          setActiveConversationIdState("default");
+          ];
+          chatHydrationError = await migrateLegacySlot(activeId, activePayload);
         } else {
           const storedActiveId = storedChatIndex?.activeConversationId;
-          const activeId =
+          activeId =
             storedActiveId &&
             storedConversations.some((item) => item.id === storedActiveId)
               ? storedActiveId
               : storedConversations[0].id;
-          conversationDataRef.current.set(activeId, {
-            messages: chatData.messages,
-            summary: chatData.summary,
-          });
-          setConversations(storedConversations);
-          setActiveConversationIdState(activeId);
+          hydratedList = storedConversations.map((record) => ({ ...record }));
+
+          if (chatIndexVersion < 2) {
+            // v1 indexes kept only the active payload in the legacy slot.
+            activePayload = {
+              messages: Array.isArray(chatData?.messages)
+                ? chatData.messages
+                : [],
+              summary: chatData?.summary || "",
+            };
+            chatHydrationError = await migrateLegacySlot(activeId, activePayload);
+          } else {
+            activePayload = await readConversationPayload(activeId);
+          }
         }
 
-        setMessages(chatData.messages);
-        setSummary(chatData.summary);
+        if (chatHydrationError) {
+          // Keep stored data untouched and make the chat slice read-only so
+          // the recovery UI can surface the failure.
+          // State is intentionally not hydrated here; the shared chat
+          // resolveSlice below disables writes with the recorded error.
+        } else {
+          conversationDataRef.current.set(activeId, activePayload);
+          hydratedList = hydratedList.map((record) =>
+            record.id === activeId
+              ? {
+                  ...record,
+                  attachmentUris: collectChatAttachmentUris(
+                    activePayload.messages
+                  ),
+                }
+              : record
+          );
+          setConversations(hydratedList);
+          setActiveConversationIdState(activeId);
+          setMessages(activePayload.messages);
+          setSummary(activePayload.summary);
+        }
       }
       chatLastSavedAtRef.current = Date.now();
       hydratedStorageOwnerUidRef.current = storageOwnerUid;
@@ -1080,9 +1351,12 @@ export const GlobalProvider = ({
         error: settingsError || legacyMigrationError,
       });
       resolveSlice("chat", {
-        writeEnabled: !chatError && !legacyMigrationError,
-        error: chatError || legacyMigrationError,
+        writeEnabled: !chatError && !legacyMigrationError && !chatHydrationError,
+        error: chatError || legacyMigrationError || chatHydrationError,
       });
+      // Hydration is complete: persistence operations may run now. Keeping the
+      // generation at 0 until this point prevents pre-hydration writes.
+      chatStorageGenerationRef.current = 1;
     };
 
     loadData();
@@ -1096,6 +1370,7 @@ export const GlobalProvider = ({
   // Smart chat saving
   // ---------------------------------------
   const incognitoEnabled = !shouldPersistChat(settings);
+  incognitoEnabledRef.current = incognitoEnabled;
   const previousIncognitoRef = useRef(incognitoEnabled);
   const leavingIncognito = shouldClearChatOnIncognitoExit(
     previousIncognitoRef.current,
@@ -1129,10 +1404,24 @@ export const GlobalProvider = ({
       getUserStorageKeys(storageOwnerUid);
     setSummary("");
     setMessages((previous) => replaceChatImagesWithPlaceholders(previous));
-    Promise.all([
-      AsyncStorage.multiRemove([chatMessages, chatSummary, chatConversations]),
-      pruneChatAttachments(storageOwnerUid, []),
-    ]).catch((error) => {
+    enqueueChatPayloadOperation(async () => {
+      try {
+        await removeAllUserConversationPayload(storageOwnerUid);
+      } catch (error) {
+        console.warn(
+          "Could not remove per-conversation chat storage:",
+          error
+        );
+      }
+      await Promise.all([
+        AsyncStorage.multiRemove([
+          chatMessages,
+          chatSummary,
+          chatConversations,
+        ]),
+        pruneChatAttachments(storageOwnerUid, []),
+      ]);
+    }).catch((error) => {
       console.warn("Could not remove incognito chat storage:", error);
     });
   }, [
@@ -1145,6 +1434,198 @@ export const GlobalProvider = ({
     storageOwnerUid,
   ]);
 
+  // ------------------------------------------------------------------
+  // Chat persistence engine
+  // ------------------------------------------------------------------
+  // Writes and removals go through a per-user queue so a delete always lands
+  // after any earlier save for the same conversation, and every async step is
+  // generation-guarded so deleted conversations can never be re-persisted.
+  const persistConversationToStorage = async ({
+    conversationId,
+    messages,
+    summary,
+    expectedGeneration,
+  }) => {
+    const uid = storageOwnerUidRef.current;
+    if (!uid || !conversationId) return;
+    const generation = chatStorageGenerationRef.current;
+    if (generation === 0) return;
+    if (
+      typeof expectedGeneration === "number" &&
+      expectedGeneration !== generation
+    ) {
+      return;
+    }
+    if (
+      !storageWriteEnabledRef.current.chat ||
+      incognitoEnabledRef.current ||
+      hydratedStorageOwnerUidRef.current !== uid
+    ) {
+      return;
+    }
+    const normalizedSummary = String(summary || "");
+    if (
+      (!Array.isArray(messages) || messages.length === 0) &&
+      !normalizedSummary.trim()
+    ) {
+      return;
+    }
+
+    try {
+      const persistedMessages = await saveConversationChatData(uid, conversationId, {
+        messages,
+        summary: normalizedSummary,
+      });
+      if (generation !== chatStorageGenerationRef.current) return;
+      chatLastSavedAtRef.current = Date.now();
+      conversationDataRef.current.set(conversationId, {
+        messages: persistedMessages,
+        summary: normalizedSummary,
+      });
+
+      const uris = collectChatAttachmentUris(persistedMessages);
+      const currentList = Array.isArray(conversationsRef.current)
+        ? conversationsRef.current
+        : [];
+      if (currentList.some((item) => item.id === conversationId)) {
+        setConversations((previous) => {
+          const list = Array.isArray(previous) ? previous : [];
+          if (!list.some((item) => item.id === conversationId)) {
+            return previous;
+          }
+          return setConversationAttachmentUris(list, conversationId, uris);
+        });
+      }
+
+      const retained = [
+        ...new Set([
+          ...uris,
+          ...unionConversationAttachmentUris(
+            currentList.filter((item) => item.id !== conversationId)
+          ),
+        ]),
+      ].sort();
+      const signature = JSON.stringify(retained);
+      if (chatAttachmentSignatureRef.current !== signature) {
+        await pruneChatAttachments(uid, retained);
+        if (generation === chatStorageGenerationRef.current) {
+          chatAttachmentSignatureRef.current = signature;
+        }
+      }
+    } catch (error) {
+      if (generation !== chatStorageGenerationRef.current) return;
+      storageWriteEnabledRef.current = {
+        ...storageWriteEnabledRef.current,
+        chat: false,
+      };
+      setStorageHydration((previous) => ({
+        ...previous,
+        chat: { resolved: true, writeEnabled: false, error },
+      }));
+      console.warn("save scoped chat messages failed:", error);
+    }
+  };
+
+  const removeConversationFromStorage = async ({
+    conversationId,
+    remainingConversations,
+    expectedGeneration,
+  }) => {
+    const uid = storageOwnerUidRef.current;
+    if (!uid || !conversationId || incognitoEnabledRef.current) return;
+    const generation = chatStorageGenerationRef.current;
+    if (
+      typeof expectedGeneration === "number" &&
+      expectedGeneration !== generation
+    ) {
+      return;
+    }
+    try {
+      await removeConversationChatData(uid, conversationId);
+      if (generation !== chatStorageGenerationRef.current) return;
+      const retained = unionConversationAttachmentUris(
+        remainingConversations
+      );
+      await pruneChatAttachments(uid, retained);
+      if (generation === chatStorageGenerationRef.current) {
+        chatAttachmentSignatureRef.current = JSON.stringify(retained);
+      }
+    } catch (error) {
+      console.warn("Could not remove conversation data:", error);
+    }
+  };
+
+  chatPersistenceOpsRef.current = {
+    persistConversation: persistConversationToStorage,
+    removeConversation: removeConversationFromStorage,
+  };
+
+  const queuePersistConversation = useCallback(
+    (conversationId, messages, summary) => {
+      const expectedGeneration = chatStorageGenerationRef.current;
+      enqueueChatPayloadOperation(() =>
+        chatPersistenceOpsRef.current?.persistConversation?.({
+          conversationId,
+          messages,
+          summary,
+          expectedGeneration,
+        })
+      );
+    },
+    []
+  );
+
+  // Lazily load a selected conversation's payload from its own storage keys.
+  // The active payload is hydrated on startup, so this only fires for
+  // conversations that have not been opened yet in this session.
+  useEffect(() => {
+    const activeId = activeConversationId;
+    if (!activeId || !storageOwnerUid || !conversationLoading) return;
+    if (conversationDataRef.current.has(activeId)) {
+      setConversationLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const generation = chatStorageGenerationRef.current;
+    (async () => {
+      let data = { messages: [], summary: "" };
+      try {
+        data = await loadConversationChatData(storageOwnerUid, activeId);
+      } catch (error) {
+        // Tolerated: a corrupt payload surfaces as an empty conversation.
+        console.warn(
+          "Could not load conversation payload:",
+          error?.message || error
+        );
+      }
+      if (cancelled || generation !== chatStorageGenerationRef.current) return;
+      if (activeConversationIdRef.current !== activeId) return;
+      if (
+        !(conversationsRef.current || []).some((item) => item.id === activeId)
+      ) {
+        return;
+      }
+      conversationDataRef.current.set(activeId, data);
+      setMessages(data.messages || []);
+      setSummary(data.summary || "");
+      setConversationLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeConversationId,
+    conversationLoading,
+    setMessages,
+    setSummary,
+    storageOwnerUid,
+  ]);
+
+  // Persist the active conversation's payload to its own keys. Messages may
+  // still stream while incognito; they stay in memory and are wiped when
+  // incognito ends.
   useEffect(() => {
     if (
       !storageHydration.chat.writeEnabled ||
@@ -1158,70 +1639,26 @@ export const GlobalProvider = ({
     // in memory; cleanup is handled once by the transition/owner effect above.
     if (incognitoEnabled || leavingIncognito) return;
 
-    const { chatMessages } = getUserStorageKeys(storageOwnerUid);
-
     // Avoid serializing the whole conversation for each streaming token. The
     // final state is persisted once receiving finishes.
     if (receiving) return;
 
-    const doSave = async () => {
-      if (!storageWriteEnabledRef.current.chat) return;
-      try {
-        chatLastSavedAtRef.current = Date.now();
-        const persistedMessages = prepareChatMessagesForPersistence(messages);
-        await AsyncStorage.setItem(
-          chatMessages,
-          JSON.stringify(persistedMessages)
-        );
-        const attachmentUris = collectChatAttachmentUris(persistedMessages);
-        const attachmentSignature = `${storageOwnerUid}:${[...attachmentUris]
-          .sort()
-          .join("|")}`;
-        if (chatAttachmentSignatureRef.current !== attachmentSignature) {
-          await pruneChatAttachments(storageOwnerUid, attachmentUris);
-          chatAttachmentSignatureRef.current = attachmentSignature;
-        }
-      } catch (error) {
-        storageWriteEnabledRef.current = {
-          ...storageWriteEnabledRef.current,
-          chat: false,
-        };
-        setStorageHydration((previous) => ({
-          ...previous,
-          chat: { resolved: true, writeEnabled: false, error },
-        }));
-        console.warn(
-          "save scoped chat messages failed:",
-          error
-        );
-      }
-    };
-
-    if (chatSaveTimerRef.current) {
-      clearTimeout(chatSaveTimerRef.current);
-      chatSaveTimerRef.current = null;
-    }
-
-    doSave();
-
-    return () => {
-      if (chatSaveTimerRef.current) {
-        clearTimeout(chatSaveTimerRef.current);
-        chatSaveTimerRef.current = null;
-      }
-    };
+    const conversationId = activeConversationId;
+    if (!conversationId) return;
+    queuePersistConversation(conversationId, messages, summary);
   }, [
     messages,
     receiving,
+    summary,
+    activeConversationId,
     incognitoEnabled,
     leavingIncognito,
     storageHydration.chat.writeEnabled,
     storageOwnerUid,
+    queuePersistConversation,
   ]);
 
   // Persist the conversation list + active id (the lightweight "chat index").
-  // Per-conversation message payloads stay in memory; the active conversation
-  // continues to use the existing chatMessages/chatSummary storage.
   useEffect(() => {
     if (
       !storageHydration.chat.writeEnabled ||
@@ -1234,7 +1671,7 @@ export const GlobalProvider = ({
 
     const { chatConversations } = getUserStorageKeys(storageOwnerUid);
     const payload = {
-      version: 1,
+      version: 2,
       activeConversationId: activeConversationId || null,
       conversations: Array.isArray(conversations) ? conversations : [],
     };
@@ -2481,10 +2918,14 @@ export const GlobalProvider = ({
       conversations,
       activeConversationId,
       activeConversationTitle,
+      conversationLoading,
       conversationsVisible,
       setConversationsVisible,
       createConversation,
       selectConversation,
+      archiveConversation,
+      restoreConversation,
+      deleteConversation,
       resetConversations,
     }),
     [
@@ -2496,9 +2937,13 @@ export const GlobalProvider = ({
       conversations,
       activeConversationId,
       activeConversationTitle,
+      conversationLoading,
       conversationsVisible,
       createConversation,
       selectConversation,
+      archiveConversation,
+      restoreConversation,
+      deleteConversation,
       resetConversations,
     ]
   );
@@ -2511,6 +2956,9 @@ export const GlobalProvider = ({
       getChatSnapshot,
       createConversation,
       selectConversation,
+      archiveConversation,
+      restoreConversation,
+      deleteConversation,
       resetConversations,
       setConversationsVisible,
     }),
@@ -2519,6 +2967,9 @@ export const GlobalProvider = ({
       setMessages,
       createConversation,
       selectConversation,
+      archiveConversation,
+      restoreConversation,
+      deleteConversation,
       resetConversations,
     ]
   );

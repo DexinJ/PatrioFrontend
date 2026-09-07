@@ -80,6 +80,48 @@ export function getUserStorageKeys(uid) {
   };
 }
 
+// Conversation ids are UUIDs from this app, but storage keys are shared with
+// the rest of the namespace, so ids are still sanitized before embedding.
+export function sanitizeConversationId(id) {
+  return String(id || "")
+    .trim()
+    .replace(/[^A-Za-z0-9._-]/g, "_")
+    .slice(0, 120);
+}
+
+// Per-conversation payload keys live under the user namespace with a distinct
+// prefix so they can never collide with the legacy chatMessages/chatSummary/
+// chatConversations keys and can be enumerated for purge/clear operations.
+export function getUserConversationStorageKeys(uid, conversationId) {
+  const namespace = `${USER_STORAGE_PREFIX}:${encodeUid(uid)}`;
+  const safeId = sanitizeConversationId(conversationId);
+  if (!safeId) {
+    throw new Error(
+      "A conversation id is required for chat payload storage."
+    );
+  }
+  const prefix = `${namespace}:chatConversation:${safeId}`;
+  return {
+    messagesKey: `${prefix}:messages`,
+    summaryKey: `${prefix}:summary`,
+  };
+}
+
+export async function listUserConversationPayloadKeys(uid) {
+  const namespace = `${USER_STORAGE_PREFIX}:${encodeUid(uid)}`;
+  const payloadPrefix = `${namespace}:chatConversation:`;
+  const allKeys = await AsyncStorage.getAllKeys();
+  return allKeys.filter((key) => key.startsWith(payloadPrefix));
+}
+
+export async function removeAllUserConversationPayload(uid) {
+  const payloadKeys = await listUserConversationPayloadKeys(uid);
+  if (payloadKeys.length > 0) {
+    await AsyncStorage.multiRemove(payloadKeys);
+  }
+  return payloadKeys.length;
+}
+
 export function getUserSecureStorageKey(uid, name) {
   const normalizedName = String(name || "")
     .trim()

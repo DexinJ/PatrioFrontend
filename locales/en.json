@@ -212,7 +212,17 @@
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
-    "justNow": "just now"
+    "justNow": "just now",
+    "chatMenu": "Chat options",
+    "rowActions": "Chat options for {{title}}",
+    "archiveChat": "Archive",
+    "restoreChat": "Restore",
+    "deleteChat": "Delete",
+    "deleteChatTitle": "Delete chat?",
+    "deleteChatBody": "This permanently deletes \"{{title}}\" and its images. This cannot be undone.",
+    "archivedSection": "Archived ({{count}})",
+    "openArchived": "Show archived chats",
+    "hideArchived": "Hide archived chats"
   },
   "voiceInput": {
     "micPermissionTitle": "Microphone permission required",

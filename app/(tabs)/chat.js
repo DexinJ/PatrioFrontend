@@ -3,6 +3,7 @@ import i18next from "i18next";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Keyboard,
@@ -97,6 +98,7 @@ export default function ChatScreen() {
     setMessages,
     waiting,
     activeConversationId,
+    conversationLoading,
   } = useContext(ChatContext);
   const mountedRef = useRef(false);
   const sendGenerationRef = useRef(0);
@@ -469,7 +471,11 @@ export default function ChatScreen() {
                 },
               ]}
             >
-              {messages.length === 0 && !waiting ? (
+              {conversationLoading && activeConversationId ? (
+                <View style={styles.loadingState}>
+                  <ActivityIndicator size="large" color={theme.accent} />
+                </View>
+              ) : messages.length === 0 && !waiting ? (
                 <ChatEmptyState theme={theme} />
               ) : (
                 <MessageList messages={messages} onUiAction={handleUiAction} />
@@ -507,5 +513,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

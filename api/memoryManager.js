@@ -8,7 +8,11 @@ import {
 } from "./backendErrors";
 import { deleteChatAttachments, pruneChatAttachments } from "./chatAttachments";
 import { cancelActiveChatWork } from "./chatLifecycle";
-import { getUserStorageKeys } from "./storageKeys";
+import {
+  getUserConversationStorageKeys,
+  getUserStorageKeys,
+  removeAllUserConversationPayload,
+} from "./storageKeys";
 import {
   collectChatAttachmentUris,
   prepareChatMessagesForPersistence,
@@ -119,6 +123,50 @@ export async function loadChatData(uid, setMessages, setSummary) {
   };
 }
 
+// Per-conversation payload load. A missing payload returns an empty
+// conversation; a corrupt stored payload throws (callers decide policy).
+export async function loadConversationChatData(uid, conversationId) {
+  const { messagesKey, summaryKey } = getUserConversationStorageKeys(
+    uid,
+    conversationId
+  );
+  const [msgData, summaryData] = await Promise.all([
+    AsyncStorage.getItem(messagesKey),
+    AsyncStorage.getItem(summaryKey),
+  ]);
+  const parsedMessages = msgData ? JSON.parse(msgData) : [];
+  const messages = sanitizePersistedChatMessages(parsedMessages);
+  const summary = summaryData || "";
+  return { messages, summary };
+}
+
+// Persists one conversation's payload to its own keys and returns the
+// sanitized/bounded messages that were actually stored.
+export async function saveConversationChatData(
+  uid,
+  conversationId,
+  { messages = [], summary = "" }
+) {
+  const { messagesKey, summaryKey } = getUserConversationStorageKeys(
+    uid,
+    conversationId
+  );
+  const persistedMessages = prepareChatMessagesForPersistence(messages);
+  await AsyncStorage.multiSet([
+    [messagesKey, JSON.stringify(persistedMessages)],
+    [summaryKey, String(summary || "")],
+  ]);
+  return persistedMessages;
+}
+
+export async function removeConversationChatData(uid, conversationId) {
+  const { messagesKey, summaryKey } = getUserConversationStorageKeys(
+    uid,
+    conversationId
+  );
+  await AsyncStorage.multiRemove([messagesKey, summaryKey]);
+}
+
 // --- Clear all chat data ---
 export async function clearChatData(uid, setMessages, setSummary) {
   const { chatMessages, chatSummary, chatConversations } =
@@ -135,13 +183,21 @@ export async function clearChatData(uid, setMessages, setSummary) {
 
   try {
     await cancelActiveChatWork();
+    let payloadKeysRemoved = 0;
+    try {
+      payloadKeysRemoved = await removeAllUserConversationPayload(uid);
+    } catch (error) {
+      // Still remove the legacy/index keys below; an enumeration failure must
+      // not prevent the standard chat keys and attachments from being purged.
+      console.warn("Could not enumerate per-conversation chat keys:", error);
+    }
     await Promise.all([
       AsyncStorage.multiRemove([chatMessages, chatSummary, chatConversations]),
       deleteChatAttachments(uid),
     ]);
     setMessages?.([]);
     setSummary?.("");
-    return { ok: true, error: null };
+    return { ok: true, error: null, payloadKeysRemoved };
   } catch (err) {
     console.warn("Error clearing chat data:", err);
     return { ok: false, error: err };
@@ -242,17 +298,29 @@ async function persistCompactedChat(
   messages,
   setSummary,
   setMessages,
-  isCurrentUser
+  isCurrentUser,
+  conversationId = null
 ) {
-  const { chatMessages, chatSummary } = getUserStorageKeys(uid);
   const persistedMessages = prepareChatMessagesForPersistence(messages);
 
   if (!isCurrentUser()) throw createSummaryAbortError();
 
-  await AsyncStorage.multiSet([
-    [chatSummary, summary],
-    [chatMessages, JSON.stringify(persistedMessages)],
-  ]);
+  if (conversationId) {
+    const { messagesKey, summaryKey } = getUserConversationStorageKeys(
+      uid,
+      conversationId
+    );
+    await AsyncStorage.multiSet([
+      [summaryKey, summary],
+      [messagesKey, JSON.stringify(persistedMessages)],
+    ]);
+  } else {
+    const { chatMessages, chatSummary } = getUserStorageKeys(uid);
+    await AsyncStorage.multiSet([
+      [chatSummary, summary],
+      [chatMessages, JSON.stringify(persistedMessages)],
+    ]);
+  }
   await pruneChatAttachments(
     uid,
     collectChatAttachmentUris(persistedMessages)
@@ -274,6 +342,7 @@ export async function summarizeHistory({
   token,
   signal,
   fetchImpl = fetch,
+  conversationId = null,
 }) {
   const allMessages = Array.isArray(messages) ? messages : [];
   const recentMessages = allMessages.slice(-KEEP_RECENT);
@@ -380,7 +449,8 @@ export async function summarizeHistory({
       recentMessages,
       setSummary,
       setMessages,
-      isCurrentUser
+      isCurrentUser,
+      conversationId
     );
 
     return {

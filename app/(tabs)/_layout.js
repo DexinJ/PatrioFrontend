@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   Pressable,
@@ -31,10 +32,63 @@ import { canExposeAccountData } from "../../context/refreshPolicy";
 function ChatTabHeader() {
   const { t } = useTranslation();
   const {
+    activeConversationId,
     activeConversationTitle,
     createConversation,
     setConversationsVisible,
+    archiveConversation,
+    deleteConversation,
   } = useContext(ChatContext);
+
+  const confirmDeleteActiveChat = () => {
+    if (!activeConversationId) return;
+    Alert.alert(
+      t("conversations.deleteChatTitle"),
+      t("conversations.deleteChatBody", {
+        title: activeConversationTitle,
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("conversations.deleteChat"),
+          style: "destructive",
+          onPress: () => deleteConversation(activeConversationId),
+        },
+      ]
+    );
+  };
+
+  const openActiveChatMenu = () => {
+    if (!activeConversationId) return;
+    Alert.alert(t("conversations.chatMenu"), activeConversationTitle, [
+      {
+        text: t("conversations.archiveChat"),
+        onPress: () => archiveConversation(activeConversationId),
+      },
+      {
+        text: t("conversations.deleteChat"),
+        style: "destructive",
+        onPress: confirmDeleteActiveChat,
+      },
+      { text: t("common.cancel"), style: "cancel" },
+    ]);
+  };
+
+  const rightItems = [
+    {
+      icon: "add-circle-outline",
+      label: t("conversations.newChat"),
+      onPress: () => createConversation(),
+      rotateOnPress: true,
+    },
+  ];
+  if (activeConversationId) {
+    rightItems.push({
+      icon: "ellipsis-horizontal",
+      label: t("conversations.chatMenu"),
+      onPress: openActiveChatMenu,
+    });
+  }
 
   return (
     <IconHeader
@@ -46,14 +100,7 @@ function ChatTabHeader() {
           onPress: () => setConversationsVisible(true),
         },
       ]}
-      rightItems={[
-        {
-          icon: "add-circle-outline",
-          label: t("conversations.newChat"),
-          onPress: () => createConversation(),
-          rotateOnPress: true,
-        },
-      ]}
+      rightItems={rightItems}
     />
   );
 }
@@ -235,6 +282,9 @@ function ThemedTabs() {
     activeConversationId,
     selectConversation,
     createConversation,
+    archiveConversation,
+    restoreConversation,
+    deleteConversation,
   } = useContext(ChatContext);
   const { width: windowWidth } = useWindowDimensions();
   const drawerWidth = Math.min(windowWidth * 0.82, 380);
@@ -499,9 +549,18 @@ function ThemedTabs() {
         conversations={conversations}
         activeConversationId={activeConversationId}
         onSelect={(id) => {
+          const item = (Array.isArray(conversations) ? conversations : []).find(
+            (conversation) => conversation.id === id
+          );
+          if (item?.status === "archived" || item?.archivedAt) {
+            restoreConversation(id);
+          }
           selectConversation(id);
           setConversationsVisible(false);
         }}
+        onArchive={(id) => archiveConversation(id)}
+        onRestore={(id) => restoreConversation(id)}
+        onDelete={(id) => deleteConversation(id)}
         onNewChat={() => {
           createConversation();
           setConversationsVisible(false);

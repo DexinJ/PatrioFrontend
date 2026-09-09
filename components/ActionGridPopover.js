@@ -3,6 +3,9 @@ import { StyleSheet, View } from "react-native";
 import Popover from "react-native-popover-view";
 import ActionTile from "./ActionTile";
 
+const GRID_TILE_WIDTH = 80;
+const GRID_GAP = 10;
+
 /**
  * Reusable grid popover for context actions (long-press menus).
  *
@@ -40,7 +43,16 @@ export default function ActionGridPopover({
       onCloseComplete={onCloseComplete}
     >
       <View style={[styles.menu, { backgroundColor: cardBg, borderRadius }]}>
-        <View style={styles.grid}>
+        <View
+          style={[
+            styles.grid,
+            actions.length > 0 && {
+              width:
+                actions.length * GRID_TILE_WIDTH +
+                (actions.length - 1) * GRID_GAP,
+            },
+          ]}
+        >
           {actions.map((a) => (
             <ActionTile
               key={a.key}

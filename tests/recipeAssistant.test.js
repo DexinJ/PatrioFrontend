@@ -68,7 +68,18 @@ function loadDirectAiTools() {
         formatConversationMemory: () => "",
       },
     ],
-    ["./aiProviderSettings", { getCustomAiProviderSettings: () => ({}) }],
+    [
+      "./aiProviderSettings",
+      {
+        getAiProviderSlotSettings: async () => ({
+          apiKey: "",
+          model: "",
+          baseUrl: "",
+        }),
+        getCustomAiProviderSettings: () => ({}),
+        resolveProviderSlotSelection: () => "custom",
+      },
+    ],
     ["./aiProviderPolicy", { resolveAiProvider: () => "pantrio" }],
     ["./chatLifecycle", { registerChatCancellation: () => () => {} }],
     [

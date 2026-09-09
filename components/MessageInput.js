@@ -1,84 +1,104 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  AudioModule,
-  RecordingPresets,
-  setAudioModeAsync,
-  useAudioRecorder,
-  useAudioRecorderState,
-} from "expo-audio";
-import * as FileSystem from "expo-file-system/legacy";
-import i18next from "i18next";
+
+// ============================================================================
+// VOICE RECOGNITION DISABLED
+// ----------------------------------------------------------------------------
+// Voice input (audio recording + speech-to-text transcription) has been
+// disabled. The expo-audio imports, recorder hooks, transcription request,
+// voice-mode composer UI, and related helpers are kept below as comments so
+// the feature can be restored later. The composer is text-only and the button
+// on the right is a permanent Send button.
+// ============================================================================
+
+// import {
+//   AudioModule,
+//   RecordingPresets,
+//   setAudioModeAsync,
+//   useAudioRecorder,
+//   useAudioRecorderState,
+// } from "expo-audio";
+// import * as FileSystem from "expo-file-system/legacy";
+// import i18next from "i18next";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Alert,
+  // [VOICE DISABLED] ActivityIndicator, Alert and Text were only used by the
+  // voice-mode composer UI.
+  //   ActivityIndicator,
+  //   Alert,
   StyleSheet,
-  Text,
+  //   Text,
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
-import { auth } from "../auth/firebaseClient";
-import { API_BASE_URL } from "../api/backendConfig";
-import {
-  createBackendResponseError,
-  parseBackendResponseText,
-} from "../api/backendErrors";
+// [VOICE DISABLED] Firebase auth, backend config and backend error helpers
+// were only used by the transcription upload.
+// import { auth } from "../auth/firebaseClient";
+// import { API_BASE_URL } from "../api/backendConfig";
+// import {
+//   createBackendResponseError,
+//   parseBackendResponseText,
+// } from "../api/backendErrors";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
-import { useAccountSession } from "../context/AccountSessionContext";
+// import { useAccountSession } from "../context/AccountSessionContext";
 import {
   COMPOSER_BORDER_WIDTH,
   calculateComposerLayout,
 } from "../utils/composerLayout";
 import {
-  buildVoiceUploadFormData,
-  mergeTranscriptIntoComposer,
+  // [VOICE DISABLED] Only the transcription helpers were voice-specific.
+  //   buildVoiceUploadFormData,
+  //   mergeTranscriptIntoComposer,
   normalizeComposerText,
   shouldShowSendButton,
 } from "../utils/voiceInput";
 import PlusMenu from "./PlusMenu";
 
-const MAX_RECORDING_SECONDS = 60;
-const TRANSCRIPTION_TIMEOUT_MS = 90_000;
+// [VOICE DISABLED] Recording limits used by the voice feature.
+// const MAX_RECORDING_SECONDS = 60;
+// const TRANSCRIPTION_TIMEOUT_MS = 90_000;
 
-async function releaseRecordingFile(uri) {
-  const normalizedUri = typeof uri === "string" ? uri.trim() : "";
-  if (!normalizedUri) return;
-
-  await FileSystem.deleteAsync(normalizedUri, { idempotent: true }).catch(
-    () => {}
-  );
-}
+// [VOICE DISABLED] Deletes the temporary recording file after transcription.
+// async function releaseRecordingFile(uri) {
+//   const normalizedUri = typeof uri === "string" ? uri.trim() : "";
+//   if (!normalizedUri) return;
+//
+//   await FileSystem.deleteAsync(normalizedUri, { idempotent: true }).catch(
+//     () => {}
+//   );
+// }
 
 export default function MessageInput({ value, onChangeText, onSend }) {
   const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
   const { receiving } = useContext(ChatContext);
-  const { updateQuota } = useAccountSession();
+  // [VOICE DISABLED] const { updateQuota } = useAccountSession();
   const { height: viewportHeight } = useWindowDimensions();
 
   const fontSize = settings?.ux?.fontSize || 16;
   const chatgptStyle = Boolean(settings?.chat?.chatgptStyle);
 
   const [composerContentHeight, setComposerContentHeight] = useState(0);
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const [recordingStarting, setRecordingStarting] = useState(false);
-  const [recordingActive, setRecordingActive] = useState(false);
   const composerInputRef = useRef(null);
-  const recordingSessionRef = useRef(false);
-  const recordingPressIntentRef = useRef(false);
-  const recordingStartPendingRef = useRef(false);
-  const recordingLimitTimeoutRef = useRef(null);
-  const transcriptionControllerRef = useRef(null);
   const mountedRef = useRef(false);
-  const lifecycleGenerationRef = useRef(0);
-  const recordingAttemptRef = useRef(0);
 
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(audioRecorder);
+  // [VOICE DISABLED] Voice-mode state and recorder hooks/refs.
+  // const [voiceMode, setVoiceMode] = useState(false);
+  // const [transcribing, setTranscribing] = useState(false);
+  // const [recordingStarting, setRecordingStarting] = useState(false);
+  // const [recordingActive, setRecordingActive] = useState(false);
+  // const recordingSessionRef = useRef(false);
+  // const recordingPressIntentRef = useRef(false);
+  // const recordingStartPendingRef = useRef(false);
+  // const recordingLimitTimeoutRef = useRef(null);
+  // const transcriptionControllerRef = useRef(null);
+  // const lifecycleGenerationRef = useRef(0);
+  // const recordingAttemptRef = useRef(0);
+  //
+  // const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  // const recorderState = useAudioRecorderState(audioRecorder);
   const composerLayout = calculateComposerLayout({
     contentHeight:
       typeof value === "string" && value.length > 0
@@ -90,60 +110,71 @@ export default function MessageInput({ value, onChangeText, onSend }) {
 
   useEffect(() => {
     mountedRef.current = true;
-    lifecycleGenerationRef.current += 1;
 
     return () => {
       mountedRef.current = false;
-      lifecycleGenerationRef.current += 1;
-      recordingAttemptRef.current += 1;
-      recordingStartPendingRef.current = false;
-      clearTimeout(recordingLimitTimeoutRef.current);
-      recordingLimitTimeoutRef.current = null;
-      transcriptionControllerRef.current?.abort();
     };
   }, []);
 
-  useEffect(
-    () => () => {
-      recordingPressIntentRef.current = false;
-      recordingSessionRef.current = false;
-      void (async () => {
-        if (audioRecorder.isRecording) {
-          await audioRecorder.stop().catch(() => {});
-        }
-        await releaseRecordingFile(audioRecorder.uri);
-        await setAudioModeAsync({
-          allowsRecording: false,
-          playsInSilentMode: true,
-        }).catch(() => {});
-      })();
-    },
-    [audioRecorder]
-  );
+  // [VOICE DISABLED] Original lifecycle effect also cancelled in-flight
+  // recordings/transcriptions on unmount:
+  // useEffect(() => {
+  //   mountedRef.current = true;
+  //   lifecycleGenerationRef.current += 1;
+  //
+  //   return () => {
+  //     mountedRef.current = false;
+  //     lifecycleGenerationRef.current += 1;
+  //     recordingAttemptRef.current += 1;
+  //     recordingStartPendingRef.current = false;
+  //     clearTimeout(recordingLimitTimeoutRef.current);
+  //     recordingLimitTimeoutRef.current = null;
+  //     transcriptionControllerRef.current?.abort();
+  //   };
+  // }, []);
 
-  const isBusy =
-    receiving ||
-    transcribing ||
-    recordingStarting ||
-    recordingActive ||
-    recorderState.isRecording;
+  // [VOICE DISABLED] Cleanup effect that stopped the audio recorder and reset
+  // the audio session on unmount:
+  // useEffect(
+  //   () => () => {
+  //     recordingPressIntentRef.current = false;
+  //     recordingSessionRef.current = false;
+  //     void (async () => {
+  //       if (audioRecorder.isRecording) {
+  //         await audioRecorder.stop().catch(() => {});
+  //       }
+  //       await releaseRecordingFile(audioRecorder.uri);
+  //       await setAudioModeAsync({
+  //         allowsRecording: false,
+  //         playsInSilentMode: true,
+  //       }).catch(() => {});
+  //     })();
+  //   },
+  //   [audioRecorder]
+  // );
 
-  const isCurrentLifecycle = (generation) =>
-    mountedRef.current && lifecycleGenerationRef.current === generation;
+  // [VOICE DISABLED] isBusy also covered transcription/recording states:
+  // const isBusy =
+  //   receiving ||
+  //   transcribing ||
+  //   recordingStarting ||
+  //   recordingActive ||
+  //   recorderState.isRecording;
 
-  const isCurrentRecordingAttempt = (generation, attempt) =>
-    isCurrentLifecycle(generation) && recordingAttemptRef.current === attempt;
+  // [VOICE DISABLED] Lifecycle guards used by the voice async flows:
+  // const isCurrentLifecycle = (generation) =>
+  //   mountedRef.current && lifecycleGenerationRef.current === generation;
+  //
+  // const isCurrentRecordingAttempt = (generation, attempt) =>
+  //   isCurrentLifecycle(generation) && recordingAttemptRef.current === attempt;
 
-  const sendMessageSafely = (
-    payload,
-    generation = lifecycleGenerationRef.current
-  ) => {
-    if (!isCurrentLifecycle(generation)) return false;
+  const sendMessageSafely = (payload) => {
+    if (!mountedRef.current) return false;
 
     try {
       const result = onSend?.(payload);
       Promise.resolve(result).catch((error) => {
-        if (isCurrentLifecycle(generation)) {
+        if (mountedRef.current) {
           console.error("Failed to send message:", error);
         }
       });
@@ -155,7 +186,8 @@ export default function MessageInput({ value, onChangeText, onSend }) {
   };
 
   const handleSendText = () => {
-    if (receiving || transcribing) return;
+    // [VOICE DISABLED] The old guard was `receiving || transcribing`.
+    if (receiving) return;
 
     const trimmedValue = normalizeComposerText(value);
 
@@ -179,325 +211,329 @@ export default function MessageInput({ value, onChangeText, onSend }) {
   };
 
   const handleSendImage = (imageData) => {
-    if (receiving || transcribing) return;
+    // [VOICE DISABLED] The old guard was `receiving || transcribing`.
+    if (receiving) return;
     sendMessageSafely(imageData);
   };
 
-  const startRecording = async (attempt) => {
-    if (
-      receiving ||
-      transcribing ||
-      recorderState.isRecording ||
-      recordingStartPendingRef.current
-    ) {
-      return;
-    }
+  // ==========================================================================
+  // [VOICE DISABLED] Voice recording + transcription
+  // --------------------------------------------------------------------------
+  // const startRecording = async (attempt) => {
+  //   if (
+  //     receiving ||
+  //     transcribing ||
+  //     recorderState.isRecording ||
+  //     recordingStartPendingRef.current
+  //   ) {
+  //     return;
+  //   }
+  //
+  //   const generation = lifecycleGenerationRef.current;
+  //   recordingStartPendingRef.current = true;
+  //   setRecordingStarting(true);
+  //
+  //   try {
+  //     const permission =
+  //       await AudioModule.requestRecordingPermissionsAsync();
+  //
+  //     if (!isCurrentRecordingAttempt(generation, attempt)) return;
+  //
+  //     if (!permission.granted) {
+  //       recordingPressIntentRef.current = false;
+  //       Alert.alert(
+  //         t("voiceInput.micPermissionTitle"),
+  //         t("voiceInput.micPermissionMessage")
+  //       );
+  //       return;
+  //     }
+  //
+  //     if (!recordingPressIntentRef.current) return;
+  //
+  //     await setAudioModeAsync({
+  //       allowsRecording: true,
+  //       playsInSilentMode: true,
+  //     });
+  //
+  //     if (!isCurrentRecordingAttempt(generation, attempt)) {
+  //       if (isCurrentLifecycle(generation) && !recordingPressIntentRef.current) {
+  //         await setAudioModeAsync({
+  //           allowsRecording: false,
+  //           playsInSilentMode: true,
+  //         }).catch(() => {});
+  //       }
+  //       return;
+  //     }
+  //
+  //     await audioRecorder.prepareToRecordAsync();
+  //     if (
+  //       !isCurrentRecordingAttempt(generation, attempt) ||
+  //       !recordingPressIntentRef.current
+  //     ) {
+  //       if (isCurrentLifecycle(generation) && !recordingPressIntentRef.current) {
+  //         await setAudioModeAsync({
+  //           allowsRecording: false,
+  //           playsInSilentMode: true,
+  //         }).catch(() => {});
+  //       }
+  //       return;
+  //     }
+  //     recordingSessionRef.current = true;
+  //     setRecordingActive(true);
+  //     audioRecorder.record();
+  //     clearTimeout(recordingLimitTimeoutRef.current);
+  //     recordingLimitTimeoutRef.current = setTimeout(() => {
+  //       recordingLimitTimeoutRef.current = null;
+  //       if (isCurrentLifecycle(generation) && recordingSessionRef.current) {
+  //         recordingAttemptRef.current += 1;
+  //         void stopRecordingAndTranscribe();
+  //       }
+  //     }, MAX_RECORDING_SECONDS * 1_000);
+  //   } catch (error) {
+  //     if (isCurrentRecordingAttempt(generation, attempt)) {
+  //       recordingPressIntentRef.current = false;
+  //       recordingSessionRef.current = false;
+  //       setRecordingActive(false);
+  //       await setAudioModeAsync({
+  //         allowsRecording: false,
+  //         playsInSilentMode: true,
+  //       }).catch(() => {});
+  //     }
+  //     console.error("Failed to start recording:", error);
+  //
+  //     if (isCurrentRecordingAttempt(generation, attempt)) {
+  //       Alert.alert(
+  //         t("voiceInput.recordingError"),
+  //         t("voiceInput.recordingErrorBody")
+  //       );
+  //     }
+  //   } finally {
+  //     recordingStartPendingRef.current = false;
+  //     if (isCurrentLifecycle(generation)) {
+  //       setRecordingStarting(false);
+  //     }
+  //   }
+  // };
+  //
+  // const stopRecordingAndTranscribe = async () => {
+  //   const generation = lifecycleGenerationRef.current;
+  //   clearTimeout(recordingLimitTimeoutRef.current);
+  //   recordingLimitTimeoutRef.current = null;
+  //   recordingPressIntentRef.current = false;
+  //   if (!recordingSessionRef.current && !audioRecorder.isRecording) {
+  //     return;
+  //   }
+  //
+  //   recordingSessionRef.current = false;
+  //   setRecordingActive(false);
+  //   let recordingUri = null;
+  //
+  //   try {
+  //     if (audioRecorder.isRecording) {
+  //       await audioRecorder.stop();
+  //     }
+  //
+  //     if (!isCurrentLifecycle(generation)) return;
+  //
+  //     recordingUri = audioRecorder.uri;
+  //
+  //     await setAudioModeAsync({
+  //       allowsRecording: false,
+  //       playsInSilentMode: true,
+  //     });
+  //
+  //     if (!isCurrentLifecycle(generation)) return;
+  //
+  //     if (!recordingUri) {
+  //       throw new Error(i18next.t("voiceInput.recordingNoFile"));
+  //     }
+  //
+  //     await transcribeAudio(recordingUri, generation);
+  //   } catch (error) {
+  //     if (isCurrentLifecycle(generation)) {
+  //       await setAudioModeAsync({
+  //         allowsRecording: false,
+  //         playsInSilentMode: true,
+  //       }).catch(() => {});
+  //     }
+  //     console.error("Failed to stop or transcribe recording:", error);
+  //
+  //     if (isCurrentLifecycle(generation)) {
+  //       Alert.alert(
+  //         t("voiceInput.voiceMessageError"),
+  //         error instanceof Error
+  //           ? error.message
+  //           : t("voiceInput.recordingCouldNotBeProcessed")
+  //       );
+  //     }
+  //   } finally {
+  //     await releaseRecordingFile(recordingUri || audioRecorder.uri);
+  //   }
+  // };
 
-    const generation = lifecycleGenerationRef.current;
-    recordingStartPendingRef.current = true;
-    setRecordingStarting(true);
-
-    try {
-      const permission =
-        await AudioModule.requestRecordingPermissionsAsync();
-
-      if (!isCurrentRecordingAttempt(generation, attempt)) return;
-
-      if (!permission.granted) {
-        recordingPressIntentRef.current = false;
-        Alert.alert(
-          t("voiceInput.micPermissionTitle"),
-          t("voiceInput.micPermissionMessage")
-        );
-        return;
-      }
-
-      if (!recordingPressIntentRef.current) return;
-
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-
-      if (!isCurrentRecordingAttempt(generation, attempt)) {
-        if (isCurrentLifecycle(generation) && !recordingPressIntentRef.current) {
-          await setAudioModeAsync({
-            allowsRecording: false,
-            playsInSilentMode: true,
-          }).catch(() => {});
-        }
-        return;
-      }
-
-      await audioRecorder.prepareToRecordAsync();
-      if (
-        !isCurrentRecordingAttempt(generation, attempt) ||
-        !recordingPressIntentRef.current
-      ) {
-        if (isCurrentLifecycle(generation) && !recordingPressIntentRef.current) {
-          await setAudioModeAsync({
-            allowsRecording: false,
-            playsInSilentMode: true,
-          }).catch(() => {});
-        }
-        return;
-      }
-      recordingSessionRef.current = true;
-      setRecordingActive(true);
-      audioRecorder.record();
-      clearTimeout(recordingLimitTimeoutRef.current);
-      recordingLimitTimeoutRef.current = setTimeout(() => {
-        recordingLimitTimeoutRef.current = null;
-        if (isCurrentLifecycle(generation) && recordingSessionRef.current) {
-          recordingAttemptRef.current += 1;
-          void stopRecordingAndTranscribe();
-        }
-      }, MAX_RECORDING_SECONDS * 1_000);
-    } catch (error) {
-      if (isCurrentRecordingAttempt(generation, attempt)) {
-        recordingPressIntentRef.current = false;
-        recordingSessionRef.current = false;
-        setRecordingActive(false);
-        await setAudioModeAsync({
-          allowsRecording: false,
-          playsInSilentMode: true,
-        }).catch(() => {});
-      }
-      console.error("Failed to start recording:", error);
-
-      if (isCurrentRecordingAttempt(generation, attempt)) {
-        Alert.alert(
-          t("voiceInput.recordingError"),
-          t("voiceInput.recordingErrorBody")
-        );
-      }
-    } finally {
-      recordingStartPendingRef.current = false;
-      if (isCurrentLifecycle(generation)) {
-        setRecordingStarting(false);
-      }
-    }
-  };
-
-  const stopRecordingAndTranscribe = async () => {
-    const generation = lifecycleGenerationRef.current;
-    clearTimeout(recordingLimitTimeoutRef.current);
-    recordingLimitTimeoutRef.current = null;
-    recordingPressIntentRef.current = false;
-    if (!recordingSessionRef.current && !audioRecorder.isRecording) {
-      return;
-    }
-
-    recordingSessionRef.current = false;
-    setRecordingActive(false);
-    let recordingUri = null;
-
-    try {
-      if (audioRecorder.isRecording) {
-        await audioRecorder.stop();
-      }
-
-      if (!isCurrentLifecycle(generation)) return;
-
-      recordingUri = audioRecorder.uri;
-
-      await setAudioModeAsync({
-        allowsRecording: false,
-        playsInSilentMode: true,
-      });
-
-      if (!isCurrentLifecycle(generation)) return;
-
-      if (!recordingUri) {
-        throw new Error(i18next.t("voiceInput.recordingNoFile"));
-      }
-
-      await transcribeAudio(recordingUri, generation);
-    } catch (error) {
-      if (isCurrentLifecycle(generation)) {
-        await setAudioModeAsync({
-          allowsRecording: false,
-          playsInSilentMode: true,
-        }).catch(() => {});
-      }
-      console.error("Failed to stop or transcribe recording:", error);
-
-      if (isCurrentLifecycle(generation)) {
-        Alert.alert(
-          t("voiceInput.voiceMessageError"),
-          error instanceof Error
-            ? error.message
-            : t("voiceInput.recordingCouldNotBeProcessed")
-        );
-      }
-    } finally {
-      await releaseRecordingFile(recordingUri || audioRecorder.uri);
-    }
-  };
-
-  const transcribeAudio = async (
-    uri,
-    generation = lifecycleGenerationRef.current
-  ) => {
-    if (!isCurrentLifecycle(generation)) return;
-    setTranscribing(true);
-    transcriptionControllerRef.current?.abort();
-    const controller = new AbortController();
-    transcriptionControllerRef.current = controller;
-    let timedOut = false;
-    const timeoutId = setTimeout(
-      () => {
-        timedOut = true;
-        controller.abort();
-      },
-      TRANSCRIPTION_TIMEOUT_MS
-    );
-
-    try {
-      const formData = await buildVoiceUploadFormData(uri);
-  
-      // Get the current Firebase user
-      const user = auth.currentUser;
-  
-      if (!user) {
-        throw new Error(i18next.t("voiceInput.signInRequired"));
-      }
-  
-      // Get a fresh Firebase ID token
-      const token = await user.getIdToken();
-
-      if (
-        !isCurrentLifecycle(generation) ||
-        transcriptionControllerRef.current !== controller
-      ) {
-        return;
-      }
-  
-      const response = await fetch(
-        `${API_BASE_URL}/api/transcriptions`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-          signal: controller.signal,
-        }
-      );
-  
-      const responseText = await response.text();
-      const data = parseBackendResponseText(responseText);
-
-      if (
-        !isCurrentLifecycle(generation) ||
-        transcriptionControllerRef.current !== controller
-      ) {
-        return;
-      }
-
-      if (data?.quota) {
-        updateQuota(data.quota);
-      }
-  
-      if (!response.ok) {
-        throw createBackendResponseError(data, {
-          status: response.status,
-          fallbackMessage: i18next.t("voiceInput.transcriptionFailed", {
-            status: response.status,
-          }),
-        });
-      }
-  
-      const transcript = data?.text?.trim();
-  
-      if (!transcript) {
-        throw new Error(i18next.t("voiceInput.noSpeechDetected"));
-      }
-  
-      onChangeText?.(mergeTranscriptIntoComposer(value, transcript));
-      setVoiceMode(false);
-    } catch (error) {
-      const isCurrentRequest =
-        isCurrentLifecycle(generation) &&
-        transcriptionControllerRef.current === controller;
-      if (!isCurrentRequest) return;
-
-      console.error("Transcription failed:", error);
-
-      if (error?.quota) {
-        updateQuota(error.quota);
-      }
-
-      if (error?.name !== "AbortError" || timedOut) {
-        Alert.alert(
-          t("voiceInput.voiceTranscriptionTitle"),
-          timedOut
-            ? t("voiceInput.transcriptionTimedOut")
-            : error?.message ||
-                String(error || t("voiceInput.transcriptionFailedGeneric"))
-        );
-      }
-    } finally {
-      clearTimeout(timeoutId);
-      const ownsController = transcriptionControllerRef.current === controller;
-      if (ownsController) {
-        transcriptionControllerRef.current = null;
-      }
-      if (ownsController && isCurrentLifecycle(generation)) {
-        setTranscribing(false);
-      }
-    }
-  };
-
-  const beginRecording = async () => {
-    const attempt = recordingAttemptRef.current + 1;
-    recordingAttemptRef.current = attempt;
-    recordingPressIntentRef.current = true;
-    await startRecording(attempt);
-  };
-
-  const enterVoiceMode = () => {
-    setVoiceMode(true);
-  };
-
-  const leaveVoiceMode = async () => {
-    const generation = lifecycleGenerationRef.current;
-    recordingAttemptRef.current += 1;
-    recordingStartPendingRef.current = false;
-    recordingPressIntentRef.current = false;
-    recordingSessionRef.current = false;
-    setRecordingActive(false);
-    clearTimeout(recordingLimitTimeoutRef.current);
-    recordingLimitTimeoutRef.current = null;
-    let recordingUri = audioRecorder.uri;
-
-    try {
-      if (audioRecorder.isRecording) {
-        await audioRecorder.stop();
-      }
-      recordingUri = audioRecorder.uri || recordingUri;
-    } catch (error) {
-      console.error("Failed to cancel recording:", error);
-    } finally {
-      await releaseRecordingFile(recordingUri || audioRecorder.uri);
-      await setAudioModeAsync({
-        allowsRecording: false,
-        playsInSilentMode: true,
-      }).catch(() => {});
-    }
-
-    if (isCurrentLifecycle(generation)) setVoiceMode(false);
-  };
-
-  const voiceButtonText = transcribing
-    ? t("voiceInput.transcribing")
-    : recordingStarting
-      ? t("voiceInput.starting")
-      : recorderState.isRecording || recordingActive
-        ? t("voiceInput.releaseToTranscribe")
-        : receiving
-          ? t("voiceInput.waiting")
-          : t("voiceInput.holdToTalk");
+  // const transcribeAudio = async (
+  //   uri,
+  //   generation = lifecycleGenerationRef.current
+  // ) => {
+  //   if (!isCurrentLifecycle(generation)) return;
+  //   setTranscribing(true);
+  //   transcriptionControllerRef.current?.abort();
+  //   const controller = new AbortController();
+  //   transcriptionControllerRef.current = controller;
+  //   let timedOut = false;
+  //   const timeoutId = setTimeout(
+  //     () => {
+  //       timedOut = true;
+  //       controller.abort();
+  //     },
+  //     TRANSCRIPTION_TIMEOUT_MS
+  //   );
+  //
+  //   try {
+  //     const formData = await buildVoiceUploadFormData(uri);
+  //
+  //     // Get the current Firebase user
+  //     const user = auth.currentUser;
+  //
+  //     if (!user) {
+  //       throw new Error(i18next.t("voiceInput.signInRequired"));
+  //     }
+  //
+  //     // Get a fresh Firebase ID token
+  //     const token = await user.getIdToken();
+  //
+  //     if (
+  //       !isCurrentLifecycle(generation) ||
+  //       transcriptionControllerRef.current !== controller
+  //     ) {
+  //       return;
+  //     }
+  //
+  //     const response = await fetch(
+  //       `${API_BASE_URL}/api/transcriptions`,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //         body: formData,
+  //         signal: controller.signal,
+  //       }
+  //     );
+  //
+  //     const responseText = await response.text();
+  //     const data = parseBackendResponseText(responseText);
+  //
+  //     if (
+  //       !isCurrentLifecycle(generation) ||
+  //       transcriptionControllerRef.current !== controller
+  //     ) {
+  //       return;
+  //     }
+  //
+  //     if (data?.quota) {
+  //       updateQuota(data.quota);
+  //     }
+  //
+  //     if (!response.ok) {
+  //       throw createBackendResponseError(data, {
+  //         status: response.status,
+  //         fallbackMessage: i18next.t("voiceInput.transcriptionFailed", {
+  //           status: response.status,
+  //         }),
+  //       });
+  //     }
+  //
+  //     const transcript = data?.text?.trim();
+  //
+  //     if (!transcript) {
+  //       throw new Error(i18next.t("voiceInput.noSpeechDetected"));
+  //     }
+  //
+  //     onChangeText?.(mergeTranscriptIntoComposer(value, transcript));
+  //     setVoiceMode(false);
+  //   } catch (error) {
+  //     const isCurrentRequest =
+  //       isCurrentLifecycle(generation) &&
+  //       transcriptionControllerRef.current === controller;
+  //     if (!isCurrentRequest) return;
+  //
+  //     console.error("Transcription failed:", error);
+  //
+  //     if (error?.quota) {
+  //       updateQuota(error.quota);
+  //     }
+  //
+  //     if (error?.name !== "AbortError" || timedOut) {
+  //       Alert.alert(
+  //         t("voiceInput.voiceTranscriptionTitle"),
+  //         timedOut
+  //           ? t("voiceInput.transcriptionTimedOut")
+  //           : error?.message ||
+  //               String(error || t("voiceInput.transcriptionFailedGeneric"))
+  //       );
+  //     }
+  //   } finally {
+  //     clearTimeout(timeoutId);
+  //     const ownsController = transcriptionControllerRef.current === controller;
+  //     if (ownsController) {
+  //       transcriptionControllerRef.current = null;
+  //     }
+  //     if (ownsController && isCurrentLifecycle(generation)) {
+  //       setTranscribing(false);
+  //     }
+  //   }
+  // };
+  //
+  // const beginRecording = async () => {
+  //   const attempt = recordingAttemptRef.current + 1;
+  //   recordingAttemptRef.current = attempt;
+  //   recordingPressIntentRef.current = true;
+  //   await startRecording(attempt);
+  // };
+  //
+  // const enterVoiceMode = () => {
+  //   setVoiceMode(true);
+  // };
+  //
+  // const leaveVoiceMode = async () => {
+  //   const generation = lifecycleGenerationRef.current;
+  //   recordingAttemptRef.current += 1;
+  //   recordingStartPendingRef.current = false;
+  //   recordingPressIntentRef.current = false;
+  //   recordingSessionRef.current = false;
+  //   setRecordingActive(false);
+  //   clearTimeout(recordingLimitTimeoutRef.current);
+  //   recordingLimitTimeoutRef.current = null;
+  //   let recordingUri = audioRecorder.uri;
+  //
+  //   try {
+  //     if (audioRecorder.isRecording) {
+  //       await audioRecorder.stop();
+  //     }
+  //     recordingUri = audioRecorder.uri || recordingUri;
+  //   } catch (error) {
+  //     console.error("Failed to cancel recording:", error);
+  //   } finally {
+  //     await releaseRecordingFile(recordingUri || audioRecorder.uri);
+  //     await setAudioModeAsync({
+  //       allowsRecording: false,
+  //       playsInSilentMode: true,
+  //     }).catch(() => {});
+  //   }
+  //
+  //   if (isCurrentLifecycle(generation)) setVoiceMode(false);
+  // };
+  //
+  // const voiceButtonText = transcribing
+  //   ? t("voiceInput.transcribing")
+  //   : recordingStarting
+  //     ? t("voiceInput.starting")
+  //     : recorderState.isRecording || recordingActive
+  //       ? t("voiceInput.releaseToTranscribe")
+  //       : receiving
+  //         ? t("voiceInput.waiting")
+  //         : t("voiceInput.holdToTalk");
   const showSendButton = shouldShowSendButton(value);
 
   return (
@@ -513,6 +549,8 @@ export default function MessageInput({ value, onChangeText, onSend }) {
     >
       <PlusMenu onSend={handleSendImage} />
 
+      {/* [VOICE DISABLED] Original voice/text composer markup, preserved for
+      reference so it can be restored later:
       {!voiceMode ? (
         <>
           <TextInput
@@ -655,6 +693,70 @@ export default function MessageInput({ value, onChangeText, onSend }) {
           </TouchableOpacity>
         </>
       )}
+      */}
+
+      {/* Text-only composer: the right-hand button is always the Send button. */}
+      <TextInput
+        ref={composerInputRef}
+        editable={!receiving}
+        multiline
+        scrollEnabled={composerLayout.scrollEnabled}
+        style={[
+          styles.input,
+          chatgptStyle ? styles.inputChatgpt : null,
+          {
+            fontSize,
+            lineHeight: composerLayout.lineHeight,
+            maxHeight: composerLayout.maximumHeight,
+            minHeight: composerLayout.minimumHeight,
+            paddingVertical: composerLayout.paddingVertical,
+            color: theme.inputText,
+            backgroundColor: chatgptStyle
+              ? "transparent"
+              : theme.inputBackground,
+            borderColor: theme.border,
+          },
+        ]}
+        value={value}
+        onChangeText={handleComposerTextChange}
+        onContentSizeChange={({ nativeEvent }) => {
+          setComposerContentHeight(nativeEvent.contentSize.height);
+        }}
+        placeholder={
+          receiving
+            ? t("voiceInput.waitingForResponse")
+            : chatgptStyle
+              ? t("voiceInput.messagePantrio")
+              : t("voiceInput.typeAMessage")
+        }
+        placeholderTextColor={theme.textPlaceholder}
+        submitBehavior="newline"
+        textAlignVertical="top"
+        accessibilityLabel={t("voiceInput.chatMessageA11y")}
+        accessibilityHint={t("voiceInput.messageHint")}
+      />
+
+      <TouchableOpacity
+        style={[
+          styles.micButton,
+          {
+            backgroundColor: theme.actionButton,
+            opacity: !showSendButton || receiving ? 0.5 : 1,
+          },
+        ]}
+        onPress={handleSendText}
+        disabled={!showSendButton || receiving}
+        accessibilityRole="button"
+        accessibilityLabel={t("voiceInput.sendMessage")}
+        accessibilityHint={t("voiceInput.sendMessageHint")}
+        accessibilityState={{ disabled: !showSendButton || receiving }}
+      >
+        <Ionicons
+          name="send"
+          size={fontSize * 1.2}
+          color={theme.inputBackground}
+        />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -691,17 +793,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  voiceButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 20,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  voiceText: {
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  // [VOICE DISABLED] Styles used by the hold-to-talk voice-mode composer:
+  // voiceButton: {
+  //   flex: 1,
+  //   borderWidth: 1,
+  //   borderRadius: 20,
+  //   marginHorizontal: 5,
+  //   paddingVertical: 12,
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  // },
+  // voiceText: {
+  //   fontWeight: "bold",
+  //   fontSize: 16,
+  // },
 });

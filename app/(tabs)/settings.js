@@ -42,9 +42,9 @@ import {
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import {
-  getCustomAiProviderSettings,
+  getAiProviderSlotSettings,
   normalizeAiBaseUrl,
-  setCustomAiProviderSettings,
+  setAiProviderSlotSettings,
 } from "../../api/aiProviderSettings";
 import { resolveAiProvider } from "../../api/aiProviderPolicy";
 import { API_BASE_URL } from "../../api/backendConfig";
@@ -101,6 +101,13 @@ const AI_PROVIDER_URLS = [
   },
 ];
 const CUSTOM_AI_PROVIDER_ID = "custom";
+
+function isKnownAiProviderSlotId(value) {
+  return (
+    AI_PROVIDER_URLS.some((item) => item.id === value) ||
+    value === CUSTOM_AI_PROVIDER_ID
+  );
+}
 
 const APPLE_AI_UNSUPPORTED_STATUSES = new Set([
   "device_not_eligible",
@@ -545,7 +552,7 @@ export default function SettingsScreen() {
   );
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [aiApiKey, setAiApiKey] = useState("");
-  const [aiProviderSettingsBaseUrl, setAiProviderSettingsBaseUrl] = useState(null);
+  const [aiProviderSettingsLoadedId, setAiProviderSettingsLoadedId] = useState(null);
   const configuredAiBaseUrl =
     settings?.advanced?.aiBaseUrl || "https://api.openai.com/v1";
   const configuredAiModel = settings?.advanced?.aiModel || "gpt-4o-mini";
@@ -555,13 +562,24 @@ export default function SettingsScreen() {
   const aiBaseUrl = aiBaseUrlDraft ?? configuredAiBaseUrl;
   const aiModel = aiModelDraft ?? configuredAiModel;
   const [aiProviderOpen, setAiProviderOpen] = useState(false);
+  // The dropdown slot is authoritative: a local draft selection wins, then
+  // the persisted advanced.aiProviderId, then the legacy URL-derived id.
+  const [aiProviderIdDraft, setAiProviderIdDraft] = useState(null);
+  // Per-slot in-memory drafts so OpenAI -> Custom -> OpenAI keeps each slot's
+  // URL/model/key without refetching or losing unsaved edits.
+  const aiSlotDraftsRef = useRef({});
   const selectedAiProviderId = useMemo(() => {
-    const normalized = normalizeAiBaseUrl(aiBaseUrl);
+    if (aiProviderIdDraft) return aiProviderIdDraft;
+    if (isKnownAiProviderSlotId(settings?.advanced?.aiProviderId)) {
+      return settings.advanced.aiProviderId;
+    }
+    const normalized = normalizeAiBaseUrl(configuredAiBaseUrl);
     const preset = AI_PROVIDER_URLS.find(
       (item) => normalizeAiBaseUrl(item.value) === normalized
     );
     return preset ? preset.id : CUSTOM_AI_PROVIDER_ID;
-  }, [aiBaseUrl]);
+  }, [aiProviderIdDraft, configuredAiBaseUrl, settings?.advanced?.aiProviderId]);
+  const aiBaseUrlLocked = selectedAiProviderId !== CUSTOM_AI_PROVIDER_ID;
   const aiProvider = resolveAiProvider(
     settings?.advanced?.aiProvider,
     settings?.advanced?.useCustomAi
@@ -675,6 +693,8 @@ export default function SettingsScreen() {
   }, [resetRecipePreferences, t]);
 
   const setAiBaseUrl = useCallback((nextValue) => {
+    // Typing happens in the custom slot only; it must not change which
+    // provider slot is selected.
     setAiBaseUrlDraft((currentDraft) => {
       const currentValue = currentDraft ?? configuredAiBaseUrl;
       return typeof nextValue === "function"
@@ -683,10 +703,17 @@ export default function SettingsScreen() {
     });
   }, [configuredAiBaseUrl]);
 
-  const normalizedAiBaseUrl = normalizeAiBaseUrl(aiBaseUrl);
-  const normalizedConfiguredAiBaseUrl = normalizeAiBaseUrl(configuredAiBaseUrl);
+  // Legacy installs kept the custom URL only in advanced.aiBaseUrl; surface it
+  // as the custom slot's starting URL until the slot migration seeds it.
+  const legacyCustomBaseUrl = useMemo(() => {
+    const normalized = normalizeAiBaseUrl(configuredAiBaseUrl);
+    const isPresetConfigured = AI_PROVIDER_URLS.some(
+      (item) => normalizeAiBaseUrl(item.value) === normalized
+    );
+    return isPresetConfigured ? "" : configuredAiBaseUrl;
+  }, [configuredAiBaseUrl]);
   const loadingAiProviderSettings =
-    !storageHydrated || aiProviderSettingsBaseUrl !== normalizedAiBaseUrl;
+    !storageHydrated || aiProviderSettingsLoadedId !== selectedAiProviderId;
 
   const aiProviderItems = useMemo(() => {
     return [
@@ -703,55 +730,72 @@ export default function SettingsScreen() {
 
   const handleAiProviderSelect = useCallback(
     (nextId) => {
-      if (nextId === CUSTOM_AI_PROVIDER_ID) {
-        setAiBaseUrl((current) =>
-          AI_PROVIDER_URLS.some(
-            (item) =>
-              normalizeAiBaseUrl(item.value) === normalizeAiBaseUrl(current)
-          )
-            ? ""
-            : current
-        );
-        return;
-      }
+      if (!isKnownAiProviderSlotId(nextId)) return;
+      setAiProviderIdDraft(nextId);
       const preset = AI_PROVIDER_URLS.find((item) => item.id === nextId);
       if (preset) setAiBaseUrl(preset.value);
+      // The custom slot's URL/model/key are applied by the load effect below.
     },
     [setAiBaseUrl]
   );
 
   useEffect(() => {
-    if (!storageHydrated) return undefined;
+    if (!storageHydrated || !selectedAiProviderId) return undefined;
 
     let active = true;
 
-    getCustomAiProviderSettings(storageOwnerUid, normalizedAiBaseUrl, {
-      migrateLegacy: normalizedAiBaseUrl === normalizedConfiguredAiBaseUrl,
-      fallbackModel:
-        normalizedAiBaseUrl === normalizedConfiguredAiBaseUrl
-          ? configuredAiModel
-          : "",
+    const cached = aiSlotDraftsRef.current?.[selectedAiProviderId];
+    if (cached) {
+      setAiApiKey(cached.apiKey ?? "");
+      setAiModelDraft(cached.model ?? "");
+      setAiBaseUrlDraft(cached.url ?? null);
+      setAiProviderSettingsLoadedId(selectedAiProviderId);
+      return () => {
+        active = false;
+      };
+    }
+
+    const preset = AI_PROVIDER_URLS.find(
+      (item) => item.id === selectedAiProviderId
+    );
+    const fallbackUrl = preset ? preset.value : legacyCustomBaseUrl;
+    getAiProviderSlotSettings(storageOwnerUid, selectedAiProviderId, {
+      fallbackModel: configuredAiModel,
+      fallbackBaseUrl: fallbackUrl,
     })
       .then((savedSettings) => {
         if (!active) return;
-        setAiApiKey(savedSettings.apiKey);
-        setAiModelDraft(savedSettings.model);
-        setAiProviderSettingsBaseUrl(normalizedAiBaseUrl);
+        const draft = {
+          url: preset ? preset.value : savedSettings.baseUrl || fallbackUrl,
+          model: savedSettings.model || "",
+          apiKey: savedSettings.apiKey || "",
+        };
+        aiSlotDraftsRef.current[selectedAiProviderId] = draft;
+        setAiApiKey(draft.apiKey);
+        setAiModelDraft(draft.model);
+        setAiBaseUrlDraft(draft.url);
+        setAiProviderSettingsLoadedId(selectedAiProviderId);
       })
       .catch(() => {
         if (!active) return;
+        aiSlotDraftsRef.current[selectedAiProviderId] = {
+          url: preset ? preset.value : fallbackUrl,
+          model: "",
+          apiKey: "",
+        };
         setAiApiKey("");
         setAiModelDraft("");
-        setAiProviderSettingsBaseUrl(normalizedAiBaseUrl);
+        setAiBaseUrlDraft(preset ? preset.value : fallbackUrl);
+        setAiProviderSettingsLoadedId(selectedAiProviderId);
       });
 
     return () => {
       active = false;
     };
   }, [
-    normalizedAiBaseUrl,
-    normalizedConfiguredAiBaseUrl,
+    selectedAiProviderId,
     configuredAiModel,
+    legacyCustomBaseUrl,
     aiProviderSettingsRevision,
     storageHydrated,
     storageOwnerUid,
@@ -844,13 +888,22 @@ export default function SettingsScreen() {
 
     setSavingAi(true);
     try {
-      await setCustomAiProviderSettings(storageOwnerUid, baseUrl, {
+      await setAiProviderSlotSettings(storageOwnerUid, selectedAiProviderId, {
+        baseUrl,
         apiKey: aiApiKey,
         model,
       });
       if (!mountedRef.current) return;
       updateSetting("advanced", "aiBaseUrl", baseUrl);
       updateSetting("advanced", "aiModel", model);
+      updateSetting("advanced", "aiProviderId", selectedAiProviderId);
+      if (aiSlotDraftsRef.current) {
+        aiSlotDraftsRef.current[selectedAiProviderId] = {
+          url: baseUrl,
+          model,
+          apiKey: aiApiKey,
+        };
+      }
       Alert.alert(
         t("settings.savedAlertTitle"),
         t("settings.savedAlertMessage")
@@ -967,7 +1020,9 @@ export default function SettingsScreen() {
       setAiApiKey("");
       setAiBaseUrlDraft(null);
       setAiModelDraft(null);
-      setAiProviderSettingsBaseUrl(null);
+      setAiProviderIdDraft(null);
+      aiSlotDraftsRef.current = {};
+      setAiProviderSettingsLoadedId(null);
       setAiProviderSettingsRevision((revision) => revision + 1);
       if (!result || result.ok !== true) {
         Alert.alert(
@@ -3242,13 +3297,17 @@ export default function SettingsScreen() {
                 {t("settings.apiUrl")}
               </Text>
               <TextInput
-                style={stylesWithFont.aiInput}
+                style={[
+                  stylesWithFont.aiInput,
+                  aiBaseUrlLocked && stylesWithFont.aiInputDisabled,
+                ]}
                 value={aiBaseUrl}
                 onChangeText={setAiBaseUrl}
                 editable={
                   !savingAi &&
                   !testingAi &&
-                  !loadingAiProviderSettings
+                  !loadingAiProviderSettings &&
+                  !aiBaseUrlLocked
                 }
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -3898,6 +3957,10 @@ const dynamicStyles = (theme, fontSize) =>
       fontSize,
       color: theme.textPrimary,
       backgroundColor: theme.background,
+    },
+    aiInputDisabled: {
+      color: theme.textSecondary,
+      opacity: 0.65,
     },
     dropdown: {
       minHeight: 48,

@@ -14,10 +14,51 @@ const LEGACY_AI_PROVIDER_SETTINGS_STORAGE_KEY = "pantrio.customAiApiKeys";
 const LEGACY_AI_SETTINGS_QUARANTINE_KEY =
   "pantrio.legacyCustomAiQuarantine.v1";
 const USER_AI_PROVIDER_SETTINGS_KEY_NAME = "customAiProviderSettings";
+
+// Provider "slots" mirror the provider dropdown in Settings > Advanced.
+// Preset slots own their endpoint from this constant; only the custom slot
+// stores an arbitrary base URL as data. Credentials are stored per slot id
+// instead of per base URL so switching the dropdown can never read or write
+// the wrong provider's profile.
+const AI_PROVIDER_SLOT_PRESET_URLS = Object.freeze({
+  openai: "https://api.openai.com/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  groq: "https://api.groq.com/openai/v1",
+  together: "https://api.together.xyz/v1",
+});
+const AI_PROVIDER_SLOT_IDS = new Set([
+  ...Object.keys(AI_PROVIDER_SLOT_PRESET_URLS),
+  "custom",
+]);
+
 let secureStoreOperation = Promise.resolve();
 
 export function normalizeAiBaseUrl(baseUrl) {
   return String(baseUrl || "").trim().replace(/\/+$/, "");
+}
+
+export function providerPresetUrl(providerId) {
+  return AI_PROVIDER_SLOT_PRESET_URLS[providerId] || null;
+}
+
+export function providerSlotIdFromBaseUrl(baseUrl) {
+  const normalized = normalizeAiBaseUrl(baseUrl);
+  for (const [slotId, presetUrl] of Object.entries(AI_PROVIDER_SLOT_PRESET_URLS)) {
+    if (normalizeAiBaseUrl(presetUrl) === normalized) return slotId;
+  }
+  return normalized ? "custom" : "";
+}
+
+// Resolves the authoritative slot from either a stored aiProviderId or the
+// legacy aiBaseUrl that older builds used as the source of truth.
+export function resolveProviderSlotSelection(aiProviderId, aiBaseUrl) {
+  if (
+    typeof aiProviderId === "string" &&
+    AI_PROVIDER_SLOT_IDS.has(aiProviderId)
+  ) {
+    return aiProviderId;
+  }
+  return providerSlotIdFromBaseUrl(aiBaseUrl) || "custom";
 }
 
 function withSecureStoreLock(operation) {
@@ -60,11 +101,21 @@ async function storeProviderSettings(uid, providerSettings) {
   }
 }
 
-function normalizeProviderSettings(value, fallbackModel = "") {
+function recordHasContent(record) {
+  return Boolean(
+    record && (record.apiKey || record.model || record.baseUrl)
+  );
+}
+
+function normalizeProviderSettings(
+  value,
+  { fallbackModel = "", fallbackBaseUrl = "" } = {}
+) {
   if (typeof value === "string") {
     return {
       apiKey: value.trim(),
       model: String(fallbackModel || "").trim(),
+      baseUrl: normalizeAiBaseUrl(fallbackBaseUrl),
     };
   }
 
@@ -75,7 +126,69 @@ function normalizeProviderSettings(value, fallbackModel = "") {
   return {
     apiKey: String(value.apiKey || "").trim(),
     model: String(value.model || fallbackModel || "").trim(),
+    baseUrl:
+      normalizeAiBaseUrl(value.baseUrl) || normalizeAiBaseUrl(fallbackBaseUrl),
   };
+}
+
+function profileToRecord(slotId, value, fallbackBaseUrl = "") {
+  const normalized = normalizeProviderSettings(value, { fallbackBaseUrl });
+  if (!normalized) return null;
+
+  const record = {
+    apiKey: normalized.apiKey,
+    model: normalized.model,
+  };
+  if (slotId === "custom" && normalized.baseUrl) {
+    record.baseUrl = normalized.baseUrl;
+  }
+  return recordHasContent(record) ? record : null;
+}
+
+// Converts the legacy URL-keyed map ({ normalizedBaseUrl: profile }) into the
+// slot-keyed map ({ providerId: profile }). Idempotent: slot-shaped input is
+// returned unchanged (only normalized).
+function convertProviderSettingsToSlots(providerSettings) {
+  const entries = Object.entries(providerSettings || {});
+  if (entries.length === 0) return { slots: {}, changed: false };
+
+  const alreadySlotShaped = entries.some(([key]) =>
+    AI_PROVIDER_SLOT_IDS.has(key)
+  );
+  const slots = {};
+
+  for (const [key, value] of entries) {
+    if (alreadySlotShaped) {
+      if (!AI_PROVIDER_SLOT_IDS.has(key)) continue;
+      const record = profileToRecord(
+        key,
+        value,
+        providerPresetUrl(key) || ""
+      );
+      if (record) slots[key] = record;
+    } else {
+      const slotId = providerSlotIdFromBaseUrl(key);
+      if (!slotId) continue;
+      const record = profileToRecord(
+        slotId,
+        value,
+        providerPresetUrl(slotId) || key
+      );
+      if (record) slots[slotId] = record;
+    }
+  }
+
+  return { slots, changed: !alreadySlotShaped };
+}
+
+async function readSlotRecords(uid) {
+  const providerSettings = await getStoredProviderSettings(uid);
+  const { slots, changed } = convertProviderSettingsToSlots(providerSettings);
+  if (changed) {
+    // Opportunistic one-time upgrade; reads still succeed if it cannot write.
+    await storeProviderSettings(uid, slots).catch(() => {});
+  }
+  return slots;
 }
 
 async function migrateLegacyProviderSettingsUnlocked(
@@ -102,44 +215,39 @@ async function migrateLegacyProviderSettingsUnlocked(
 
   if (legacyOwnerUid !== normalizedUid) return false;
 
-  const providerId = normalizeAiBaseUrl(baseUrl);
-
   if (legacyProviderValue === null && legacyApiKey === null) return false;
 
-  const providerSettings = await getStoredProviderSettings(uid);
+  const slots = await readSlotRecords(uid);
   const legacyProviderSettings = parseProviderSettings(legacyProviderValue);
+  const configuredSlotId = providerSlotIdFromBaseUrl(baseUrl);
   let changed = false;
 
   Object.entries(legacyProviderSettings).forEach(([legacyBaseUrl, value]) => {
-    const legacyProviderId = normalizeAiBaseUrl(legacyBaseUrl);
-    if (!legacyProviderId || Object.hasOwn(providerSettings, legacyProviderId)) {
-      return;
-    }
+    const slotId = providerSlotIdFromBaseUrl(legacyBaseUrl);
+    if (!slotId || recordHasContent(slots[slotId])) return;
 
-    const normalizedSettings = normalizeProviderSettings(
+    const record = profileToRecord(
+      slotId,
       value,
-      legacyProviderId === providerId ? fallbackModel : ""
+      slotId === configuredSlotId ? fallbackModel : ""
     );
-    if (normalizedSettings) {
-      providerSettings[legacyProviderId] = normalizedSettings;
+    if (record) {
+      slots[slotId] = record;
       changed = true;
     }
   });
 
-  if (
-    legacyApiKey &&
-    providerId &&
-    !Object.hasOwn(providerSettings, providerId)
-  ) {
-    providerSettings[providerId] = {
+  if (legacyApiKey && configuredSlotId && !recordHasContent(slots[configuredSlotId])) {
+    slots[configuredSlotId] = {
       apiKey: legacyApiKey.trim(),
       model: String(fallbackModel || "").trim(),
+      ...(configuredSlotId === "custom" ? { baseUrl: normalizeAiBaseUrl(baseUrl) } : {}),
     };
     changed = true;
   }
 
   if (changed) {
-    await storeProviderSettings(uid, providerSettings);
+    await storeProviderSettings(uid, slots);
   }
 
   await Promise.all([
@@ -160,47 +268,70 @@ export async function migrateLegacyCustomAiProviderSettings(
   );
 }
 
-export async function getCustomAiProviderSettings(
-  uid,
-  baseUrl,
-  { migrateLegacy = false, fallbackModel = "" } = {}
-) {
-  const providerId = normalizeAiBaseUrl(baseUrl);
-  if (!providerId) return { apiKey: "", model: "" };
-
+// One-time URL-keyed -> slot-keyed upgrade. Runs at startup after the
+// advanced settings have been parsed so a custom URL that only lived in
+// AsyncStorage can seed the custom slot.
+export async function migrateProviderRecordsToSlots(uid, advanced = {}) {
   return withSecureStoreLock(async () => {
-    if (migrateLegacy) {
-      await migrateLegacyProviderSettingsUnlocked(uid, {
-        baseUrl: providerId,
-        fallbackModel,
-      });
-    }
-
     const providerSettings = await getStoredProviderSettings(uid);
-    const storedSettings = providerSettings[providerId];
-    const savedSettings = normalizeProviderSettings(storedSettings, fallbackModel);
+    const { slots, changed } = convertProviderSettingsToSlots(providerSettings);
 
-    if (savedSettings) {
-      if (typeof storedSettings === "string" && savedSettings.model) {
-        providerSettings[providerId] = savedSettings;
-        // Reading should still succeed if this opportunistic format upgrade
-        // cannot be written yet.
-        await storeProviderSettings(uid, providerSettings).catch(() => {});
-      }
-      return savedSettings;
+    const advancedUrl = normalizeAiBaseUrl(advanced.aiBaseUrl || "");
+    let seededCustom = false;
+    if (
+      advancedUrl &&
+      providerSlotIdFromBaseUrl(advancedUrl) === "custom" &&
+      !recordHasContent(slots.custom)
+    ) {
+      slots.custom = {
+        baseUrl: advancedUrl,
+        model: String(advanced.aiModel || "").trim(),
+        apiKey: "",
+      };
+      seededCustom = true;
     }
 
-    return { apiKey: "", model: "" };
+    if (changed || seededCustom) {
+      await storeProviderSettings(uid, slots);
+    }
+    return changed || seededCustom;
   });
 }
 
-export async function setCustomAiProviderSettings(
+// Slot API: callers identify a provider by dropdown slot id.
+export async function getAiProviderSlotSettings(
   uid,
-  baseUrl,
-  { apiKey, model } = {}
+  providerId,
+  { fallbackModel = "", fallbackBaseUrl = "" } = {}
 ) {
-  const providerId = normalizeAiBaseUrl(baseUrl);
-  if (!providerId) {
+  const slotId = resolveProviderSlotSelection(providerId, fallbackBaseUrl);
+  return withSecureStoreLock(async () => {
+    const slots = await readSlotRecords(uid);
+    const presetUrl = providerPresetUrl(slotId);
+    const entry = slots[slotId];
+    const normalized = normalizeProviderSettings(entry, {
+      fallbackModel,
+      fallbackBaseUrl: presetUrl || fallbackBaseUrl,
+    });
+
+    if (normalized) {
+      return {
+        apiKey: normalized.apiKey,
+        model: normalized.model,
+        baseUrl: slotId === "custom" ? normalized.baseUrl : presetUrl || "",
+      };
+    }
+    return { apiKey: "", model: "", baseUrl: presetUrl || "" };
+  });
+}
+
+export async function setAiProviderSlotSettings(
+  uid,
+  providerId,
+  { baseUrl = "", apiKey = "", model = "" } = {}
+) {
+  const slotId = resolveProviderSlotSelection(providerId, baseUrl);
+  if (!AI_PROVIDER_SLOT_IDS.has(slotId)) {
     throw new Error(i18next.t("errors.aiBaseUrlRequired"));
   }
 
@@ -208,16 +339,63 @@ export async function setCustomAiProviderSettings(
     apiKey: String(apiKey || "").trim(),
     model: String(model || "").trim(),
   };
+  if (slotId === "custom") {
+    nextSettings.baseUrl = normalizeAiBaseUrl(baseUrl);
+  }
 
   return withSecureStoreLock(async () => {
-    const providerSettings = await getStoredProviderSettings(uid);
-    if (nextSettings.apiKey || nextSettings.model) {
-      providerSettings[providerId] = nextSettings;
+    const slots = await readSlotRecords(uid);
+    if (nextSettings.apiKey || nextSettings.model || nextSettings.baseUrl) {
+      slots[slotId] = nextSettings;
     } else {
-      delete providerSettings[providerId];
+      delete slots[slotId];
     }
+    await storeProviderSettings(uid, slots);
+  });
+}
 
-    await storeProviderSettings(uid, providerSettings);
+// Legacy URL-keyed shims -----------------------------------------------------
+// Kept so existing callers (and the one-time global-key migration) continue
+// to work. They translate the base URL into its owning slot and delegate.
+
+export async function getCustomAiProviderSettings(
+  uid,
+  baseUrl,
+  { migrateLegacy = false, fallbackModel = "" } = {}
+) {
+  const normalizedUrl = normalizeAiBaseUrl(baseUrl);
+  if (!normalizedUrl) return { apiKey: "", model: "" };
+
+  const slotId = providerSlotIdFromBaseUrl(normalizedUrl);
+  if (migrateLegacy) {
+    await migrateLegacyCustomAiProviderSettings(uid, {
+      baseUrl: normalizedUrl,
+      fallbackModel,
+    });
+  }
+
+  const savedSettings = await getAiProviderSlotSettings(uid, slotId, {
+    fallbackModel,
+    fallbackBaseUrl: normalizedUrl,
+  });
+  return { apiKey: savedSettings.apiKey, model: savedSettings.model };
+}
+
+export async function setCustomAiProviderSettings(
+  uid,
+  baseUrl,
+  { apiKey, model } = {}
+) {
+  const normalizedUrl = normalizeAiBaseUrl(baseUrl);
+  if (!normalizedUrl) {
+    throw new Error(i18next.t("errors.aiBaseUrlRequired"));
+  }
+
+  const slotId = providerSlotIdFromBaseUrl(normalizedUrl);
+  return setAiProviderSlotSettings(uid, slotId, {
+    baseUrl: normalizedUrl,
+    apiKey,
+    model,
   });
 }
 

@@ -26,7 +26,11 @@ import {
 } from "../api/memoryManager";
 import { pruneChatAttachments } from "../api/chatAttachments";
 import { syncLocalReminders } from "../api/reminderScheduler";
-import { migrateLegacyCustomAiProviderSettings } from "../api/aiProviderSettings";
+import {
+  migrateLegacyCustomAiProviderSettings,
+  migrateProviderRecordsToSlots,
+  resolveProviderSlotSelection,
+} from "../api/aiProviderSettings";
 import { cancelActiveChatWork } from "../api/chatLifecycle";
 import {
   getUserDataPurgeIntent,
@@ -251,6 +255,10 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
     storedAdvanced.aiProvider,
     storedAdvanced.useCustomAi
   );
+  const restoredAiProviderSlotId = resolveProviderSlotSelection(
+    storedAdvanced.aiProviderId,
+    storedAdvanced.aiBaseUrl || previousSettings.advanced.aiBaseUrl
+  );
   const reminderPermissionRequested =
     storedNotifications.reminderPermissionRequested === true;
 
@@ -272,6 +280,7 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
       ...storedAdvanced,
       aiProvider: restoredAiProvider,
       useCustomAi: restoredAiProvider === "custom",
+      aiProviderId: restoredAiProviderSlotId,
     },
     expiration: {
       ...previousSettings.expiration,
@@ -328,6 +337,7 @@ export const GlobalProvider = ({
         useCustomAi: false,
         aiBaseUrl: "https://api.openai.com/v1",
         aiModel: "gpt-4o-mini",
+        aiProviderId: null,
       },
       chat: {
         chatgptStyle: false,
@@ -1165,6 +1175,7 @@ export const GlobalProvider = ({
             fallbackModel:
               storedAdvanced.aiModel || defaultSettings.advanced.aiModel,
           });
+          await migrateProviderRecordsToSlots(storageOwnerUid, storedAdvanced);
         } catch (error) {
           settingsMigrationError = error;
           console.error("Legacy AI provider migration failed:", error);

@@ -20,7 +20,10 @@ import {
   // checkAndSummarize,
   // formatConversationMemory,
 } from "./memoryManager";
-import { getCustomAiProviderSettings } from "./aiProviderSettings";
+import {
+  getAiProviderSlotSettings,
+  resolveProviderSlotSelection,
+} from "./aiProviderSettings";
 import { resolveAiProvider } from "./aiProviderPolicy";
 import { registerChatCancellation } from "./chatLifecycle";
 import {
@@ -855,19 +858,22 @@ const useGptRuntime = () => {
     messages,
     { signal, lifecycleGeneration, intent, recipeContext }
   ) {
-    const baseUrl = String(settings?.advanced?.aiBaseUrl || "").trim().replace(/\/+$/, "");
+    const configuredBaseUrl = String(
+      settings?.advanced?.aiBaseUrl || ""
+    ).trim().replace(/\/+$/, "");
     const configuredModel = String(settings?.advanced?.aiModel || "").trim();
-    const { apiKey, model } = await getCustomAiProviderSettings(
-      storageOwnerUid,
-      baseUrl,
-      {
-        // GlobalContext completes (or fail-closes) the one-time migration
-        // before the authenticated UI can issue custom-provider requests.
-        // Re-running it here added several SecureStore reads to every prompt.
-        migrateLegacy: false,
-        fallbackModel: configuredModel,
-      }
+    const providerSlotId = resolveProviderSlotSelection(
+      settings?.advanced?.aiProviderId,
+      configuredBaseUrl
     );
+    const { apiKey, model, baseUrl: slotBaseUrl } =
+      await getAiProviderSlotSettings(storageOwnerUid, providerSlotId, {
+        // GlobalContext completes (or fail-closes) the one-time migrations
+        // before the authenticated UI can issue custom-provider requests.
+        fallbackModel: configuredModel,
+        fallbackBaseUrl: configuredBaseUrl,
+      });
+    const baseUrl = String(slotBaseUrl || configuredBaseUrl || "").trim().replace(/\/+$/, "");
 
     if (!apiKey) throw new Error("Add an API key in Settings > Advanced.");
     if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) throw new Error("The custom AI base URL is invalid.");

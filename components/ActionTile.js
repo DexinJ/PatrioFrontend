@@ -42,7 +42,7 @@ export default function ActionTile({
 
 const styles = StyleSheet.create({
   tile: {
-    width: "23%",
+    flex: 1,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",

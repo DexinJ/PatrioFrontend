@@ -13,6 +13,7 @@ import {
   Easing,
 } from "react-native";
 import MessageBubble from "./MessageBubble";
+import RecipeResultCards from "./RecipeResultCards";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useTranslation } from "react-i18next";
@@ -1020,6 +1021,12 @@ export default function MessageList({ messages, onUiAction }) {
           };
         }
 
+        if (msg?.type === "recipe_cards") {
+          const recipes = Array.isArray(msg?.recipes) ? msg.recipes : [];
+          if (recipes.length === 0) return null;
+          return { kind: "recipe_cards", recipes, key };
+        }
+
         const contentText = Array.isArray(msg?.content)
           ? msg.content.find((part) => part?.text != null)?.text
           : msg?.content;
@@ -1062,6 +1069,9 @@ export default function MessageList({ messages, onUiAction }) {
             return <ActionCard action={item.action} onPress={actionPress} />;
           }
           if (item.kind === "typing") return <TypingIndicator theme={theme} />;
+          if (item.kind === "recipe_cards") {
+            return <RecipeResultCards recipes={item.recipes} />;
+          }
           return (
             <MessageBubble
               text={item.text}

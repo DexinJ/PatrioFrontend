@@ -20,3 +20,29 @@ export function insertAssistantAboveActionCard(
   updated.splice(cardIndex, 0, message);
   return updated;
 }
+
+/**
+ * Insert a new assistant message above the earliest structured message in a
+ * list of ids (recipe card message, confirmation card, etc.). This keeps the
+ * assistant's streamed summary above recipe cards even when a follow-up
+ * confirmation card was appended later in the same request.
+ */
+export function insertAssistantAboveStructuredMessage(
+  previous,
+  message,
+  structuredMessageIds = []
+) {
+  const prev = Array.isArray(previous) ? previous : [];
+  const ids = Array.isArray(structuredMessageIds)
+    ? structuredMessageIds
+    : [structuredMessageIds];
+  const indexes = ids
+    .filter((id) => id)
+    .map((id) => prev.findIndex((entry) => entry?.id === id))
+    .filter((index) => index >= 0);
+  if (indexes.length === 0) return [...prev, message];
+
+  const updated = [...prev];
+  updated.splice(Math.min(...indexes), 0, message);
+  return updated;
+}

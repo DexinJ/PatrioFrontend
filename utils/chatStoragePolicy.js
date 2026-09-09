@@ -1,3 +1,5 @@
+import { normalizeRecipeCards } from "./recipeCards.js";
+
 export const MAX_RUNTIME_CHAT_MESSAGES = 120;
 export const MAX_RUNTIME_CHAT_BYTES = 2 * 1024 * 1024;
 export const MAX_PERSISTED_CHAT_MESSAGES = 100;
@@ -230,6 +232,19 @@ function sanitizeContentPart(part, { persist }) {
 
 function sanitizeMessage(message, { persist }) {
   if (!isPlainRecord(message)) return null;
+
+  if (message.type === "recipe_cards") {
+    const recipes = normalizeRecipeCards(message.recipes);
+    if (recipes.length === 0) return null;
+    const text = boundedText(message.text);
+    return {
+      ...(typeof message.id === "string" ? { id: message.id } : {}),
+      type: "recipe_cards",
+      role: "assistant",
+      ...(text ? { text } : {}),
+      recipes,
+    };
+  }
 
   if (message.type === "ui_action") {
     if (!isPlainRecord(message.action)) return null;

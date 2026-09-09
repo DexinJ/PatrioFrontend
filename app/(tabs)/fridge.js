@@ -342,10 +342,11 @@ export default function FridgeScreen() {
 Recommend 4 quick recipes using as many of these selected fridge items as practical:
 ${ingredientLines}
 
-For each recipe, list the linked title followed by one or two short lines with
-the calories per serving when available (append "(est.)" when AI-estimated)
-and the missing ingredients (or "none"). Keep the list to what recommendRecipes
-returns; never add steps, explanations, or invented details.
+Keep your reply to a one-line intro pointing to the recipe cards the app shows
+below; the cards carry the title, calories, ingredients you have, and missing
+ingredients, and tapping one reveals the full steps and recipe page. If no
+recipes are found, say so plainly and do not mention cards. Never add
+per-recipe text, steps, explanations, or invented details.
 `.trim();
 
       try {
@@ -353,7 +354,6 @@ returns; never add steps, explanations, or invented details.
         await streamMessage({
           text: prompt,
           displayText,
-          language: "en",
           intent: "recipe_recommendation",
           selectedIngredients: items,
         });

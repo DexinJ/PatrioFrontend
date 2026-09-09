@@ -308,7 +308,24 @@
     "addedToShoppingList": "Added to shopping list",
     "confirmItems": "Confirm items",
     "hideTags": "Hide tags",
-    "editTags": "Edit tags"
+    "editTags": "Edit tags",
+    "recipes": {
+      "youHave": "You have",
+      "missing": "Missing",
+      "tapForDetails": "Tap for details & steps",
+      "minutes_one": "{{count}} min",
+      "minutes_other": "{{count}} min",
+      "calories_one": "{{count}} kcal",
+      "calories_other": "{{count}} kcal",
+      "servings_one": "Serves {{count}}",
+      "servings_other": "Serves {{count}}",
+      "estimatedSuffix": " (est.)",
+      "haveMore_one": "+{{count}} more…",
+      "haveMore_other": "+{{count}} more…",
+      "stepsTitle": "Steps",
+      "stepsNone": "The publisher did not provide structured steps.",
+      "openRecipe": "View full recipe"
+    }
   },
   "tags": {
     "storage": {

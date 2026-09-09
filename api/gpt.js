@@ -34,7 +34,8 @@ import {
   RECOMMEND_RECIPES_TOOL,
 } from "./recipeAssistant";
 import { generateAppleIntelligenceToolTurn } from "../modules/apple-intelligence/src";
-import { insertAssistantAboveActionCard } from "../utils/chatMessageOrder";
+import { insertAssistantAboveStructuredMessage } from "../utils/chatMessageOrder";
+import { normalizeRecipeCards } from "../utils/recipeCards";
 
 const DEFAULT_MODEL = "gpt-5";
 const REQUEST_TIMEOUT_MS = 180_000;
@@ -147,6 +148,42 @@ function assistantText(content) {
   return "";
 }
 
+// Structured chat message holding the recipe cards for one recommendation
+// result. The card carries only normalized recipe data; the assistant's short
+// intro stays in its own text message rendered above the cards.
+function makeRecipeCardMessage({ requestId = "", recipes, text = "" }) {
+  const id = `recipe-cards-${String(requestId || "").trim() || makeId()}`;
+  const normalizedText = String(text || "").trim();
+  return {
+    id,
+    role: "assistant",
+    type: "recipe_cards",
+    ...(normalizedText ? { text: normalizedText } : {}),
+    recipes: normalizeRecipeCards(recipes),
+  };
+}
+
+function recipeCardPlaceholderText(count) {
+  const language = String(i18next.language || "en").toLowerCase();
+  const isChinese = language.startsWith("zh");
+  return isChinese
+    ? `已展示 ${count} 个菜谱推荐卡片。`
+    : `Recipe cards shown for ${count} recommendation${count === 1 ? "" : "s"}.`;
+}
+
+// The model should reply in the app's active language. The UI only ships
+// en/zh today, so codes outside those two fall back to English, mirroring
+// the language resolution in i18n/index.js.
+function resolveModelLanguage(override) {
+  const raw = String(
+    typeof override === "string" && override.trim()
+      ? override.trim()
+      : i18next.language || "en"
+  );
+  const code = raw.toLowerCase().split("-")[0].split("_")[0];
+  return code === "zh" ? "zh" : "en";
+}
+
 // ✅ Convert your app messages into Chat Completions format
 // If a message has an image AND it is NOT the last message, replace image with "[image]"
 function toChatCompletionsMessages(
@@ -163,7 +200,23 @@ function toChatCompletionsMessages(
     for (let i = 0; i < msgs.length; i++) {
       const m = msgs[i];
       const isLast = i === lastIdx;
-  
+
+      // Recipe-card messages are display-only, but a one-line placeholder
+      // keeps follow-up intent detection (and the model's context) aware that
+      // recipes were just presented without sending the bulky card payload.
+      if (m?.type === "recipe_cards") {
+        const cardSummary =
+          typeof m?.text === "string" && m.text.trim()
+            ? m.text.trim()
+            : Array.isArray(m?.content)
+              ? m.content.map((part) => part?.text || "").join(" ").trim()
+              : "";
+        if (cardSummary) {
+          out.push({ role: "assistant", content: cardSummary });
+        }
+        continue;
+      }
+
       // --------------------------
       // USER
       // --------------------------
@@ -497,14 +550,14 @@ const useGptRuntime = () => {
       const prev = Array.isArray(previous) ? previous : [];
       const index = prev.findIndex((message) => message?.id === job.messageId);
       if (index < 0) {
-        return insertAssistantAboveActionCard(
+        return insertAssistantAboveStructuredMessage(
           prev,
           {
             id: job.messageId,
             role: "assistant",
             content: [{ type: "output_text", text: pendingDelta }],
           },
-          job.actionMessageId
+          [job.recipeCardId, job.actionMessageId]
         );
       }
 
@@ -754,6 +807,31 @@ const useGptRuntime = () => {
         return;
       }
 
+      // Server tool events: recommendRecipes is executed by the backend, which
+      // already streams the FULL structured result (including instructions) in
+      // this event. Capture it and render an interactive recipe-card message;
+      // the model's own text stays a short intro above the cards.
+      if (type === "tool") {
+        if (
+          msg.name === "recommendRecipes" &&
+          !job.recipeCardId &&
+          Array.isArray(msg.result?.recipes) &&
+          msg.result.recipes.length > 0
+        ) {
+          const cardMessage = makeRecipeCardMessage({
+            requestId,
+            recipes: msg.result.recipes,
+            text: recipeCardPlaceholderText(msg.result.recipes.length),
+          });
+          job.recipeCardId = cardMessage.id;
+          setMessages((previous) => [
+            ...(Array.isArray(previous) ? previous : []),
+            cardMessage,
+          ]);
+        }
+        return;
+      }
+
       // 3) Errors / Done
       if (type === "error") {
         setWaiting(false);
@@ -843,7 +921,9 @@ const useGptRuntime = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ overrides, recipeContext, compactForChat: true }),
+        // Ask for the rich payload (ingredients + instructions) so the app can
+        // render interactive recipe cards for custom/Apple providers too.
+        body: JSON.stringify({ overrides, recipeContext }),
       },
       { signal }
     );
@@ -883,6 +963,7 @@ const useGptRuntime = () => {
     let recipeRecommendationCompleted = false;
     let toolsLockedAfterIsolatedAction = false;
     let recipeFollowUpUsed = false;
+    let recipeCardId = null;
     const recipeFollowUpTool = DIRECT_AI_TOOLS.find(
       (tool) =>
         tool?.function?.name === "proposeAddMissingIngredientsToShoppingList"
@@ -935,7 +1016,9 @@ const useGptRuntime = () => {
       conversation.push(message);
 
       const calls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
-      if (!calls.length) return assistantText(message.content);
+      if (!calls.length) {
+        return { text: assistantText(message.content), recipeCardId };
+      }
       const recipeRecommendationCall = calls.find(
         (call) => call?.function?.name === "recommendRecipes"
       );
@@ -994,6 +1077,23 @@ const useGptRuntime = () => {
           if (error?.code === "REQUEST_CANCELLED") throw error;
           result = { error: error?.message || "Tool failed" };
         }
+        if (
+          name === "recommendRecipes" &&
+          !recipeCardId &&
+          result &&
+          Array.isArray(result.recipes) &&
+          result.recipes.length > 0
+        ) {
+          const cardMessage = makeRecipeCardMessage({
+            recipes: result.recipes,
+            text: recipeCardPlaceholderText(result.recipes.length),
+          });
+          recipeCardId = cardMessage.id;
+          setMessages((previous) => [
+            ...(Array.isArray(previous) ? previous : []),
+            cardMessage,
+          ]);
+        }
         if (result?.actionId) {
           pendingActionMessageIdRef.current = result.actionId;
         }
@@ -1033,6 +1133,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     let recipeRecommendationCompleted = false;
     let toolsLockedAfterIsolatedAction = false;
     let recipeFollowUpUsed = false;
+    let recipeCardId = null;
 
     for (let step = 0; step < 6; step += 1) {
       assertCurrentLifecycle(lifecycleGeneration);
@@ -1065,7 +1166,10 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
           });
           continue;
         }
-        return String(turn?.text || "").trim();
+        return {
+          text: String(turn?.text || "").trim(),
+          recipeCardId,
+        };
       }
       if (type !== "tool") {
         throw new Error("Apple Intelligence returned an invalid response.");
@@ -1113,6 +1217,23 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
         result = { error: error?.message || "Tool failed" };
       }
 
+      if (
+        name === "recommendRecipes" &&
+        !recipeCardId &&
+        result &&
+        Array.isArray(result.recipes) &&
+        result.recipes.length > 0
+      ) {
+        const cardMessage = makeRecipeCardMessage({
+          recipes: result.recipes,
+          text: recipeCardPlaceholderText(result.recipes.length),
+        });
+        recipeCardId = cardMessage.id;
+        setMessages((previous) => [
+          ...(Array.isArray(previous) ? previous : []),
+          cardMessage,
+        ]);
+      }
       if (result?.actionId) {
         pendingActionMessageIdRef.current = result.actionId;
       }
@@ -1138,13 +1259,14 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     text,
     imageUri,
     imageRequestUri,
-    language = "en",
+    language,
     intent,
     selectedIngredients = [],
     displayText,
   }) => {
     const lifecycleGeneration = lifecycleGenerationRef.current;
     pendingActionMessageIdRef.current = null;
+    const resolvedLanguage = resolveModelLanguage(language);
     const normalizedText =
       typeof text === "string"
         ? text
@@ -1183,7 +1305,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       history: Array.isArray(updatedMessages)
         ? updatedMessages.slice(0, -1)
         : [],
-      language,
+      language: resolvedLanguage,
     });
     const selectedProvider = resolveAiProvider(
       settings?.advanced?.aiProvider,
@@ -1227,6 +1349,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       settings,
       fridgeItems,
       shoppingListItems,
+      language: resolvedLanguage,
     });
     // const memoryText = selectedProvider === "pantrio"
     //   ? formatConversationMemory(requestSummary)
@@ -1246,7 +1369,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     );
 
     if (selectedProvider === "custom") {
-      const fullText = await runCustomAi(ccMessages, {
+      const { text: fullText, recipeCardId } = await runCustomAi(ccMessages, {
         signal: lifecycleAbortControllerRef.current.signal,
         lifecycleGeneration,
         intent: requestIntent,
@@ -1255,14 +1378,14 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       setWaiting(false);
       if (fullText) {
         setMessages((prev) =>
-          insertAssistantAboveActionCard(
+          insertAssistantAboveStructuredMessage(
             prev,
             {
               id: `assistant-${makeId()}`,
               role: "assistant",
               content: [{ type: "output_text", text: fullText }],
             },
-            pendingActionMessageIdRef.current
+            [recipeCardId, pendingActionMessageIdRef.current]
           )
         );
       }
@@ -1270,7 +1393,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     }
 
     if (selectedProvider === "apple") {
-      const fullText = await runAppleAi(ccMessages, systemText, {
+      const { text: fullText, recipeCardId } = await runAppleAi(ccMessages, systemText, {
         signal: lifecycleAbortControllerRef.current.signal,
         lifecycleGeneration,
         intent: requestIntent,
@@ -1279,14 +1402,14 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       setWaiting(false);
       if (fullText) {
         setMessages((prev) =>
-          insertAssistantAboveActionCard(
+          insertAssistantAboveStructuredMessage(
             prev,
             {
               id: `assistant-${makeId()}`,
               role: "assistant",
               content: [{ type: "output_text", text: fullText }],
             },
-            pendingActionMessageIdRef.current
+            [recipeCardId, pendingActionMessageIdRef.current]
           )
         );
       }
@@ -1316,7 +1439,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       type: "start",
       requestId,
       model: DEFAULT_MODEL,
-      language,
+      language: resolvedLanguage,
       token,
       messages: ccMessages,
       intent: requestIntent,
@@ -1333,6 +1456,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
         pendingDelta: "",
         deltaTimerId: null,
         claimedClientToolCallIds: new Set(),
+        recipeCardId: null,
         timeoutId: null,
         lifecycleGeneration,
       };
@@ -1388,7 +1512,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     text,
     imageUri,
     imageRequestUri,
-    language = "en",
+    language,
   }) => {
     const replyText = await streamMessage({
       text,

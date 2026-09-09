@@ -195,6 +195,7 @@ function MessageBubble({ text, imageUri, isUser }) {
           styles.messageGroup,
           chatgptStyle ? styles.messageGroupChatgpt : null,
           isUser ? styles.userAlign : styles.aiAlign,
+          isUser ? styles.groupAlignUser : styles.groupAlignAi,
         ]}
       >
         {/* --- Bubble (text only). Plain non-selectable text keeps scrolling
@@ -410,6 +411,14 @@ const styles = StyleSheet.create({
 
   messageGroupChatgpt: {
     maxWidth: "100%",
+  },
+
+  // The message group fills the list width; the bubble is aligned inside it.
+  groupAlignUser: {
+    alignItems: "flex-end",
+  },
+  groupAlignAi: {
+    alignItems: "flex-start",
   },
 
   bubble: {

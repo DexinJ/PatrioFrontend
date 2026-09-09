@@ -40,3 +40,9 @@ app-example
 .env.local
 
 .env.local
+
+# Local recipe-card proposal artifacts (patch + docs)
+recipe-card-feature/
+
+# New unit tests kept local for recipe-card work
+tests/

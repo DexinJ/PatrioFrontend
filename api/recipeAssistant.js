@@ -177,6 +177,9 @@ function assistantResponseText(message) {
       .join(" ")
       .trim();
   }
+  // Structured chat messages (for example recipe cards) carry their short
+  // conversational placeholder in a top-level text field.
+  if (typeof message?.text === "string") return message.text;
   return "";
 }
 

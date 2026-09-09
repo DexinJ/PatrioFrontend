@@ -308,7 +308,24 @@
     "addedToShoppingList": "已加入购物清单",
     "confirmItems": "确认物品",
     "hideTags": "收起标签",
-    "editTags": "编辑标签"
+    "editTags": "编辑标签",
+    "recipes": {
+      "youHave": "已有食材",
+      "missing": "缺少",
+      "tapForDetails": "点击卡片查看详情与做法",
+      "minutes_one": "{{count}} 分钟",
+      "minutes_other": "{{count}} 分钟",
+      "calories_one": "{{count}} 千卡",
+      "calories_other": "{{count}} 千卡",
+      "servings_one": "{{count}} 人份",
+      "servings_other": "{{count}} 人份",
+      "estimatedSuffix": "（估算）",
+      "haveMore_one": "+{{count}} 更多…",
+      "haveMore_other": "+{{count}} 更多…",
+      "stepsTitle": "做法",
+      "stepsNone": "发布者未提供结构化做法步骤。",
+      "openRecipe": "查看完整菜谱"
+    }
   },
   "tags": {
     "storage": {

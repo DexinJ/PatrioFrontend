@@ -107,6 +107,7 @@ import {
   patchRecipePreferences,
   resetRecipePreferences as createResetRecipePreferences,
 } from "../utils/recipePreferences";
+import { planShoppingListAdditions } from "../utils/recipeShoppingList";
 
 const STORAGE_SLICE_NAMES = ["fridge", "shopping", "settings", "chat"];
 const DEFAULT_URGENCY_DAYS = Object.freeze({
@@ -2100,8 +2101,16 @@ export const GlobalProvider = ({
   // -----------------------------
   const addManyToShoppingList = (items = []) => {
     if (!Array.isArray(items) || items.length === 0) return [];
+    // Skip what the list already holds, and collapse repeats inside the batch.
+    // Only the items actually added are returned, so callers can report counts
+    // that match what the user sees.
+    const { additions: toAdd } = planShoppingListAdditions(
+      shoppingListItems,
+      items
+    );
+    if (toAdd.length === 0) return [];
     const now = new Date().toISOString();
-    const additions = items.map((item) => ({
+    const additions = toAdd.map((item) => ({
       id: uuidv4(),
       name: item?.name,
       quantity: item?.quantity,

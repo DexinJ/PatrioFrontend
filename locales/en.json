@@ -324,7 +324,15 @@
       "haveMore_other": "+{{count}} more…",
       "stepsTitle": "Steps",
       "stepsNone": "The publisher did not provide structured steps.",
-      "openRecipe": "View full recipe"
+      "openRecipe": "View full recipe",
+      "addMissingItems": "Add missing items to shopping list",
+      "addMissingItemsCount_one": "Add {{count}} missing item",
+      "addMissingItemsCount_other": "Add {{count}} missing items",
+      "alreadyOnList": "Already on your shopping list",
+      "addedToShoppingList_one": "Added {{count}} item to your shopping list",
+      "addedToShoppingList_other": "Added {{count}} items to your shopping list",
+      "addedSomeToShoppingList": "Added {{added}}; {{skipped}} already on your list",
+      "addToShoppingListFailed": "Could not add these items. Please try again."
     }
   },
   "tags": {

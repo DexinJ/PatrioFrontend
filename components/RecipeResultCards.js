@@ -19,6 +19,7 @@ import { memo, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GlobalContext } from "../context/GlobalContext";
 import { visibleMissingIngredients } from "../utils/recipeCards";
+import RecipeMissingItemsButton from "./RecipeMissingItemsButton";
 
 const MAX_CARD_USED_ITEMS = 4;
 
@@ -126,6 +127,7 @@ function RecipeCard({ recipe, onOpen }) {
         items={missing.items}
         moreCount={missing.hiddenCount}
       />
+      <RecipeMissingItemsButton recipe={recipe} />
       <Text style={[styles.cardHint, { color: theme.textSecondary }]}>
         {labels.tapForDetails}
       </Text>
@@ -230,6 +232,7 @@ function RecipeDetailModal({ recipe, visible, onClose }) {
               title={t("messageList.recipes.missing")}
               items={recipe.missingIngredients}
             />
+            <RecipeMissingItemsButton recipe={recipe} />
             {recipe.whyRecommended ? (
               <Text style={[styles.whyText, { color: theme.textSecondary }]}>
                 {recipe.whyRecommended}

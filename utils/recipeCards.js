@@ -47,6 +47,24 @@ function clipList(value, maxItems, maxLength = MAX_INGREDIENT_LENGTH) {
   return output;
 }
 
+/**
+ * Addable shopping-list items, kept as objects. `clipList` would flatten them
+ * to strings, which is why this has its own normalizer.
+ */
+function normalizeMissingItems(value, maxItems) {
+  const output = [];
+  for (const entry of Array.isArray(value) ? value : []) {
+    const name = clipText(entry?.name, MAX_INGREDIENT_LENGTH);
+    if (!name) continue;
+    output.push({
+      name,
+      quantity: clipText(entry?.quantity, 40) || "1",
+    });
+    if (output.length >= maxItems) break;
+  }
+  return output;
+}
+
 function httpUrl(value) {
   if (typeof value !== "string" || !value.trim()) return "";
   try {
@@ -142,6 +160,12 @@ export function normalizeRecipeCard(recipe) {
     usedIngredients: clipList(source.usedIngredients, MAX_USED_INGREDIENTS),
     missingIngredients: clipList(
       source.missingIngredients,
+      MAX_MISSING_INGREDIENTS
+    ),
+    // Structured, addable form of the same items. Kept so the card's
+    // shopping-list button survives a reload.
+    missingItems: normalizeMissingItems(
+      source.missingItems,
       MAX_MISSING_INGREDIENTS
     ),
     instructions: clipList(

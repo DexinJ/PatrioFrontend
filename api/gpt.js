@@ -1347,7 +1347,6 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     // 2) Build messages for backend (now includes image parts)
     const baseSystemText = buildSystemMessage({
       settings,
-      fridgeItems,
       language: resolvedLanguage,
     });
     // const memoryText = selectedProvider === "pantrio"

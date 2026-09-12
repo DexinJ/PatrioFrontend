@@ -5,18 +5,14 @@ const MODEL_LANGUAGES = {
 
 export function buildSystemMessage({
   settings,
-  shoppingListItems,
   language = "en",
 }) {
   const normalizedLanguage = MODEL_LANGUAGES[language] ? language : "en";
   const languageLabel = MODEL_LANGUAGES[normalizedLanguage];
 
-  const shoppingSummary = shoppingListItems.length
-    ? shoppingListItems.map((item) => `${item.name} (${item.quantity})`).join(", ")
-    : "nothing";
-
+  // Neither list is inlined any more: the fridge is read with
+  // getFridgeContents, the shopping list with getShoppingListContents.
   const contextLines = [
-    `- Shopping List: ${shoppingSummary}`,
     `- User: ${settings?.user?.name || "User"}`,
   ];
 
@@ -33,6 +29,7 @@ Tools:
 - Never invent tool results.
 - Expiry: estimate how many whole days from today the food will stay good (expiresInDays; e.g., raw chicken ~2, milk ~7, frozen meat ~180). expiresInDays is the only supported expiry input; never pass calendar dates. If the user states an absolute date, express it as whole days from today; if unsure, omit it and the app will estimate.
 - Fridge edits: call getFridgeContents once and resolve each item by its returned id (use the exact name only when no id is available). One item → updateFridgeItem with the full update. Several items → proposeBulkFridgeUpdate ONCE with the full change list; it shows a confirmation card and changes nothing until the user confirms. Never loop updateFridgeItem or removeFridgeItem calls for a batch.
+- Shopping list: it is not included in this prompt either. Call getShoppingListContents before proposing or changing shopping-list items, so you never re-propose something that is already on the list.
 - For streamlineLists, first call it with dryRun:true, summarize the proposed changes to the user, and only apply them (dryRun:false) after the user confirms.
 
 Behavior:

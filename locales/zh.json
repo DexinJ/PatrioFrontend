@@ -324,7 +324,15 @@
       "haveMore_other": "+{{count}} 更多…",
       "stepsTitle": "做法",
       "stepsNone": "发布者未提供结构化做法步骤。",
-      "openRecipe": "查看完整菜谱"
+      "openRecipe": "查看完整菜谱",
+      "addMissingItems": "把缺少的食材加入购物清单",
+      "addMissingItemsCount_one": "加入 {{count}} 样缺少的食材",
+      "addMissingItemsCount_other": "加入 {{count}} 样缺少的食材",
+      "alreadyOnList": "购物清单中已有",
+      "addedToShoppingList_one": "已加入 {{count}} 样食材到购物清单",
+      "addedToShoppingList_other": "已加入 {{count}} 样食材到购物清单",
+      "addedSomeToShoppingList": "已加入 {{added}} 样，另有 {{skipped}} 样已在清单中",
+      "addToShoppingListFailed": "无法加入这些食材，请重试。"
     }
   },
   "tags": {

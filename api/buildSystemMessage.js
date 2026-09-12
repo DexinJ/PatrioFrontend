@@ -5,7 +5,6 @@ const MODEL_LANGUAGES = {
 
 export function buildSystemMessage({
   settings,
-  fridgeItems,
   shoppingListItems,
   language = "en",
 }) {
@@ -50,9 +49,11 @@ Language:
 - Keep recipe titles, dish names, ingredient names, URLs, and other values returned by tools exactly as provided; translate only the prose you write.
 
 Recipes:
+- The fridge inventory is NOT included in this prompt. Before recommending recipes, always call getFridgeContents and use the items it returns. Never guess what is in the fridge, and never call recommendRecipes without having checked it in this conversation.
 - Recipe rules override the general behavior rules above. If you determine the user is asking for recipes, meal ideas, or anything to cook, make, or eat — even when the phrasing is unusual, indirect, or was not pre-classified as a recipe request — call recommendRecipes.
 - Recipe requests are always in scope. Never answer a recipe request from memory and never decline it as out of scope.
 - For every recipe or meal-idea request, including requests for something light or a cuisine such as Asian or American, call recommendRecipes exactly once per request and search fresh every time — never skip or reuse a recipe only because it was shown in an earlier answer.
+- If the user names a specific dish (for example "tomato egg stir fry" or "番茄炒蛋"), put that dish in dishQuery exactly as the user said it, in the user's language, and leave mustUseIngredients empty unless the user also named ingredients. A name search is not an ingredient search.
 - If the user asks to use a specific ingredient (or selected one fridge item), present only recipes that contain it; never pad with recipes that omit it.
 - Follow-ups after a recipe answer (for example asking for breakfast, lunch, more ideas, or something different) are NEW requests: call recommendRecipes once and put only the new meal's constraints in the arguments. Never reuse the previous meal's constraints or results. This applies even if the earlier answer is no longer visible in the conversation.
 - Saved preferences and the trusted fridge inventory are supplied to recommendRecipes by the app. Put only constraints stated for the current meal in the tool arguments.

@@ -18,6 +18,11 @@ export const RECOMMEND_RECIPES_TOOL = {
     description:
       "Find and rank real recipes using the user's trusted fridge inventory and saved recipe preferences. Search fresh on every request and never avoid a recipe because it was shown before. Use for recipe ideas, meal ideas, and 'what can I cook?' requests. Call once. A follow-up after a previous recipe answer is a NEW request: pass only constraints from the latest user message. If the user names an ingredient to use (or a single fridge item is selected), only return recipes that contain it. Include only constraints stated for this meal; the app supplies saved defaults and fridge items separately.",
     parameters: objectSchema({
+      dishQuery: {
+        type: ["string", "null"],
+        description:
+          "The dish the user named, written in the user's own language exactly as they said it (for example 'tomato egg stir fry', '番茄炒蛋'). Set this whenever the user names a dish. Never translate it and never duplicate it into mustUseIngredients. Null when the user listed ingredients instead of naming a dish.",
+      },
       preferredCuisines: {
         ...stringArray(5),
         description: "Cuisines requested for this meal.",
@@ -229,6 +234,7 @@ export function buildRecipeContext({
   fridgeItems,
   settings,
   selectedIngredients = [],
+  language = "en",
 } = {}) {
   return {
     inventory: (Array.isArray(fridgeItems) ? fridgeItems : [])
@@ -245,22 +251,48 @@ export function buildRecipeContext({
       .filter(Boolean)
       .slice(0, 30),
     preferences: settings?.recipePreferences || {},
+    // The language the user set in the app. The backend searches for the dish
+    // in this language and returns the results adapted to it.
+    language,
   };
 }
 
-export function customRecipeToolPolicy(intent, step) {
+// Read-only fridge reader, offered in recipe mode so the model can see what the
+// user actually has before it asks for recommendations. Defined here rather
+// than imported from gpt.js, which imports this module.
+export const GET_FRIDGE_CONTENTS_TOOL = {
+  type: "function",
+  function: {
+    name: "getFridgeContents",
+    description: "Read-only: get all fridge items.",
+    parameters: objectSchema({}),
+  },
+};
+
+/**
+ * Same forced two-call sequence as the backend: the fridge read happens on the
+ * first step, the recommendation on the second.
+ */
+export function customRecipeToolPolicy(intent, step = 0) {
   if (intent !== "recipe_recommendation") {
     return null;
   }
-  if (step === 0) {
+  if (step <= 0) {
     return {
-      tools: [RECOMMEND_RECIPES_TOOL],
+      tools: [GET_FRIDGE_CONTENTS_TOOL],
       tool_choice: {
         type: "function",
-        function: { name: "recommendRecipes" },
+        function: { name: "getFridgeContents" },
       },
       parallel_tool_calls: false,
     };
   }
-  return {};
+  return {
+    tools: [RECOMMEND_RECIPES_TOOL],
+    tool_choice: {
+      type: "function",
+      function: { name: "recommendRecipes" },
+    },
+    parallel_tool_calls: false,
+  };
 }

@@ -407,7 +407,6 @@ const useGptRuntime = () => {
     settings,
     storageOwnerUid,
     fridgeItems,
-    shoppingListItems,
   } = useContext(GlobalContext);
   const {
     setMessages,
@@ -1142,7 +1141,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       const recipeFollowUpAvailable =
         recipeRecommendationCompleted && !recipeFollowUpUsed;
       const turnInstructions = recipeToolRequired
-        ? `${instructions}\n\nFor this recipe request, your next step must be the recommendRecipes tool.`
+        ? `${instructions}\n\nFor this recipe request, call getFridgeContents first if you have not already seen the fridge this conversation, then call the recommendRecipes tool.`
         : toolsLockedAfterIsolatedAction
           ? recipeFollowUpAvailable
             ? `${instructions}\n\nYou may make one follow-up tool call: proposeAddMissingIngredientsToShoppingList, to propose adding the recommended recipes' missing ingredients to the shopping list. After it returns, return a final answer without calling another tool.`
@@ -1290,6 +1289,7 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       fridgeItems,
       settings,
       selectedIngredients,
+      language: resolvedLanguage,
     });
 
     // 1) Add user message locally
@@ -1348,7 +1348,6 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
     const baseSystemText = buildSystemMessage({
       settings,
       fridgeItems,
-      shoppingListItems,
       language: resolvedLanguage,
     });
     // const memoryText = selectedProvider === "pantrio"

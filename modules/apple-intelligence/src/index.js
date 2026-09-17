@@ -44,3 +44,17 @@ export async function generateAppleIntelligenceToolTurn(instructions, prompt) {
   if (!module) throw new Error("Apple Intelligence is only available on iOS.");
   return module.generateToolTurn(instructions, prompt);
 }
+
+export async function generateAppleIntelligenceToolTurnWithImages(
+  instructions,
+  prompt,
+  imageBase64
+) {
+  const module = getNativeModule();
+  if (!module) throw new Error("Apple Intelligence is only available on iOS.");
+  return module.generateToolTurnWithImages(
+    instructions,
+    prompt,
+    imageBase64 || []
+  );
+}

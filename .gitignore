@@ -46,3 +46,5 @@ recipe-card-feature/
 
 # New unit tests kept local for recipe-card work
 tests/
+
+docs/

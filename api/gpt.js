@@ -33,7 +33,10 @@ import {
   PROPOSE_RECIPE_PREFERENCE_UPDATE_TOOL,
   RECOMMEND_RECIPES_TOOL,
 } from "./recipeAssistant";
-import { generateAppleIntelligenceToolTurn } from "../modules/apple-intelligence/src";
+import {
+  generateAppleIntelligenceToolTurn,
+  generateAppleIntelligenceToolTurnWithImages,
+} from "../modules/apple-intelligence/src";
 import { insertAssistantAboveStructuredMessage } from "../utils/chatMessageOrder";
 import { normalizeRecipeCards } from "../utils/recipeCards";
 
@@ -48,6 +51,11 @@ const APPLE_AI_ISOLATED_TOOL_NAMES = new Set([
   "proposeBulkFridgeUpdate",
   "proposeAddMissingIngredientsToShoppingList",
 ]);
+const APPLE_AI_MAX_INPUT_CHARS = 28_000;
+const APPLE_AI_TOOL_DESCRIPTION_MAX_CHARS = 220;
+const APPLE_AI_RECIPE_SUMMARY_MAX_RECIPES = 4;
+const APPLE_AI_MISSING_ITEMS_PER_RECIPE = 12;
+const APPLE_AI_CONTEXT_ITEM_LIMIT = 40;
 // const MAX_IMAGE_REQUEST_URI_LENGTH = 4 * 1024 * 1024;
 const GptContext = createContext(null);
 
@@ -139,6 +147,144 @@ export const DIRECT_AI_TOOLS = [
   RECOMMEND_RECIPES_TOOL,
   PROPOSE_RECIPE_PREFERENCE_UPDATE_TOOL,
 ]);
+
+function compactAppleToolDefinitions() {
+  return DIRECT_AI_TOOLS.map(({ function: tool }) => {
+    const parameters = tool.parameters || {};
+    const propertyNames = Object.keys(parameters.properties || {});
+    const requiredNames = Array.isArray(parameters.required)
+      ? parameters.required
+      : [];
+    const description = String(tool.description || "").slice(
+      0,
+      APPLE_AI_TOOL_DESCRIPTION_MAX_CHARS
+    );
+    const args = propertyNames.length
+      ? `${propertyNames.join(", ")}${
+          requiredNames.length
+            ? ` [required: ${requiredNames.join(", ")}]`
+            : ""
+        }`
+      : "none";
+
+    return `${tool.name}(${args}): ${description}`;
+  }).join("\n");
+}
+
+function buildAppleInstructions(systemText) {
+  return `${systemText}
+
+You can use the app tools listed below. Choose type "tool" whenever you need to read or change app data. Choose type "final" only when you can answer the user without another tool. Never claim that an action succeeded until its tool result says it succeeded. Use only an exact tool name from this list.
+
+${compactAppleToolDefinitions()}`;
+}
+
+function compactAppleToolResult(name, result) {
+  if (!result || typeof result !== "object") {
+    return result;
+  }
+
+  if (name === "recommendRecipes") {
+    const recipes = Array.isArray(result.recipes) ? result.recipes : [];
+
+    return {
+      ok: true,
+      recipeCount: recipes.length,
+      recipes: recipes
+        .slice(0, APPLE_AI_RECIPE_SUMMARY_MAX_RECIPES)
+        .map((recipe) => ({
+          id: recipe?.id || null,
+          title: recipe?.title || "",
+          missingItems: (recipe?.missingItems || [])
+            .slice(0, APPLE_AI_MISSING_ITEMS_PER_RECIPE)
+            .map((item) => ({
+              name: item?.name || "",
+              quantity: item?.quantity || "1",
+            })),
+        })),
+    };
+  }
+
+  if (name === "getFridgeContents" || name === "getShoppingListContents") {
+    const items = Array.isArray(result.items) ? result.items : [];
+
+    return {
+      __context: true,
+      count: items.length,
+      truncated: items.length > APPLE_AI_CONTEXT_ITEM_LIMIT,
+      items: items
+        .slice(0, APPLE_AI_CONTEXT_ITEM_LIMIT)
+        .map((item) => ({
+          id: item?.id || null,
+          name: item?.name || "",
+          quantity: item?.quantity || "",
+          tagLabels: Array.isArray(item?.tagLabels)
+            ? item.tagLabels
+            : [],
+        })),
+    };
+  }
+
+  if (name === "streamlineLists") {
+    const shoppingItems = Array.isArray(result?.items?.shopping)
+      ? result.items.shopping
+      : [];
+    const fridgeItems = Array.isArray(result?.items?.fridge)
+      ? result.items.fridge
+      : [];
+
+    return {
+      __context: true,
+      changed: {
+        shopping: result?.changed?.shopping || 0,
+        fridge: result?.changed?.fridge || 0,
+      },
+      shoppingCount: shoppingItems.length,
+      fridgeCount: fridgeItems.length,
+    };
+  }
+
+  if (result.error) {
+    return { error: result.error };
+  }
+
+  // Other tool results are already small enough to keep unchanged.
+  return result;
+}
+
+function assertApplePromptWithinLimit(instructions, prompt) {
+  const combinedLength = `${instructions}\n\n${prompt}`.length;
+
+  if (combinedLength > APPLE_AI_MAX_INPUT_CHARS) {
+    throw new Error(
+      "This conversation is too large for Apple Intelligence. Start a new chat or switch AI provider."
+    );
+  }
+}
+
+function extractAppleImageBase64(messages) {
+  const result = [];
+
+  for (const message of Array.isArray(messages) ? messages : []) {
+    if (message?.role !== "user" || !Array.isArray(message.content)) continue;
+
+    for (const part of message.content) {
+      const url =
+        part?.image_url?.url ||
+        part?.image_url ||
+        part?.imageUri ||
+        part?.imageUrl;
+
+      if (typeof url !== "string" || !url.trim()) continue;
+      if (!url.startsWith("data:image/")) continue;
+
+      const base64 = url.slice(url.indexOf(",") + 1);
+      if (base64) result.push(base64);
+    }
+  }
+
+  return result.slice(0, 4);
+}
 
 function assistantText(content) {
   if (typeof content === "string") return content;
@@ -1121,14 +1267,8 @@ const useGptRuntime = () => {
             ? message.content
             : assistantText(message.content),
       }));
-    const toolDescriptions = DIRECT_AI_TOOLS.map(({ function: tool }) =>
-      `${tool.name}: ${tool.description} Arguments JSON Schema: ${JSON.stringify(tool.parameters)}`
-    ).join("\n");
-    const instructions = `${systemText}
-
-You can use the app tools listed below. Choose type "tool" whenever you need to read or change app data. Choose type "final" only when you can answer the user without another tool. Never claim that an action succeeded until its tool result says it succeeded. Use only an exact tool name from this list.
-
-    ${toolDescriptions}`;
+    const instructions = buildAppleInstructions(systemText);
+    const appleImageBase64 = extractAppleImageBase64(messages);
     let recipeRecommendationCompleted = false;
     let toolsLockedAfterIsolatedAction = false;
     let recipeFollowUpUsed = false;
@@ -1150,10 +1290,17 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       const prompt = conversation
         .map((message) => `${message.role}: ${message.content}`)
         .join("\n\n");
-      const turn = await generateAppleIntelligenceToolTurn(
-        turnInstructions,
-        prompt
-      );
+      assertApplePromptWithinLimit(turnInstructions, prompt);
+      const turn = appleImageBase64.length
+        ? await generateAppleIntelligenceToolTurnWithImages(
+            turnInstructions,
+            prompt,
+            appleImageBase64
+          )
+        : await generateAppleIntelligenceToolTurn(
+            turnInstructions,
+            prompt
+          );
       assertCurrentLifecycle(lifecycleGeneration);
       const type = String(turn?.type || "").trim().toLowerCase();
 
@@ -1247,7 +1394,9 @@ You can use the app tools listed below. Choose type "tool" whenever you need to 
       });
       conversation.push({
         role: "tool",
-        content: `${name} result: ${JSON.stringify(result ?? {})}`,
+        content: `${name} result: ${JSON.stringify(
+          compactAppleToolResult(name, result)
+        )}`,
       });
     }
 

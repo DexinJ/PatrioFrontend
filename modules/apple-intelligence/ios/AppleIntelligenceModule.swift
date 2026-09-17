@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import UIKit
+import Vision
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -84,6 +85,46 @@ public final class AppleIntelligenceModule: Module {
       #endif
       throw AppleIntelligenceException("Apple Intelligence requires iOS 26 or later.")
     }
+
+    AsyncFunction("generateToolTurnWithImages") { (instructions: String, prompt: String, imageBase64: [String]) async throws -> [String: String] in
+      #if canImport(FoundationModels)
+      if #available(iOS 26.0, *) {
+        guard SystemLanguageModel.default.isAvailable else {
+          throw AppleIntelligenceException("Apple Intelligence is not available right now.")
+        }
+
+        var recognizedText = ""
+        for base64 in imageBase64.prefix(4) {
+          if let text = try? Self.recognizedText(from: base64), !text.isEmpty {
+            recognizedText += "\n\n\(text)"
+          }
+        }
+
+        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let effectivePrompt: String
+        if !recognizedText.isEmpty {
+          effectivePrompt = "\(prompt)\n\nRecognized text from the attached image(s):\(recognizedText)"
+        } else if trimmedPrompt.isEmpty {
+          effectivePrompt = "The attached image contained no readable text."
+        } else {
+          effectivePrompt = prompt
+        }
+
+        let session = LanguageModelSession(instructions: instructions)
+        let response = try await session.respond(
+          to: effectivePrompt,
+          generating: AppleIntelligenceTurn.self
+        )
+        return [
+          "type": response.content.type,
+          "name": response.content.name,
+          "arguments": response.content.arguments,
+          "text": response.content.text,
+        ]
+      }
+      #endif
+      throw AppleIntelligenceException("Apple Intelligence requires iOS 26 or later.")
+    }
   }
 
   private static func availability() -> [String: Any] {
@@ -108,6 +149,27 @@ public final class AppleIntelligenceModule: Module {
 
   private static func result(_ status: String, _ available: Bool, _ reason: String) -> [String: Any] {
     ["status": status, "available": available, "reason": reason]
+  }
+
+  private static func recognizedText(from base64: String) throws -> String {
+    guard
+      let data = Data(base64Encoded: base64),
+      let image = UIImage(data: data),
+      let cgImage = image.cgImage
+    else {
+      return ""
+    }
+
+    let request = VNRecognizeTextRequest()
+    request.recognitionLevel = .accurate
+    request.usesLanguageCorrection = true
+
+    let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+    try handler.perform([request])
+
+    return (request.results ?? [])
+      .compactMap { $0.topCandidates(1).first?.string }
+      .joined(separator: "\n")
   }
 }
 

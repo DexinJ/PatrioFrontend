@@ -131,6 +131,7 @@
     "findRecipesUsing": "Find recipes using: {{items}}",
     "findRecipesWithItems": "Find recipes with my fridge items",
     "more": " +{{count}} more",
+    "findRecipesPrompt": "Recommend 4 quick recipes using as many of these selected fridge items as practical:\n{{items}}\n\nKeep your reply to a one-line intro pointing to the recipe cards the app shows below; the cards carry the title, calories, ingredients you have, and missing ingredients, and tapping one reveals the full steps and recipe page. If no recipes are found, say so plainly and do not mention cards. Never add per-recipe text, steps, explanations, or invented details.",
     "recipes": "Recipes",
     "shopList": "Shop list",
     "edit": "Edit",
@@ -290,6 +291,8 @@
     "noLimit": "no limit",
     "minSuffix": "{{count}} min",
     "addAllToFridge": "Add all to fridge",
+    "confirmPreferenceChanges": "Confirm preference changes",
+    "streamlineSummary": "🧹 Streamlined {{count}} item(s) (normalized names/qty + ensured food_type tags).",
     "noneValue": "none",
     "changeLine": "{{label}}: {{value}}",
     "removePreferences": "Remove these saved recipe preferences?",
@@ -309,6 +312,8 @@
     "confirmItems": "Confirm items",
     "hideTags": "Hide tags",
     "editTags": "Edit tags",
+    "tokenUsage": "~{{total}} tokens",
+    "tokenUsageDetail": "{{prompt}} in · {{completion}} out",
     "recipes": {
       "youHave": "You have",
       "missing": "Missing",
@@ -918,5 +923,15 @@
     "storedDataNotArray": "Stored {{label}} data must be an array.",
     "envNotConfigured": "{{name}} is not configured. Add it to the selected Expo/EAS environment.",
     "couldNotLoadAccountAccess": "Could not load account access ({{status}})."
+  },
+  "status": {
+    "thinking": "Thinking…",
+    "searchingRecipes": "Searching recipes…",
+    "searchingWeb": "Searching the web…",
+    "readingFridge": "Reading your fridge…",
+    "updatingFridge": "Updating your fridge…",
+    "updatingList": "Updating your list…",
+    "preparingChanges": "Preparing your changes…",
+    "working": "Working…"
   }
 }

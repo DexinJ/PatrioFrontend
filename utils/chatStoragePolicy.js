@@ -187,6 +187,27 @@ function imageUrlFromPart(part) {
   return "";
 }
 
+function sanitizeUsage(value) {
+  if (!isPlainRecord(value)) return null;
+  const toCount = (field) => {
+    const numeric = Number(value?.[field]);
+    return Number.isFinite(numeric) && numeric >= 0
+      ? Math.max(0, Math.trunc(numeric))
+      : null;
+  };
+  const promptTokens = toCount("promptTokens");
+  const completionTokens = toCount("completionTokens");
+  const totalTokens = toCount("totalTokens");
+  if (
+    promptTokens === null ||
+    completionTokens === null ||
+    totalTokens === null
+  ) {
+    return null;
+  }
+  return { promptTokens, completionTokens, totalTokens };
+}
+
 function isDurableManagedAttachment(uri) {
   const normalized = String(uri || "").trim().replace(/\\/g, "/");
   return (
@@ -282,6 +303,7 @@ function sanitizeMessage(message, { persist }) {
     (typeof content === "string" && content.length > 0) ||
     (Array.isArray(content) && content.length > 0);
   if (!hasContent && !text && !imageUri) return null;
+  const usage = sanitizeUsage(message.usage);
 
   return {
     ...(typeof message.id === "string" ? { id: message.id } : {}),
@@ -289,6 +311,7 @@ function sanitizeMessage(message, { persist }) {
     ...(hasContent ? { content } : {}),
     ...(text ? { text } : {}),
     ...(imageUri ? { imageUri } : {}),
+    ...(usage ? { usage } : {}),
   };
 }
 

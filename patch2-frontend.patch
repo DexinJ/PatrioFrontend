@@ -1,0 +1,279 @@
+diff --git a/api/gpt.js b/api/gpt.js
+index 60bccb3..6bff890 100644
+--- a/api/gpt.js
++++ b/api/gpt.js
+@@ -367,6 +367,32 @@ function resolveModelLanguage(override) {
+   return code === "zh" ? "zh" : "en";
+ }
+ 
++const TOOL_STATUS_KEYS = {
++  recommendRecipes: "status.searchingRecipes",
++  webSearch: "status.searchingWeb",
++  getFridgeContents: "status.readingFridge",
++  addToFridge: "status.updatingFridge",
++  editFridgeItem: "status.updatingFridge",
++  removeFromFridge: "status.updatingFridge",
++  updateFridgeItem: "status.updatingFridge",
++  addToShoppingList: "status.updatingList",
++  editShoppingListItem: "status.updatingList",
++  removeFromShoppingList: "status.updatingList",
++  proposeAddAllToFridge: "status.preparingChanges",
++  proposeBulkFridgeUpdate: "status.preparingChanges",
++  proposeAddMissingIngredientsToShoppingList: "status.preparingChanges",
++  proposeRecipePreferenceUpdate: "status.preparingChanges",
++};
++
++function statusKeyForToolNames(toolNames) {
++  const list = Array.isArray(toolNames) ? toolNames : [toolNames];
++  for (const name of list) {
++    const key = TOOL_STATUS_KEYS[String(name || "")];
++    if (key) return key;
++  }
++  return "status.working";
++}
++
+ // ✅ Convert your app messages into Chat Completions format
+ // If a message has an image AND it is NOT the last message, replace image with "[image]"
+ function toChatCompletionsMessages(
+@@ -596,6 +622,7 @@ const useGptRuntime = () => {
+     // setSummary,
+     setReceiving,
+     setWaiting,
++    setStatus,
+     // getChatSnapshot,
+   } = useContext(ChatActionsContext);
+   const { activeConversationId } = useContext(ChatContext);
+@@ -691,9 +718,10 @@ const useGptRuntime = () => {
+       activeStreamsRef.current.clear();
+       setReceiving(false);
+       setWaiting(false);
++      setStatus("");
+       scheduleIdleSocketClose(ws);
+     },
+-    [scheduleIdleSocketClose, setReceiving, setWaiting]
++    [scheduleIdleSocketClose, setReceiving, setWaiting, setStatus]
+   );
+ 
+   useEffect(
+@@ -895,6 +923,7 @@ const useGptRuntime = () => {
+       // 1) Assistant text stream
+       if (type === "delta") {
+         setWaiting(false);
++        setStatus("");
+         const delta =
+           typeof msg.text === "string"
+             ? msg.text
+@@ -926,6 +955,13 @@ const useGptRuntime = () => {
+           claimedIds,
+         });
+         if (clientToolCalls.length === 0) return;
++        setStatus(
++          i18next.t(
++            statusKeyForToolNames(
++              clientToolCalls.map((tc) => tc?.function?.name || tc?.name)
++            )
++          )
++        );
+         const results = [];
+ 
+         for (const tc of clientToolCalls) {
+@@ -1019,6 +1055,11 @@ const useGptRuntime = () => {
+         return;
+       }
+ 
++      if (type === "tool_started") {
++        setStatus(i18next.t(statusKeyForToolNames([msg.name])));
++        return;
++      }
++
+       // Server tool events: recommendRecipes is executed by the backend, which
+       // already streams the FULL structured result (including instructions) in
+       // this event. Capture it and render an interactive recipe-card message;
+@@ -1037,6 +1078,7 @@ const useGptRuntime = () => {
+           });
+           job.recipeCardId = cardMessage.id;
+           setWaiting(false);
++          setStatus("");
+           appendRequestMessage(job.conversationId, (previous) => [
+             ...(Array.isArray(previous) ? previous : []),
+             cardMessage,
+@@ -1048,6 +1090,7 @@ const useGptRuntime = () => {
+       // 3) Errors / Done
+       if (type === "error") {
+         setWaiting(false);
++        setStatus("");
+         flushAssistantDelta(job);
+         clearTimeout(job.timeoutId);
+         job.reject?.(backendErrorFromMessage(msg));
+@@ -1058,6 +1101,7 @@ const useGptRuntime = () => {
+ 
+       if (type === "done") {
+         setWaiting(false);
++        setStatus("");
+         flushAssistantDelta(job);
+         clearTimeout(job.timeoutId);
+         job.resolve?.(job.text);
+@@ -1717,6 +1761,7 @@ const useGptRuntime = () => {
+     activeStreamsRef.current.add(activityToken);
+     setReceiving(true);
+     setWaiting(true);
++    setStatus(i18next.t("status.thinking"));
+     try {
+       return await runStreamMessage(request);
+     } finally {
+@@ -1724,6 +1769,7 @@ const useGptRuntime = () => {
+       if (activeStreamsRef.current.size === 0) {
+         setReceiving(false);
+         setWaiting(false);
++        setStatus("");
+       }
+     }
+   };
+diff --git a/components/MessageList.js b/components/MessageList.js
+index 25d1581..ec64361 100644
+--- a/components/MessageList.js
++++ b/components/MessageList.js
+@@ -891,10 +891,11 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
+   );
+ }
+ 
+-function TypingIndicator({ theme }) {
++function TypingIndicator({ theme, status }) {
+   const [d1] = useState(() => new Animated.Value(0.2));
+   const [d2] = useState(() => new Animated.Value(0.2));
+   const [d3] = useState(() => new Animated.Value(0.2));
++  const { t } = useTranslation();
+ 
+   useEffect(() => {
+     const mk = (v, delay) =>
+@@ -954,6 +955,15 @@ function TypingIndicator({ theme }) {
+             transform: [{ translateY: d3.interpolate({ inputRange: [0.2, 1], outputRange: [2, -2] }) }],
+           }}
+         />
++        <Text
++          style={{
++            color: theme?.text ?? "#333",
++            fontSize: 13,
++            marginLeft: 4,
++          }}
++        >
++          {status || t("status.thinking")}
++        </Text>
+       </View>
+     </View>
+   );
+@@ -963,7 +973,7 @@ export default function MessageList({ messages, onUiAction }) {
+   const listRef = useRef(null);
+   const scrollTimerRef = useRef(null);
+   const { theme } = useContext(GlobalContext);
+-  const { waiting } = useContext(ChatContext);
++  const { waiting, status } = useContext(ChatContext);
+   const [modalVisible, setModalVisible] = useState(false);
+   const [pendingAction, setPendingAction] = useState(null);
+ 
+@@ -1054,10 +1064,10 @@ export default function MessageList({ messages, onUiAction }) {
+       })
+       .filter(Boolean);
+ 
+-    if (waiting) base.push({ kind: "typing", key: "typing" });
++    if (waiting) base.push({ kind: "typing", key: "typing", status });
+ 
+     return base;
+-  }, [messages, waiting]);
++  }, [messages, waiting, status]);
+ 
+   return (
+     <>
+@@ -1075,7 +1085,7 @@ export default function MessageList({ messages, onUiAction }) {
+                 : () => openActionModal(item.action);
+             return <ActionCard action={item.action} onPress={actionPress} />;
+           }
+-          if (item.kind === "typing") return <TypingIndicator theme={theme} />;
++          if (item.kind === "typing") return <TypingIndicator theme={theme} status={item.status} />;
+           if (item.kind === "recipe_cards") {
+             return <RecipeResultCards recipes={item.recipes} />;
+           }
+diff --git a/context/GlobalContext.js b/context/GlobalContext.js
+index 2a987d3..4be72f3 100644
+--- a/context/GlobalContext.js
++++ b/context/GlobalContext.js
+@@ -673,6 +673,7 @@ export const GlobalProvider = ({
+   const [summary, setSummary] = useState("");
+   const [receiving, setReceiving] = useState(false);
+   const [waiting, setWaiting] = useState(false);
++  const [status, setStatus] = useState("");
+   const chatStateRef = useRef({
+     messages: [],
+     summary: "",
+@@ -2935,6 +2936,7 @@ export const GlobalProvider = ({
+       setReceiving,
+       waiting,
+       setWaiting,
++      status,
+       conversations,
+       activeConversationId,
+       activeConversationTitle,
+@@ -2954,6 +2956,7 @@ export const GlobalProvider = ({
+       setMessages,
+       summary,
+       waiting,
++      status,
+       conversations,
+       activeConversationId,
+       activeConversationTitle,
+@@ -2973,6 +2976,7 @@ export const GlobalProvider = ({
+       setSummary,
+       setReceiving,
+       setWaiting,
++      setStatus,
+       getChatSnapshot,
+       createConversation,
+       selectConversation,
+@@ -2985,6 +2989,7 @@ export const GlobalProvider = ({
+     [
+       getChatSnapshot,
+       setMessages,
++      setStatus,
+       createConversation,
+       selectConversation,
+       archiveConversation,
+diff --git a/locales/en.json b/locales/en.json
+index 7ff1eb9..ef62260 100644
+--- a/locales/en.json
++++ b/locales/en.json
+@@ -923,5 +923,15 @@
+     "storedDataNotArray": "Stored {{label}} data must be an array.",
+     "envNotConfigured": "{{name}} is not configured. Add it to the selected Expo/EAS environment.",
+     "couldNotLoadAccountAccess": "Could not load account access ({{status}})."
++  },
++  "status": {
++    "thinking": "Thinking…",
++    "searchingRecipes": "Searching recipes…",
++    "searchingWeb": "Searching the web…",
++    "readingFridge": "Reading your fridge…",
++    "updatingFridge": "Updating your fridge…",
++    "updatingList": "Updating your list…",
++    "preparingChanges": "Preparing your changes…",
++    "working": "Working…"
+   }
+ }
+diff --git a/locales/zh.json b/locales/zh.json
+index acbfbae..62b6213 100644
+--- a/locales/zh.json
++++ b/locales/zh.json
+@@ -923,5 +923,15 @@
+     "storedDataNotArray": "存储的 {{label}} 数据格式不正确。",
+     "envNotConfigured": "{{name}} 未配置，请在 Expo/EAS 环境中补充。",
+     "couldNotLoadAccountAccess": "无法加载账号权限（{{status}}）。"
++  },
++  "status": {
++    "thinking": "思考中…",
++    "searchingRecipes": "正在搜索菜谱…",
++    "searchingWeb": "正在搜索网页…",
++    "readingFridge": "正在读取冰箱…",
++    "updatingFridge": "正在更新冰箱…",
++    "updatingList": "正在更新清单…",
++    "preparingChanges": "正在准备更改…",
++    "working": "处理中…"
+   }
+ }

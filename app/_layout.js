@@ -15,8 +15,9 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-get-random-values";
 import { AuthProvider, useAuth } from "../auth/useAuth";
-import i18n, {
+import {
   SUPPORTED_LANGUAGES,
+  applyLanguageCode,
   getDeviceLanguageCode,
   getSavedLanguageCode,
 } from "../i18n";
@@ -310,7 +311,7 @@ export default Sentry.wrap(function Layout() {
         : SUPPORTED_LANGUAGES.some((l) => l.code === deviceCode)
           ? deviceCode
           : "en";
-      i18n.changeLanguage(code);
+      applyLanguageCode(code);
     })();
     return () => {
       active = false;

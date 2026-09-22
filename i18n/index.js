@@ -25,10 +25,22 @@ export const SUPPORTED_LANGUAGES = [
 
 export const LANGUAGE_STORAGE_KEY = "pantrio.appLanguage";
 
+let currentLanguageCode = "en";
+
 export function getDeviceLanguageCode() {
   const locales = getLocales();
   const code = locales?.[0]?.languageCode;
   return typeof code === "string" && code.length ? code : "en";
+}
+
+export function getCurrentLanguageCode() {
+  return currentLanguageCode;
+}
+
+export function applyLanguageCode(code) {
+  currentLanguageCode = code;
+  i18n.currentLanguageCode = code;
+  return i18n.changeLanguage(code);
 }
 
 export async function getSavedLanguageCode() {
@@ -41,9 +53,15 @@ export async function getSavedLanguageCode() {
 }
 
 export async function setAppLanguage(code) {
-  await i18n.changeLanguage(code);
+  const normalized = SUPPORTED_LANGUAGES.some((lang) => lang.code === code)
+    ? code
+    : "en";
+
+  currentLanguageCode = normalized;
+  i18n.currentLanguageCode = normalized;
+  await i18n.changeLanguage(normalized);
   try {
-    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, code);
+    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
   } catch {
     // Persistence is best-effort; the in-memory language still applies.
   }

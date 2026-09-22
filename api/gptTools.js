@@ -5,6 +5,7 @@
 // - Adds defensive fallback if streamlineLists isn't wired yet
 
 import { useContext } from "react";
+import i18next from "i18next";
 import { GlobalContext } from "../context/GlobalContext";
 import {
   createFridgeProposalActionId,
@@ -499,7 +500,7 @@ export function useGPTTools() {
             title:
               typeof title === "string" && title.trim()
                 ? title.trim().slice(0, 160)
-                : "Review fridge changes",
+                : i18next.t("messageList.reviewBulkChanges"),
             changes: safeChanges,
             ...(failures.length ? { skipped: failures.slice(0, 10) } : {}),
           },
@@ -562,7 +563,7 @@ export function useGPTTools() {
             title:
               typeof title === "string" && title.trim()
                 ? title.trim().slice(0, 160)
-                : "Add missing ingredients to shopping list",
+                : i18next.t("messageList.addMissingIngredients"),
             items: safeItems,
           },
         },
@@ -636,7 +637,9 @@ export function useGPTTools() {
             content: [
               {
                 type: "output_text",
-                text: `🧹 Streamlined ${(res.changed.shopping || 0) + (res.changed.fridge || 0)} item(s) (normalized names/qty + ensured food_type tags).`,
+                text: i18next.t("messageList.streamlineSummary", {
+                  count: (res.changed.shopping || 0) + (res.changed.fridge || 0),
+                }),
               },
             ],
           },
@@ -725,7 +728,7 @@ export function useGPTTools() {
           type: "ui_action",
           action: {
             kind: "recipe_preference_update",
-            title: "Confirm preference changes",
+            title: i18next.t("messageList.confirmPreferenceChanges"),
             summary:
               typeof summary === "string" ? summary.trim().slice(0, 160) : "",
             operation: safeOperation,
@@ -791,7 +794,7 @@ export function useGPTTools() {
             kind: "add_all_to_fridge",
             actionId,
             status: "pending",
-            title: safeTitle || "Add all to fridge",
+            title: safeTitle || i18next.t("messageList.addAllToFridge"),
             items: safeItems,
     
             // expiresInDays is OPTIONAL – predictor will fill if missing

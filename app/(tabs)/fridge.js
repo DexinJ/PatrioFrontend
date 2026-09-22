@@ -338,16 +338,9 @@ export default function FridgeScreen() {
           })
         : t("fridge.findRecipesWithItems");
 
-      const prompt = `
-Recommend 4 quick recipes using as many of these selected fridge items as practical:
-${ingredientLines}
-
-Keep your reply to a one-line intro pointing to the recipe cards the app shows
-below; the cards carry the title, calories, ingredients you have, and missing
-ingredients, and tapping one reveals the full steps and recipe page. If no
-recipes are found, say so plainly and do not mention cards. Never add
-per-recipe text, steps, explanations, or invented details.
-`.trim();
+      const prompt = t("fridge.findRecipesPrompt", {
+        items: ingredientLines,
+      });
 
       try {
         router.push("/chat");

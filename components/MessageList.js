@@ -891,10 +891,11 @@ function ItemsConfirmModal({ visible, action, onClose, onConfirm }) {
   );
 }
 
-function TypingIndicator({ theme }) {
+function TypingIndicator({ theme, status, chatgptStyle }) {
   const [d1] = useState(() => new Animated.Value(0.2));
   const [d2] = useState(() => new Animated.Value(0.2));
   const [d3] = useState(() => new Animated.Value(0.2));
+  const { t } = useTranslation();
 
   useEffect(() => {
     const mk = (v, delay) =>
@@ -920,13 +921,17 @@ function TypingIndicator({ theme }) {
       style={{
         alignSelf: "flex-start",
         marginVertical: 6,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        maxWidth: "75%",
-        backgroundColor: theme?.card ?? "#eee",
-        borderWidth: 1,
-        borderColor: theme?.border ?? "#ddd",
+        maxWidth: chatgptStyle ? "100%" : "75%",
+        ...(chatgptStyle
+          ? {}
+          : {
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 16,
+              backgroundColor: theme?.card ?? "#eee",
+              borderWidth: 1,
+              borderColor: theme?.border ?? "#ddd",
+            }),
       }}
     >
       <View style={{ flexDirection: "row", gap: 6 }}>
@@ -954,6 +959,15 @@ function TypingIndicator({ theme }) {
             transform: [{ translateY: d3.interpolate({ inputRange: [0.2, 1], outputRange: [2, -2] }) }],
           }}
         />
+        <Text
+          style={{
+            color: theme?.text ?? "#333",
+            fontSize: 13,
+            marginLeft: 4,
+          }}
+        >
+          {status || t("status.thinking")}
+        </Text>
       </View>
     </View>
   );
@@ -962,8 +976,9 @@ function TypingIndicator({ theme }) {
 export default function MessageList({ messages, onUiAction }) {
   const listRef = useRef(null);
   const scrollTimerRef = useRef(null);
-  const { theme } = useContext(GlobalContext);
-  const { waiting } = useContext(ChatContext);
+  const { settings, theme } = useContext(GlobalContext);
+  const chatgptStyle = Boolean(settings?.chat?.chatgptStyle);
+  const { waiting, status } = useContext(ChatContext);
   const [modalVisible, setModalVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
 
@@ -1043,14 +1058,21 @@ export default function MessageList({ messages, onUiAction }) {
 
         if (!text && !imageUri) return null;
 
-        return { kind: "bubble", text, imageUri, isUser, key };
+        return {
+          kind: "bubble",
+          text,
+          imageUri,
+          isUser,
+          usage: msg?.usage || null,
+          key,
+        };
       })
       .filter(Boolean);
 
-    if (waiting) base.push({ kind: "typing", key: "typing" });
+    if (waiting) base.push({ kind: "typing", key: "typing", status });
 
     return base;
-  }, [messages, waiting]);
+  }, [messages, waiting, status]);
 
   return (
     <>
@@ -1068,7 +1090,7 @@ export default function MessageList({ messages, onUiAction }) {
                 : () => openActionModal(item.action);
             return <ActionCard action={item.action} onPress={actionPress} />;
           }
-          if (item.kind === "typing") return <TypingIndicator theme={theme} />;
+          if (item.kind === "typing") return <TypingIndicator theme={theme} status={item.status} chatgptStyle={chatgptStyle} />;
           if (item.kind === "recipe_cards") {
             return <RecipeResultCards recipes={item.recipes} />;
           }
@@ -1077,6 +1099,7 @@ export default function MessageList({ messages, onUiAction }) {
               text={item.text}
               imageUri={item.imageUri}
               isUser={item.isUser}
+              usage={item.usage}
             />
           );
         }}

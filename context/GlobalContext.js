@@ -673,6 +673,7 @@ export const GlobalProvider = ({
   const [summary, setSummary] = useState("");
   const [receiving, setReceiving] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  const [status, setStatus] = useState("");
   const chatStateRef = useRef({
     messages: [],
     summary: "",
@@ -2935,6 +2936,7 @@ export const GlobalProvider = ({
       setReceiving,
       waiting,
       setWaiting,
+      status,
       conversations,
       activeConversationId,
       activeConversationTitle,
@@ -2954,6 +2956,7 @@ export const GlobalProvider = ({
       setMessages,
       summary,
       waiting,
+      status,
       conversations,
       activeConversationId,
       activeConversationTitle,
@@ -2973,6 +2976,7 @@ export const GlobalProvider = ({
       setSummary,
       setReceiving,
       setWaiting,
+      setStatus,
       getChatSnapshot,
       createConversation,
       selectConversation,
@@ -2985,6 +2989,7 @@ export const GlobalProvider = ({
     [
       getChatSnapshot,
       setMessages,
+      setStatus,
       createConversation,
       selectConversation,
       archiveConversation,

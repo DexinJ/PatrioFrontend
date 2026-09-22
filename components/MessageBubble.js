@@ -42,7 +42,7 @@ function getDomain(url) {
   }
 }
 
-function MessageBubble({ text, imageUri, isUser }) {
+function MessageBubble({ text, imageUri, isUser, usage }) {
   const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
   const fontSize = settings?.ux?.fontSize || 16;
@@ -54,6 +54,8 @@ function MessageBubble({ text, imageUri, isUser }) {
   const [selectModeVisible, setSelectModeVisible] = useState(false);
   const mountedRef = useRef(false);
   const displayText = toDisplayText(text);
+  const usageSummary =
+    usage && Number(usage?.totalTokens) > 0 ? usage : null;
   const safeImageUri = typeof imageUri === "string" ? imageUri : "";
   const [linkMetas, setLinkMetas] = useState([]); // ✅ array now
 
@@ -230,6 +232,21 @@ function MessageBubble({ text, imageUri, isUser }) {
               )}
             </View>
           </Pressable>
+        ) : null}
+
+        {!isUser && usageSummary ? (
+          <Text
+            style={[styles.tokenUsage, { color: theme.textSecondary }]}
+          >
+            {t("messageList.tokenUsage", {
+              total: usageSummary.totalTokens,
+            })}{" "}
+            ·{" "}
+            {t("messageList.tokenUsageDetail", {
+              prompt: usageSummary.promptTokens,
+              completion: usageSummary.completionTokens,
+            })}
+          </Text>
         ) : null}
 
         {/* Link preview cards OUTSIDE the bubble: user messages only, since
@@ -427,6 +444,13 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginVertical: 5,
     flexShrink: 1,
+  },
+  tokenUsage: {
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 2,
+    marginBottom: 2,
+    opacity: 0.75,
   },
   aiBubbleChatgpt: {
     maxWidth: "100%",

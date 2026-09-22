@@ -7,7 +7,11 @@ import { AppState } from "react-native";
 import i18next from "i18next";
 import { auth } from "../auth/firebaseClient";
 import { useAccountSession } from "../context/AccountSessionContext";
-import { ChatActionsContext, GlobalContext } from "../context/GlobalContext";
+import {
+  ChatActionsContext,
+  ChatContext,
+  GlobalContext,
+} from "../context/GlobalContext";
 import { API_BASE_URL, BACKEND_WS_URL } from "./backendConfig";
 import { createBackendResponseError } from "./backendErrors";
 import { buildSystemMessage } from "./buildSystemMessage";
@@ -176,6 +180,8 @@ function buildAppleInstructions(systemText) {
 
 You can use the app tools listed below. Choose type "tool" whenever you need to read or change app data. Choose type "final" only when you can answer the user without another tool. Never claim that an action succeeded until its tool result says it succeeded. Use only an exact tool name from this list.
 
+Current app state can change between messages. Do not answer questions about the current fridge, shopping list, preferences, or any other app data from an older assistant answer or older tool result. Whenever the answer depends on current app data, call the appropriate read tool again first, even if a similar answer appears earlier in this conversation.
+
 ${compactAppleToolDefinitions()}`;
 }
 
@@ -294,6 +300,35 @@ function assistantText(content) {
   return "";
 }
 
+function normalizeUsage(value) {
+  const usage =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
+  const toCount = (field) => {
+    const numeric = Number(usage?.[field]);
+    return Number.isFinite(numeric) && numeric > 0
+      ? Math.max(0, Math.trunc(numeric))
+      : 0;
+  };
+  const promptTokens = toCount("prompt_tokens");
+  const completionTokens = toCount("completion_tokens");
+  const totalTokens = toCount("total_tokens");
+  return { promptTokens, completionTokens, totalTokens };
+}
+
+function withMessageUsage(messages, messageId, usage) {
+  const prev = Array.isArray(messages) ? messages : [];
+  const index = prev.findIndex((message) => message?.id === messageId);
+  if (index < 0) return prev;
+  const current = prev[index];
+  const nextUsage = usage && usage.totalTokens > 0 ? usage : undefined;
+  if (!nextUsage) return prev;
+  const updated = [...prev];
+  updated[index] = { ...current, usage: nextUsage };
+  return updated;
+}
+
 // Structured chat message holding the recipe cards for one recommendation
 // result. The card carries only normalized recipe data; the assistant's short
 // intro stays in its own text message rendered above the cards.
@@ -310,7 +345,9 @@ function makeRecipeCardMessage({ requestId = "", recipes, text = "" }) {
 }
 
 function recipeCardPlaceholderText(count) {
-  const language = String(i18next.language || "en").toLowerCase();
+  const language = String(
+    i18next.currentLanguageCode || i18next.language || "en"
+  ).toLowerCase();
   const isChinese = language.startsWith("zh");
   return isChinese
     ? `已展示 ${count} 个菜谱推荐卡片。`
@@ -324,10 +361,36 @@ function resolveModelLanguage(override) {
   const raw = String(
     typeof override === "string" && override.trim()
       ? override.trim()
-      : i18next.language || "en"
+      : i18next.currentLanguageCode || i18next.language || "en"
   );
   const code = raw.toLowerCase().split("-")[0].split("_")[0];
   return code === "zh" ? "zh" : "en";
+}
+
+const TOOL_STATUS_KEYS = {
+  recommendRecipes: "status.searchingRecipes",
+  webSearch: "status.searchingWeb",
+  getFridgeContents: "status.readingFridge",
+  addToFridge: "status.updatingFridge",
+  editFridgeItem: "status.updatingFridge",
+  removeFromFridge: "status.updatingFridge",
+  updateFridgeItem: "status.updatingFridge",
+  addToShoppingList: "status.updatingList",
+  editShoppingListItem: "status.updatingList",
+  removeFromShoppingList: "status.updatingList",
+  proposeAddAllToFridge: "status.preparingChanges",
+  proposeBulkFridgeUpdate: "status.preparingChanges",
+  proposeAddMissingIngredientsToShoppingList: "status.preparingChanges",
+  proposeRecipePreferenceUpdate: "status.preparingChanges",
+};
+
+function statusKeyForToolNames(toolNames) {
+  const list = Array.isArray(toolNames) ? toolNames : [toolNames];
+  for (const name of list) {
+    const key = TOOL_STATUS_KEYS[String(name || "")];
+    if (key) return key;
+  }
+  return "status.working";
 }
 
 // ✅ Convert your app messages into Chat Completions format
@@ -559,8 +622,10 @@ const useGptRuntime = () => {
     // setSummary,
     setReceiving,
     setWaiting,
+    setStatus,
     // getChatSnapshot,
   } = useContext(ChatActionsContext);
+  const { activeConversationId } = useContext(ChatContext);
   const { applyRealtimeState } = useAccountSession();
 
   const toolHandlers = useGPTTools();
@@ -568,6 +633,10 @@ const useGptRuntime = () => {
   useEffect(() => {
     toolHandlersRef.current = toolHandlers;
   }, [toolHandlers]);
+  const activeConversationIdRef = useRef(activeConversationId);
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
   const pendingActionMessageIdRef = useRef(null);
 
   const wsRef = useRef(null);
@@ -649,9 +718,10 @@ const useGptRuntime = () => {
       activeStreamsRef.current.clear();
       setReceiving(false);
       setWaiting(false);
+      setStatus("");
       scheduleIdleSocketClose(ws);
     },
-    [scheduleIdleSocketClose, setReceiving, setWaiting]
+    [scheduleIdleSocketClose, setReceiving, setWaiting, setStatus]
   );
 
   useEffect(
@@ -691,7 +761,7 @@ const useGptRuntime = () => {
       return;
     }
 
-    setMessages((previous) => {
+    appendRequestMessage(job.conversationId, (previous) => {
       const prev = Array.isArray(previous) ? previous : [];
       const index = prev.findIndex((message) => message?.id === job.messageId);
       if (index < 0) {
@@ -701,6 +771,9 @@ const useGptRuntime = () => {
             id: job.messageId,
             role: "assistant",
             content: [{ type: "output_text", text: pendingDelta }],
+            ...(job.usage && job.usage.totalTokens > 0
+              ? { usage: job.usage }
+              : {}),
           },
           [job.recipeCardId, job.actionMessageId]
         );
@@ -714,6 +787,9 @@ const useGptRuntime = () => {
         content: [
           { type: "output_text", text: `${currentText}${pendingDelta}` },
         ],
+        ...(job.usage && job.usage.totalTokens > 0
+          ? { usage: job.usage }
+          : {}),
       };
       return updated;
     });
@@ -725,6 +801,15 @@ const useGptRuntime = () => {
       { message: i18next.t("errors.chatCancelledSession") },
       "REQUEST_CANCELLED"
     );
+  }
+
+  function appendRequestMessage(conversationId, updater) {
+    setMessages((previous) => {
+      if (activeConversationIdRef.current !== conversationId) {
+        return previous;
+      }
+      return typeof updater === "function" ? updater(previous) : updater;
+    });
   }
 
   function ensureWs() {
@@ -804,6 +889,17 @@ const useGptRuntime = () => {
 
       if (type === "started") return;
 
+      if (type === "request_usage") {
+        const usage = normalizeUsage(msg.usage);
+        if (usage.totalTokens > 0) {
+          job.usage = usage;
+          appendRequestMessage(job.conversationId, (previous) =>
+            withMessageUsage(previous, job.messageId, usage)
+          );
+        }
+        return;
+      }
+
       if (
         type === "quota_budget" ||
         type === "quota_budget_update" ||
@@ -827,6 +923,7 @@ const useGptRuntime = () => {
       // 1) Assistant text stream
       if (type === "delta") {
         setWaiting(false);
+        setStatus("");
         const delta =
           typeof msg.text === "string"
             ? msg.text
@@ -848,7 +945,6 @@ const useGptRuntime = () => {
 
       // 2) Tool call(s) from backend → execute locally → send tool_results back
       if (type === "tool_calls" || type === "awaiting_tool_results") {
-        setWaiting(false);
         const toolCalls = Array.isArray(msg.toolCalls) ? msg.toolCalls : [];
         const claimedIds =
           job.claimedClientToolCallIds ||
@@ -859,6 +955,13 @@ const useGptRuntime = () => {
           claimedIds,
         });
         if (clientToolCalls.length === 0) return;
+        setStatus(
+          i18next.t(
+            statusKeyForToolNames(
+              clientToolCalls.map((tc) => tc?.function?.name || tc?.name)
+            )
+          )
+        );
         const results = [];
 
         for (const tc of clientToolCalls) {
@@ -952,6 +1055,11 @@ const useGptRuntime = () => {
         return;
       }
 
+      if (type === "tool_started") {
+        setStatus(i18next.t(statusKeyForToolNames([msg.name])));
+        return;
+      }
+
       // Server tool events: recommendRecipes is executed by the backend, which
       // already streams the FULL structured result (including instructions) in
       // this event. Capture it and render an interactive recipe-card message;
@@ -969,7 +1077,9 @@ const useGptRuntime = () => {
             text: recipeCardPlaceholderText(msg.result.recipes.length),
           });
           job.recipeCardId = cardMessage.id;
-          setMessages((previous) => [
+          setWaiting(false);
+          setStatus("");
+          appendRequestMessage(job.conversationId, (previous) => [
             ...(Array.isArray(previous) ? previous : []),
             cardMessage,
           ]);
@@ -980,6 +1090,7 @@ const useGptRuntime = () => {
       // 3) Errors / Done
       if (type === "error") {
         setWaiting(false);
+        setStatus("");
         flushAssistantDelta(job);
         clearTimeout(job.timeoutId);
         job.reject?.(backendErrorFromMessage(msg));
@@ -990,6 +1101,7 @@ const useGptRuntime = () => {
 
       if (type === "done") {
         setWaiting(false);
+        setStatus("");
         flushAssistantDelta(job);
         clearTimeout(job.timeoutId);
         job.resolve?.(job.text);
@@ -1081,7 +1193,7 @@ const useGptRuntime = () => {
 
   async function runCustomAi(
     messages,
-    { signal, lifecycleGeneration, intent, recipeContext }
+    { signal, lifecycleGeneration, intent, recipeContext, conversationId }
   ) {
     const configuredBaseUrl = String(
       settings?.advanced?.aiBaseUrl || ""
@@ -1234,7 +1346,7 @@ const useGptRuntime = () => {
             text: recipeCardPlaceholderText(result.recipes.length),
           });
           recipeCardId = cardMessage.id;
-          setMessages((previous) => [
+          appendRequestMessage(conversationId, (previous) => [
             ...(Array.isArray(previous) ? previous : []),
             cardMessage,
           ]);
@@ -1256,7 +1368,7 @@ const useGptRuntime = () => {
   async function runAppleAi(
     messages,
     systemText,
-    { signal, lifecycleGeneration, intent, recipeContext }
+    { signal, lifecycleGeneration, intent, recipeContext, conversationId }
   ) {
     const conversation = messages
       .filter((message) => message.role !== "system")
@@ -1375,7 +1487,7 @@ const useGptRuntime = () => {
           text: recipeCardPlaceholderText(result.recipes.length),
         });
         recipeCardId = cardMessage.id;
-        setMessages((previous) => [
+        appendRequestMessage(conversationId, (previous) => [
           ...(Array.isArray(previous) ? previous : []),
           cardMessage,
         ]);
@@ -1413,6 +1525,7 @@ const useGptRuntime = () => {
     displayText,
   }) => {
     const lifecycleGeneration = lifecycleGenerationRef.current;
+    const requestConversationId = activeConversationIdRef.current;
     pendingActionMessageIdRef.current = null;
     const resolvedLanguage = resolveModelLanguage(language);
     const normalizedText =
@@ -1521,10 +1634,11 @@ const useGptRuntime = () => {
         lifecycleGeneration,
         intent: requestIntent,
         recipeContext,
+        conversationId: requestConversationId,
       });
       setWaiting(false);
       if (fullText) {
-        setMessages((prev) =>
+        appendRequestMessage(requestConversationId, (prev) =>
           insertAssistantAboveStructuredMessage(
             prev,
             {
@@ -1545,10 +1659,11 @@ const useGptRuntime = () => {
         lifecycleGeneration,
         intent: requestIntent,
         recipeContext,
+        conversationId: requestConversationId,
       });
       setWaiting(false);
       if (fullText) {
-        setMessages((prev) =>
+        appendRequestMessage(requestConversationId, (prev) =>
           insertAssistantAboveStructuredMessage(
             prev,
             {
@@ -1601,11 +1716,13 @@ const useGptRuntime = () => {
         text: "",
         messageId: `assistant-${requestId}`,
         pendingDelta: "",
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         deltaTimerId: null,
         claimedClientToolCallIds: new Set(),
         recipeCardId: null,
         timeoutId: null,
         lifecycleGeneration,
+        conversationId: requestConversationId,
       };
       job.timeoutId = setTimeout(() => {
         if (inflightRef.current.get(requestId) !== job) return;
@@ -1644,6 +1761,7 @@ const useGptRuntime = () => {
     activeStreamsRef.current.add(activityToken);
     setReceiving(true);
     setWaiting(true);
+    setStatus(i18next.t("status.thinking"));
     try {
       return await runStreamMessage(request);
     } finally {
@@ -1651,6 +1769,7 @@ const useGptRuntime = () => {
       if (activeStreamsRef.current.size === 0) {
         setReceiving(false);
         setWaiting(false);
+        setStatus("");
       }
     }
   };

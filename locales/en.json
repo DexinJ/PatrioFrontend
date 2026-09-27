@@ -198,6 +198,8 @@
       "sessionExpired": "Your session expired. Please sign in again.",
       "entitlementStale": "Your subscription status needs to be refreshed in Settings.",
       "requestTimedOut": "The chat request timed out. Please try again.",
+      "recipeSearchTimedOut": "The recipe search timed out. Showing what was found.",
+      "toolTimedOut": "That took too long on the server. Please try again.",
       "upstreamUnavailable": "Pantrio AI is temporarily unavailable. Please try again.",
       "couldNotComplete": "Pantrio AI could not complete that request."
     }
@@ -305,10 +307,6 @@
     "removeItem": "Remove",
     "skippedChanges": "Skipped: {{names}}",
     "changesApplied": "Changes applied",
-    "addMissingIngredients": "Add missing ingredients to shopping list",
-    "missingItems_one": "{{count}} missing ingredient",
-    "missingItems_other": "{{count}} missing ingredients",
-    "addedToShoppingList": "Added to shopping list",
     "confirmItems": "Confirm items",
     "hideTags": "Hide tags",
     "editTags": "Edit tags",
@@ -329,6 +327,7 @@
       "haveMore_other": "+{{count}} more…",
       "stepsTitle": "Steps",
       "stepsNone": "The publisher did not provide structured steps.",
+      "nearMatch": "Near match",
       "openRecipe": "View full recipe",
       "addMissingItems": "Add missing items to shopping list",
       "addMissingItemsCount_one": "Add {{count}} missing item",

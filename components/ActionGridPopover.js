@@ -1,10 +1,14 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import Popover from "react-native-popover-view";
 import ActionTile from "./ActionTile";
 
 const GRID_TILE_WIDTH = 80;
 const GRID_GAP = 10;
+const MENU_PADDING = 12;
+// react-native-popover-view applies a 10px margin on the non-arrow sides.
+const POPOVER_MARGIN = 10;
+const HORIZONTAL_CHROME = MENU_PADDING * 2 + POPOVER_MARGIN * 2;
 
 /**
  * Reusable grid popover for context actions (long-press menus).
@@ -31,6 +35,16 @@ export default function ActionGridPopover({
   borderRadius = 14,
 }) {
   const cardBg = theme?.card ?? "#fff";
+  const { width: windowWidth } = useWindowDimensions();
+
+  const desiredWidth =
+    actions.length > 0
+      ? actions.length * GRID_TILE_WIDTH + (actions.length - 1) * GRID_GAP
+      : 0;
+  const gridWidth =
+    actions.length > 0
+      ? Math.min(desiredWidth, Math.max(0, windowWidth - HORIZONTAL_CHROME))
+      : 0;
 
   return (
     <Popover
@@ -46,11 +60,7 @@ export default function ActionGridPopover({
         <View
           style={[
             styles.grid,
-            actions.length > 0 && {
-              width:
-                actions.length * GRID_TILE_WIDTH +
-                (actions.length - 1) * GRID_GAP,
-            },
+            actions.length > 0 && gridWidth > 0 && { width: gridWidth },
           ]}
         >
           {actions.map((a) => (

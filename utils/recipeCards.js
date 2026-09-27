@@ -3,7 +3,7 @@
 // objects the chat history stores and the chat list renders as cards.
 // Keeping this module free of React/i18n imports makes it unit-testable.
 
-const MAX_RECIPE_CARDS = 4;
+const MAX_RECIPE_CARDS = 6;
 const MAX_STRING_LENGTH = 300;
 const MAX_INGREDIENT_LENGTH = 160;
 const MAX_INSTRUCTION_LENGTH = MAX_STRING_LENGTH;
@@ -51,14 +51,23 @@ function clipList(value, maxItems, maxLength = MAX_INGREDIENT_LENGTH) {
  * Addable shopping-list items, kept as objects. `clipList` would flatten them
  * to strings, which is why this has its own normalizer.
  */
+function displayLineForItem(name, quantity) {
+  return quantity && quantity !== "1" ? `${quantity} ${name}` : name;
+}
+
 function normalizeMissingItems(value, maxItems) {
   const output = [];
   for (const entry of Array.isArray(value) ? value : []) {
     const name = clipText(entry?.name, MAX_INGREDIENT_LENGTH);
     if (!name) continue;
+    const quantity = clipText(entry?.quantity, 40) || "1";
+    const line =
+      clipText(entry?.line, MAX_INGREDIENT_LENGTH) ||
+      displayLineForItem(name, quantity);
     output.push({
+      line,
       name,
-      quantity: clipText(entry?.quantity, 40) || "1",
+      quantity,
     });
     if (output.length >= maxItems) break;
   }
@@ -140,6 +149,26 @@ export function normalizeRecipeCard(recipe) {
     : null;
   const servings = Number.isFinite(source.servings) ? source.servings : null;
 
+  const structuredMissingItems = normalizeMissingItems(
+    source.missingItems,
+    MAX_MISSING_INGREDIENTS
+  );
+  // Cards persisted before `missingItems` existed only carry the display
+  // lines. Derive addable items from them so the shopping-list button keeps
+  // working for legacy cards without a reinstall.
+  const missingItems =
+    structuredMissingItems.length > 0
+      ? structuredMissingItems
+      : normalizeMissingItems(
+          clipList(source.missingIngredients, MAX_MISSING_INGREDIENTS).map(
+            (line) => ({ line, name: line, quantity: "1" })
+          ),
+          MAX_MISSING_INGREDIENTS
+        );
+  // Single source of truth: the display lines are the structured items' own
+  // `line`, so the card preview and the shopping-list button never drift.
+  const missingIngredients = missingItems.map((item) => item.line);
+
   return {
     title,
     url,
@@ -158,22 +187,17 @@ export function normalizeRecipeCard(recipe) {
         ? source.timeConfidence
         : "unknown",
     usedIngredients: clipList(source.usedIngredients, MAX_USED_INGREDIENTS),
-    missingIngredients: clipList(
-      source.missingIngredients,
-      MAX_MISSING_INGREDIENTS
-    ),
-    // Structured, addable form of the same items. Kept so the card's
-    // shopping-list button survives a reload.
-    missingItems: normalizeMissingItems(
-      source.missingItems,
-      MAX_MISSING_INGREDIENTS
-    ),
+    missingIngredients,
+    missingItems,
     instructions: clipList(
       source.instructions,
       MAX_INSTRUCTIONS,
       MAX_INSTRUCTION_LENGTH
     ),
     whyRecommended: clipText(source.whyRecommended, 240),
+    // Set by the dish pipeline when the named dish had no exact published
+    // recipe and this is the closest labelled near match.
+    nearMatch: source.nearMatch === true,
   };
 }
 

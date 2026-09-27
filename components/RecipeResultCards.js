@@ -29,6 +29,7 @@ function useRecipeLabels() {
     youHave: t("messageList.recipes.youHave"),
     missing: t("messageList.recipes.missing"),
     tapForDetails: t("messageList.recipes.tapForDetails"),
+    nearMatch: t("messageList.recipes.nearMatch"),
   };
 }
 
@@ -113,9 +114,26 @@ function RecipeCard({ recipe, onOpen }) {
         },
       ]}
     >
-      <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={2}>
-        {recipe.title}
-      </Text>
+      <View style={styles.cardTitleRow}>
+        <Text
+          style={[styles.cardTitle, { color: theme.textPrimary }]}
+          numberOfLines={2}
+        >
+          {recipe.title}
+        </Text>
+        {recipe.nearMatch ? (
+          <View
+            style={[
+              styles.nearMatchBadge,
+              { borderColor: theme.border ?? "rgba(0,0,0,0.2)" },
+            ]}
+          >
+            <Text style={[styles.nearMatchText, { color: theme.textSecondary }]}>
+              {labels.nearMatch}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       <RecipeMetaLine recipe={recipe} />
       <IngredientSummaryRow
         label={labels.youHave}
@@ -209,6 +227,13 @@ function RecipeDetailModal({ recipe, visible, onClose }) {
               >
                 {recipe.title}
               </Text>
+              {recipe.nearMatch ? (
+                <Text
+                  style={[styles.nearMatchText, { color: theme.textSecondary }]}
+                >
+                  {t("messageList.recipes.nearMatch")}
+                </Text>
+              ) : null}
               <RecipeMetaLine recipe={recipe} />
             </View>
             <TouchableOpacity
@@ -313,6 +338,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     lineHeight: 21,
+  },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  nearMatchBadge: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  nearMatchText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   metaText: {
     fontSize: 13,

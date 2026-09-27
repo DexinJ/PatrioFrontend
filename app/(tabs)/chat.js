@@ -45,6 +45,9 @@ function getChatErrorMessage(error) {
     AUTH_INVALID: i18next.t("chat.errors.sessionExpired"),
     ENTITLEMENT_STALE: i18next.t("chat.errors.entitlementStale"),
     REQUEST_TIMEOUT: i18next.t("chat.errors.requestTimedOut"),
+    SERVER_TOOL_TIMEOUT: i18next.t("chat.errors.toolTimedOut"),
+    RECIPE_RECOMMENDATION_TIMEOUT: i18next.t("chat.errors.recipeSearchTimedOut"),
+    UPSTREAM_TIMEOUT: i18next.t("chat.errors.requestTimedOut"),
     UPSTREAM_ERROR: i18next.t("chat.errors.upstreamUnavailable"),
     UPSTREAM_UNAVAILABLE: i18next.t("chat.errors.upstreamUnavailable"),
   };
@@ -82,13 +85,12 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  const { streamMessage } = useGpt();
+  const { streamMessage, prewarm } = useGpt();
   const {
     theme,
     settings,
     fridgeItems,
     addManyToFridge,
-    addManyToShoppingList,
     editFridgeItem,
     removeManyFromFridge,
     updateRecipePreferences,
@@ -143,6 +145,18 @@ export default function ChatScreen() {
         setKeyboardVisible(false);
       };
     }, [])
+  );
+
+  // Prewarm the chat WebSocket as soon as this screen is opened, so the
+  // connect handshake overlaps with the user composing their first message.
+  useFocusEffect(
+    useCallback(() => {
+      try {
+        prewarm();
+      } catch {
+        // Best-effort; the normal send path reconnects as needed.
+      }
+    }, [prewarm])
   );
 
   const handleSend = async (message) => {
@@ -276,66 +290,6 @@ export default function ChatScreen() {
               type: "output_text",
               text:
                 t("chat.appliedFridgeChanges", { count: applied }) +
-                (failed.length
-                  ? `\n${t("chat.skipped", {
-                      names: failed.join(", "),
-                    })}`
-                  : ""),
-            },
-          ],
-        },
-      ]);
-      return;
-    }
-    if (action?.kind === "add_missing_to_shopping_list") {
-      const items = Array.isArray(action.items) ? action.items : [];
-      if (items.length === 0) return;
-
-      const additions = items
-        .map((it) => ({
-          name: String(it?.name ?? "").trim(),
-          quantity: String(it?.quantity ?? "1").trim() || "1",
-          categories: it?.categories,
-        }))
-        .filter((it) => it.name);
-      if (additions.length === 0) return;
-      if (
-        !claimFridgeProposalAction(
-          claimedFridgeProposalActionsRef.current,
-          action
-        )
-      ) {
-        return;
-      }
-
-      let added = 0;
-      const failed = [];
-      try {
-        added = addManyToShoppingList(additions).length;
-      } catch (error) {
-        releaseFridgeProposalAction(
-          claimedFridgeProposalActionsRef.current,
-          action
-        );
-        const reason = String(error?.message || error);
-        failed.push(...additions.map(({ name }) => name));
-        if (__DEV__) console.log({ shoppingListAddError: reason });
-      }
-
-      if (!mountedRef.current) return;
-      setMessages((prev) => [
-        ...(failed.length === 0
-          ? markFridgeProposalActionConsumed(prev, action)
-          : Array.isArray(prev)
-            ? prev
-            : []),
-        {
-          role: "assistant",
-          content: [
-            {
-              type: "output_text",
-              text:
-                t("chat.addedToShoppingList", { count: added }) +
                 (failed.length
                   ? `\n${t("chat.skipped", {
                       names: failed.join(", "),

@@ -405,6 +405,7 @@ export async function summarizeHistory({
             role: "system",
             content:
               "Incorporate this previously retained conversation memory into the updated summary:\n" +
+              "Never mention tool names, prompts, schemas, or internal pipeline steps.\n" +
               previousSummary,
           },
           ...olderMessages,

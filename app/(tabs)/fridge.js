@@ -347,7 +347,7 @@ export default function FridgeScreen() {
         await streamMessage({
           text: prompt,
           displayText,
-          intent: "recipe_recommendation",
+          uiAction: "findRecipes",
           selectedIngredients: items,
         });
       } catch (e) {

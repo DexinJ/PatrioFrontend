@@ -51,7 +51,7 @@ export function useGPTTools() {
   const {
     fridgeItems,
     shoppingListItems,
-    addToFridge, // addToFridge(name, quantity, tagIds, expiresAt = null, expiresInDays?)
+    addToFridge, // addToFridge(name, quantity, tagIds, expiresAt = null, expiresInDays)
     addToShoppingList, // addToShoppingList(name, quantity, tagIds)
     removeFromFridge,
     removeFromShoppingList,
@@ -99,25 +99,30 @@ export function useGPTTools() {
       .filter(Boolean);
   };
 
+  // Validation results stay machine-readable: short codes plus the offending
+  // fields, never English prose the model could paste back to the user.
+  const categoryValidationError = (validation) => ({
+    success: false,
+    message: validation.message,
+    ...(Array.isArray(validation.required)
+      ? { required: validation.required }
+      : {}),
+    ...(Array.isArray(validation.missing) ? { missing: validation.missing } : {}),
+  });
+
   // Validate the required typed keys when object is provided
   const validateTypedCategories = (categories) => {
+    const required = ["storage", "urgency", "food_type"];
     if (!categories || typeof categories !== "object" || Array.isArray(categories)) {
-      return {
-        ok: false,
-        message: "categories must be an object: { storage, urgency, food_type, state? }",
-      };
+      return { ok: false, message: "invalid_categories", required };
     }
 
-    const storage = String(categories.storage || "").trim();
-    const urgency = String(categories.urgency || "").trim();
-    const foodType = String(categories.food_type || "").trim();
+    const missing = required.filter(
+      (key) => !String(categories[key] || "").trim()
+    );
 
-    if (!storage || !urgency || !foodType) {
-      return {
-        ok: false,
-        message:
-          "Missing required categories. Required: storage, urgency, food_type. Example: { storage:'Fridge', urgency:'Use soon', food_type:'Dairy' }",
-      };
+    if (missing.length > 0) {
+      return { ok: false, message: "missing_categories", missing, required };
     }
 
     return { ok: true };
@@ -171,11 +176,12 @@ export function useGPTTools() {
     return { ok: missing.length === 0, ids: Array.from(new Set(ids)), missing };
   };
 
-  const formatAcceptedCategories = (categories, tagIds) => {
+  // Labels that could not be mapped to a preset tag, returned as data rather
+  // than as an English aside the model could repeat.
+  const unmappedCategoryLabels = (categories, tagIds) => {
     const labels = normalizeCategoriesToLabels(categories);
-    if (labels.length === 0) return "";
-    if (tagIds.length === 0) return " (categories ignored: not in preset tags)";
-    return ` (categories: ${labels.join(", ")})`;
+    if (labels.length === 0 || tagIds.length > 0) return [];
+    return labels;
   };
 
   // -----------------------------
@@ -209,8 +215,8 @@ export function useGPTTools() {
   };
 
   // Convert an AI whole-day estimate into an absolute ISO date the edit
-  // pipeline can store. No estimate means the current value is kept; the app's
-  // tag-based predictor is the fallback for newly added items.
+  // pipeline can store. AI edit paths validate expiresInDays before calling
+  // this, so the fallback is only for non-AI/internal callers.
   const resolveExpiryForEdit = ({ expiresInDays, fallback }) => {
     const days = normalizeShelfLifeDays(expiresInDays);
     if (days) return addDaysIso(new Date().toISOString(), days);
@@ -242,8 +248,8 @@ export function useGPTTools() {
   // Tools
   // -----------------------------
   return {
-    // Expiry is optional: the AI supplies a whole-day estimate and the app
-    // anchors it at commit time; without one the tag-based predictor applies.
+    // Expiry is required: the AI always supplies a whole-day estimate and the
+    // app anchors it at commit time.
     addFridgeItem: async ({
       name,
       quantity = "1",
@@ -254,20 +260,27 @@ export function useGPTTools() {
       if (!n) return { success: false, message: "Missing item name." };
 
       const v = validateTypedCategories(categories);
-      if (!v.ok) return { success: false, message: v.message };
+      if (!v.ok) return categoryValidationError(v);
 
       const tagIds = categoriesToPresetTagIds(categories);
       const exDays = normalizeShelfLifeDays(expiresInDays);
+      if (!exDays) {
+        return {
+          success: false,
+          message:
+            "Missing or invalid expiresInDays. Provide a positive whole-day shelf-life estimate.",
+        };
+      }
 
       addToFridge(n, String(quantity || "1"), tagIds, null, exDays);
 
-      const expiryNote = exDays
-        ? `shelf life: ${exDays} day${exDays === 1 ? "" : "s"}`
-        : "estimated expiry from its category";
+      const expiryNote = `shelf life: ${exDays} day${exDays === 1 ? "" : "s"}`;
+      const unmapped = unmappedCategoryLabels(categories, tagIds);
 
       return {
         success: true,
-        message: `${quantity} ${n} added to fridge (${expiryNote}).${formatAcceptedCategories(categories, tagIds)}`,
+        message: `${quantity} ${n} added to fridge (${expiryNote}).`,
+        ...(unmapped.length ? { ignoredCategories: unmapped } : {}),
       };
     },
 
@@ -276,17 +289,16 @@ export function useGPTTools() {
       if (!n) return { success: false, message: "Missing item name." };
 
       const v = validateTypedCategories(categories);
-      if (!v.ok) return { success: false, message: v.message };
+      if (!v.ok) return categoryValidationError(v);
 
       const tagIds = categoriesToPresetTagIds(categories);
       addToShoppingList(n, String(quantity || "1"), tagIds);
+      const unmapped = unmappedCategoryLabels(categories, tagIds);
 
       return {
         success: true,
-        message: `${quantity} ${n} added to shopping list.${formatAcceptedCategories(
-          categories,
-          tagIds
-        )}`,
+        message: `${quantity} ${n} added to shopping list.`,
+        ...(unmapped.length ? { ignoredCategories: unmapped } : {}),
       };
     },
 
@@ -352,7 +364,10 @@ export function useGPTTools() {
         if (!mapped.ok || mapped.ids.length === 0) {
           return {
             success: false,
-            message: `Invalid categories: ${mapped.missing.join(", ")}`,
+            message: "invalid_categories",
+            ...(Array.isArray(mapped.missing) && mapped.missing.length
+              ? { invalid: mapped.missing }
+              : {}),
           };
         }
         patch.tagIds = mapped.ids;
@@ -364,13 +379,18 @@ export function useGPTTools() {
             "expiresAt is not supported; estimate whole days with expiresInDays instead.",
         };
       }
-      if (updates.expiresInDays !== undefined) {
-        const resolved = resolveExpiryForEdit({
-          expiresInDays: updates.expiresInDays,
-          fallback: item.expiresAt ?? null,
-        });
-        if (resolved) patch.expiresAt = resolved;
+      const resolvedExpiry = resolveExpiryForEdit({
+        expiresInDays: updates.expiresInDays,
+        fallback: item.expiresAt ?? null,
+      });
+      if (!resolvedExpiry) {
+        return {
+          success: false,
+          message:
+            "Missing or invalid expiresInDays. Provide a positive whole-day shelf-life estimate.",
+        };
       }
+      patch.expiresAt = resolvedExpiry;
 
       if (Object.keys(patch).length === 0) {
         return { success: false, message: "No valid updates were provided." };
@@ -450,13 +470,17 @@ export function useGPTTools() {
           );
           continue;
         }
-        if (update.expiresInDays !== undefined) {
-          const resolved = resolveExpiryForEdit({
-            expiresInDays: update.expiresInDays,
-            fallback: item.expiresAt ?? null,
-          });
-          if (resolved) patch.expiresAt = resolved;
+        const resolvedExpiry = resolveExpiryForEdit({
+          expiresInDays: update.expiresInDays,
+          fallback: item.expiresAt ?? null,
+        });
+        if (!resolvedExpiry) {
+          failures.push(
+            `${item.name} (missing or invalid expiresInDays)`
+          );
+          continue;
         }
+        patch.expiresAt = resolvedExpiry;
 
         if (Object.keys(patch).length === 0) {
           failures.push(item.name);
@@ -520,67 +544,6 @@ export function useGPTTools() {
     },
 
     // -----------------------------
-    // ✅ Add missing recipe ingredients to the shopping list (proposal card)
-    // Allowed as the one follow-up action after recommendRecipes. Never adds
-    // hypothetical ingredients to the fridge.
-    // -----------------------------
-    proposeAddMissingIngredientsToShoppingList: async ({
-      items = [],
-      title,
-    }) => {
-      const safeItems = (Array.isArray(items) ? items : [])
-        .map((it) => {
-          const name = String(it?.name ?? "").trim();
-          if (!name) return null;
-          const categories = normalizeFridgeProposalCategories(it?.categories);
-          return {
-            name,
-            quantity: normalizeFridgeProposalQuantity(it?.quantity),
-            categories,
-          };
-        })
-        .filter(Boolean);
-
-      if (safeItems.length === 0) {
-        return {
-          ok: false,
-          proposalShown: false,
-          error: "No shopping-list items were provided.",
-        };
-      }
-
-      const actionId = createFridgeProposalActionId();
-      setMessages?.((prev) => [
-        ...(Array.isArray(prev) ? prev : []),
-        {
-          id: actionId,
-          role: "assistant",
-          type: "ui_action",
-          action: {
-            kind: "add_missing_to_shopping_list",
-            actionId,
-            status: "pending",
-            title:
-              typeof title === "string" && title.trim()
-                ? title.trim().slice(0, 160)
-                : i18next.t("messageList.addMissingIngredients"),
-            items: safeItems,
-          },
-        },
-      ]);
-
-      return {
-        ok: true,
-        proposalShown: true,
-        committed: false,
-        actionId,
-        itemCount: safeItems.length,
-        message:
-          "A confirmation card proposing the missing ingredients is shown to the user. Nothing was added yet; the user must tap the card's button to confirm. Tell the user their items are ready to review and ask them to confirm on the card.",
-      };
-    },
-
-    // -----------------------------
     // ✅ streamlineLists tool
     // Delegates to GlobalContext.streamlineLists (single source of truth)
     //
@@ -622,7 +585,7 @@ export function useGPTTools() {
                 }))
               : [],
           },
-          warning: "GlobalContext.streamlineLists not found; no changes applied.",
+          warning: "unavailable",
         };
       }
 
@@ -749,27 +712,29 @@ export function useGPTTools() {
     proposeAddAllToFridge: async ({ items, title }) => {
       const clean = (v) => String(v ?? "").trim();
       const safeTitle = typeof title === "string" ? title.trim() : "";
+      const sourceItems = Array.isArray(items) ? items : [];
 
-      const safeItems = (Array.isArray(items) ? items : [])
+      const safeItems = sourceItems
         .map((it) => {
           const name = clean(it?.name);
           if (!name) return null;
+
+          const expiresInDays = normalizeShelfLifeDays(
+            it?.expiresInDays ??
+              it?.expires_in_days ??
+              it?.shelfLifeDays
+          );
+          if (!expiresInDays) return null;
 
           return {
             name,
             quantity: normalizeFridgeProposalQuantity(it?.quantity),
             categories: normalizeFridgeProposalCategories(it?.categories),
 
-            // The AI estimates shelf life in whole days only; the app anchors
-            // the date at commit time (or the tag-based predictor fills it).
-            // Legacy aliases are tolerated for old callers but never expose
-            // absolute dates in the schema.
-            expiresInDays:
-              normalizeShelfLifeDays(
-                it?.expiresInDays ??
-                  it?.expires_in_days ??
-                  it?.shelfLifeDays
-              ) ?? undefined,
+            // The AI always estimates shelf life in whole days; the app
+            // anchors the date at commit time. Legacy aliases are tolerated
+            // for old callers but never expose absolute dates in the schema.
+            expiresInDays,
           };
         })
         .filter(Boolean);
@@ -778,7 +743,16 @@ export function useGPTTools() {
         return {
           ok: false,
           proposalShown: false,
-          error: "No valid fridge items were provided.",
+          error: "No valid fridge items were provided. Every item requires a name, categories, and a valid expiresInDays.",
+        };
+      }
+
+      if (safeItems.length !== sourceItems.length) {
+        return {
+          ok: false,
+          proposalShown: false,
+          error:
+            "Every proposed fridge item requires a name, categories, and a valid expiresInDays.",
         };
       }
 
@@ -797,7 +771,7 @@ export function useGPTTools() {
             title: safeTitle || i18next.t("messageList.addAllToFridge"),
             items: safeItems,
     
-            // expiresInDays is OPTIONAL – predictor will fill if missing
+            // expiresInDays is REQUIRED and was validated above.
             requires: [],
           },
         },

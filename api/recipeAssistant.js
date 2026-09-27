@@ -77,7 +77,7 @@ export const RECOMMEND_RECIPES_TOOL = {
       mustUseIngredients: stringArray(20),
       excludedIngredients: stringArray(20),
       servings: { type: "integer", minimum: 1, maximum: 12 },
-      resultCount: { type: "integer", minimum: 1, maximum: 4 },
+      resultCount: { type: "integer", minimum: 1, maximum: 6 },
     }),
   },
 };
@@ -126,108 +126,15 @@ export const PROPOSE_RECIPE_PREFERENCE_UPDATE_TOOL = {
   },
 };
 
-const RECIPE_LANGUAGE =
-  /\b(recipe|recipes|meal ideas?|dish ideas?|what (?:can|should) i (?:cook|make|eat)|what to (?:cook|make|eat)|breakfast ideas?|lunch ideas?|dinner ideas?|snack ideas?|(?:suggest|recommend|find|want|feel like|craving)\b.{0,40}\b(?:food|meal|dish|recipe|breakfast|lunch|dinner)|something (?:light|healthy|quick|hearty)(?: to eat)?|(?:under|below|less than) \d{2,4} calories|low[- ]calorie)\b/i;
-const PERSISTENT_PREFERENCE_LANGUAGE =
-  /\b(remember|save (?:that|my)|always|usually|set my (?:recipe|food|meal)|my (?:recipe|food|meal) preferences?)\b/i;
+// The client no longer classifies text into a recipe intent. Routing is
+// server-owned: the backend matches high-precision phrasings, the model sees
+// the full tool set, and the only forced recipe flow left is an explicit UI
+// action (see RECIPE_UI_ACTIONS in the backend's chat/recipeRequest.js).
+export const RECIPE_UI_ACTIONS = Object.freeze(["findRecipes"]);
 
-const MEAL_REQUEST_TERMS = {
-  en: [
-    "breakfast",
-    "brunch",
-    "lunch",
-    "dinner",
-    "supper",
-    "snack",
-    "dessert",
-    "meal",
-    "recipe",
-    "recipes",
-    "dish",
-    "dishes",
-  ],
-  zh: [
-    "早餐",
-    "午饭",
-    "午餐",
-    "晚饭",
-    "晚餐",
-    "甜点",
-    "点心",
-    "零食",
-    "食谱",
-    "菜",
-  ],
-};
-
-const RECIPE_VARIATION_TERMS = {
-  en: [
-    "more",
-    "another",
-    "other",
-    "else",
-    "different",
-    "new ideas",
-    "next",
-  ],
-  zh: ["更多", "别的", "其他", "其他的", "换", "再", "新"],
-};
-
-function assistantResponseText(message) {
-  if (!message) return "";
-  if (typeof message?.content === "string") return message.content;
-  if (Array.isArray(message?.content)) {
-    return message.content
-      .map((part) => part?.text || "")
-      .join(" ")
-      .trim();
-  }
-  // Structured chat messages (for example recipe cards) carry their short
-  // conversational placeholder in a top-level text field.
-  if (typeof message?.text === "string") return message.text;
-  return "";
-}
-
-export function inferChatIntent({
-  text,
-  imageUri,
-  intent,
-  history = [],
-  language = "en",
-} = {}) {
-  if (intent === "recipe_recommendation") return intent;
-  if (intent === "chat") return intent;
-  if (String(imageUri || "").trim()) return "chat";
-
-  const message = String(text || "").trim();
-  if (!message || PERSISTENT_PREFERENCE_LANGUAGE.test(message)) return "chat";
-  if (RECIPE_LANGUAGE.test(message)) return "recipe_recommendation";
-
-  const normalized = message.toLowerCase();
-  const isChinese = String(language || "").toLowerCase().startsWith("zh");
-  const mealTerms = isChinese
-    ? MEAL_REQUEST_TERMS.zh
-    : MEAL_REQUEST_TERMS.en;
-  if (mealTerms.some((term) => normalized.includes(term))) {
-    return "recipe_recommendation";
-  }
-
-  // Variation follow-ups ("more", "something else", "换一个") only count when
-  // the previous assistant turn was a recipe answer, so ordinary chat is not
-  // hijacked.
-  const priorAssistant = [...(Array.isArray(history) ? history : [])]
-    .reverse()
-    .find((entry) => entry?.role === "assistant");
-  const priorText = assistantResponseText(priorAssistant).toLowerCase();
-  const wasRecipeAnswer =
-    /recipe|recommend|suggest|idea|推荐|食谱|做法/i.test(priorText);
-  if (!wasRecipeAnswer) return "chat";
-  const variationTerms = isChinese
-    ? RECIPE_VARIATION_TERMS.zh
-    : RECIPE_VARIATION_TERMS.en;
-  return variationTerms.some((term) => normalized.includes(term))
-    ? "recipe_recommendation"
-    : "chat";
+export function normalizeRecipeUiAction(value) {
+  const action = typeof value === "string" ? value.trim().slice(0, 40) : "";
+  return RECIPE_UI_ACTIONS.includes(action) ? action : "";
 }
 
 export function buildRecipeContext({

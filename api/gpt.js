@@ -43,6 +43,10 @@ import {
 } from "../modules/apple-intelligence/src";
 import { insertAssistantAboveStructuredMessage } from "../utils/chatMessageOrder";
 import { normalizeRecipeCards } from "../utils/recipeCards";
+import {
+  applyPostSearchHelpers,
+  buildPreSearchHints,
+} from "./recipeHelperRunner";
 
 const REQUEST_TIMEOUT_MS = 180_000;
 const STREAM_RENDER_INTERVAL_MS = 50;
@@ -1156,7 +1160,7 @@ const useGptRuntime = () => {
 
   async function requestRecipeRecommendations(
     overrides,
-    { signal, lifecycleGeneration, recipeContext }
+    { signal, lifecycleGeneration, recipeContext, providerKind, hints }
   ) {
     const currentUser = auth.currentUser;
     if (!currentUser) {
@@ -1180,7 +1184,12 @@ const useGptRuntime = () => {
         },
         // Ask for the rich payload (ingredients + instructions) so the app can
         // render interactive recipe cards for custom/Apple providers too.
-        body: JSON.stringify({ overrides, recipeContext }),
+        body: JSON.stringify({
+          overrides,
+          recipeContext,
+          ...(providerKind ? { provider: { kind: providerKind } } : {}),
+          ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
+        }),
       },
       { signal }
     );
@@ -1189,6 +1198,118 @@ const useGptRuntime = () => {
       throw backendErrorFromMessage(data, "RECIPE_RECOMMENDATION_FAILED");
     }
     return data;
+  }
+
+  /**
+   * The BYO recipe flow. Our server still searches (Serper is shared) and still
+   * validates everything, but every model step — aliases, ideas, missing-item
+   * structuring, translation, estimation, dedupe, page extraction — runs on the
+   * user's own provider through `recipeHelperRunner`. Our key is never used.
+   */
+  async function byoRecipeSearch(args, {
+    signal,
+    lifecycleGeneration,
+    recipeContext,
+    provider,
+    language,
+  }) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw backendErrorFromMessage(
+        {
+          code: "AUTH_REQUIRED",
+          message: i18next.t("errors.signInForRecipes"),
+        },
+        "AUTH_REQUIRED"
+      );
+    }
+    const token = await currentUser.getIdToken();
+    const inventory = (Array.isArray(recipeContext?.inventory)
+      ? recipeContext.inventory
+      : []
+    )
+      .map((item) => (typeof item === "string" ? item : item?.name))
+      .filter(Boolean)
+      .slice(0, 20);
+    const ingredientTerms = [
+      ...(Array.isArray(args?.mustUseIngredients) ? args.mustUseIngredients : []),
+      ...(Array.isArray(recipeContext?.selectedIngredients)
+        ? recipeContext.selectedIngredients
+        : []),
+    ].filter(Boolean);
+
+    let hints = {};
+    try {
+      hints = await buildPreSearchHints(
+        {
+          dishQuery: typeof args?.dishQuery === "string" ? args.dishQuery : "",
+          ingredientTerms,
+          inventory,
+          mealType: args?.mealType || "",
+          language,
+        },
+        provider,
+        { apiBaseUrl: API_BASE_URL, token }
+      );
+    } catch {
+      hints = {};
+    }
+    assertCurrentLifecycle(lifecycleGeneration);
+
+    const payload = await requestRecipeRecommendations(args, {
+      signal,
+      lifecycleGeneration,
+      recipeContext,
+      providerKind: provider.type,
+      hints,
+    });
+    assertCurrentLifecycle(lifecycleGeneration);
+
+    let recipes = Array.isArray(payload?.recipes) ? payload.recipes : [];
+    let extractions = [];
+    try {
+      const applied = await applyPostSearchHelpers(payload, provider, {
+        apiBaseUrl: API_BASE_URL,
+        token,
+      });
+      recipes = applied.recipes;
+      extractions = applied.extractions;
+    } catch {
+      // Helper work is additive; the server's own result stays in place.
+    }
+    assertCurrentLifecycle(lifecycleGeneration);
+
+    if (extractions.length > 0) {
+      try {
+        const { response, data } = await fetchWithLifecycleTimeout(
+          `${API_BASE_URL}/api/recipes/apply-extractions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            // The server re-validates every extracted recipe before it can be
+            // shown, so client-side extraction cannot bypass any rule.
+            body: JSON.stringify({
+              provider: { kind: provider.type },
+              dishQuery: typeof args?.dishQuery === "string" ? args.dishQuery : "",
+              recipeContext,
+              recipes,
+              extractions,
+            }),
+          },
+          { signal }
+        );
+        if (response.ok && Array.isArray(data?.recipes)) {
+          recipes = data.recipes;
+        }
+      } catch {
+        // Keep the validated search results.
+      }
+    }
+
+    return { ...payload, recipes };
   }
 
   async function runCustomAi(
@@ -1295,10 +1416,17 @@ const useGptRuntime = () => {
         const handler =
           name === "recommendRecipes"
             ? (args) =>
-                requestRecipeRecommendations(args, {
+                byoRecipeSearch(args, {
                   signal,
                   lifecycleGeneration,
                   recipeContext,
+                  language: recipeContext?.language || "en",
+                  provider: {
+                    type: "custom",
+                    baseUrl,
+                    apiKey,
+                    model,
+                  },
                 })
             : toolHandlers?.[name];
         let result;
@@ -1420,10 +1548,12 @@ const useGptRuntime = () => {
       const handler =
         name === "recommendRecipes"
           ? (args) =>
-              requestRecipeRecommendations(args, {
+              byoRecipeSearch(args, {
                 signal,
                 lifecycleGeneration,
                 recipeContext,
+                language: recipeContext?.language || "en",
+                provider: { type: "apple" },
               })
           : toolHandlersRef.current?.[name];
       const isolatedTool = APPLE_AI_ISOLATED_TOOL_NAMES.has(name);

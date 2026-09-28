@@ -143,39 +143,18 @@ export function missingItemsStatus(recipe, shoppingListItems) {
 }
 
 // ---------------------------------------------------------------------------
-// Integration notes (not applied)
+// Wiring
 // ---------------------------------------------------------------------------
 //
-// 1. context/GlobalContext.js — addManyToShoppingList is the shared add path.
-//    Skipping names already on the list there covers every caller, not just
-//    this button, and it returns only what it actually added so callers can
-//    report honestly:
+// context/GlobalContext.js uses `planShoppingListAdditions` in
+// addManyToShoppingList, so names already on the list are skipped for every
+// caller rather than only for this button.
+// components/RecipeResultCards.js renders RecipeMissingItemsButton in the card
+// and in the modal.
+// utils/recipeCards.js keeps `missingItems` when a card is normalized for
+// storage, so the button survives a reload.
 //
-//      import { planShoppingListAdditions } from "../utils/recipeShoppingList";
-//      ...
-//      const addManyToShoppingList = (items = []) => {
-//        const { additions } = planShoppingListAdditions(shoppingListItems, items);
-//        if (additions.length === 0) return [];
-//        ...existing mapping...
-//        setShoppingListItems((previous) => [...previous, ...mapped]);
-//        return mapped;
-//      };
-//
-//    `shoppingListItems` is already in scope in that component. Note this also
-//    changes the single-item addToShoppingList, which delegates here.
-//
-// 2. components/RecipeResultCards.js — render the button in the card and in the
-//    modal, passing the same recipe:
-//
-//      import RecipeMissingItemsButton from "./RecipeMissingItemsButton";
-//      ...
-//      <RecipeMissingItemsButton recipe={recipe} />
-//
-// 3. utils/recipeCards.js — keep the payload field when a card is normalized
-//    for storage, or the button disappears after a reload:
-//
-//      missingItems: clipList(source.missingItems, MAX_MISSING_ITEMS),
-//
-// 4. locales/en.json and locales/zh.json — add the button strings listed in
-//    messageList.recipes: addMissingItems, addMissingItemsCount, alreadyOnList,
-//    addedToShoppingList, addedSomeToShoppingList, addToShoppingListFailed.
+// Who fills `missingItems`: the backend splits the publisher lines on the
+// pantrio path, and for a custom API key or Apple AI it sends a `missingItems`
+// task descriptor instead — api/recipeHelperRunner.js runs that on the user's
+// own provider and merges `{ name, quantity }` back into the card.

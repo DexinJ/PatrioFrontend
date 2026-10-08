@@ -59,11 +59,6 @@ const {
   shouldFinalizeDeletionLocally,
 } = require("../api/accountDeletionPolicy.cjs");
 
-const APPLE_MANUAL_SIGN_IN_REVOCATION_MESSAGE =
-  i18next.t("account.manualAppleRevocationMessage");
-const APPLE_PENDING_SIGN_IN_REVOCATION_MESSAGE =
-  i18next.t("account.pendingAppleRevocationMessage");
-
 const DELETED_FIREBASE_ERROR_CODES = new Set([
   "auth/invalid-user-token",
   "auth/user-disabled",
@@ -130,8 +125,8 @@ function firebaseAccountGoneResolution(user, bearerToken) {
 function pendingDeletionRecoveryError({ uid, cause = null, signedOut = false } = {}) {
   const error = new Error(
     signedOut
-      ? "Pantrio found an unfinished account-deletion cleanup on this device. Sign in again to verify the server result, or clear this device's account data explicitly."
-      : "Pantrio could not safely verify the pending account deletion. Your account data remains locked on this device. Retry, sign out without erasing it, or clear this device's data explicitly."
+      ? i18next.t("errors.accountDeletionRecoverySignedOut")
+      : i18next.t("errors.accountDeletionRecoveryLocked")
   );
   error.code = "ACCOUNT_DELETION_STATUS_UNKNOWN";
   error.cause = cause;
@@ -181,7 +176,7 @@ async function requestDeletionAndResolveStatus(user, bearerToken) {
     if (classification.kind === "recent_auth_required") {
       const error = definitiveDeletionError(
         deleteResult,
-        "Sign in again with your account provider, then retry account deletion."
+        i18next.t("errors.recentAuthRequired")
       );
       error.code = "RECENT_AUTH_REQUIRED";
       throw error;
@@ -218,7 +213,7 @@ async function requestDeletionAndResolveStatus(user, bearerToken) {
     if (status.classification.kind === "not_requested") {
       throw definitiveDeletionError(
         status.result,
-        deleteError?.message || "The server did not accept account deletion."
+        deleteError?.message || i18next.t("errors.deletionNotAccepted")
       );
     }
     if (
@@ -278,7 +273,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const storePostAuthNotice = useCallback(async (notice) => {
-    const title = String(notice?.title || "Account update").trim();
+    const title = String(notice?.title || i18next.t("account.updateTitle")).trim();
     const message = String(notice?.message || "").trim();
     if (!message) return null;
 
@@ -342,12 +337,12 @@ export function AuthProvider({ children }) {
       if (manualAppleRevocation) {
         notice = {
           title: i18next.t("account.finishDisconnectingApple"),
-          message: APPLE_MANUAL_SIGN_IN_REVOCATION_MESSAGE,
+            message: i18next.t("account.manualAppleRevocationMessage"),
         };
       } else if (pendingAppleRevocation) {
         notice = {
           title: i18next.t("account.appleAccessStillDisconnecting"),
-          message: APPLE_PENDING_SIGN_IN_REVOCATION_MESSAGE,
+            message: i18next.t("account.pendingAppleRevocationMessage"),
         };
       } else if (!visiblePurgeResult.ok) {
         notice = {
@@ -400,14 +395,14 @@ export function AuthProvider({ children }) {
             localPurgeComplete: visiblePurgeResult.ok,
           }).catch(() => {});
           const recoveryError = new Error(
-            error?.message || "Local Firebase sign-out failed."
+            error?.message || i18next.t("errors.signOutFailedLocal")
           );
           recoveryError.code = error?.code || "LOCAL_SIGN_OUT_FAILED";
           recoveryError.cause = error;
           recoveryError.accountDeletionRecoveryRequired = true;
           setAuthRecoveryError(
             new Error(
-              "The account was deleted, but this device could not finish signing out. Retry local sign-out before using Pantrio again."
+              i18next.t("errors.signOutIncomplete")
             )
           );
           throw recoveryError;
@@ -448,12 +443,12 @@ export function AuthProvider({ children }) {
       const nextUser = rawUserRef.current || auth.currentUser;
       if (!nextUser) {
         return Promise.reject(
-          new Error("The deleted account is no longer signed in on this device.")
+          new Error(i18next.t("errors.deletedAccountSignedOut"))
         );
       }
       if (!hasExactDeletionUid(payload, nextUser.uid)) {
         const mismatchError = new Error(
-          "The server deletion state belongs to a different account."
+          i18next.t("errors.deletionStateOtherAccount")
         );
         mismatchError.code = "ACCOUNT_DELETION_UID_MISMATCH";
         return Promise.reject(mismatchError);
@@ -462,7 +457,7 @@ export function AuthProvider({ children }) {
       const classification = classifyDeletionStatus(410, payload);
       if (!shouldFinalizeDeletionLocally(classification)) {
         const invalidStateError = new Error(
-          "The server did not return an accepted account-deletion state."
+          i18next.t("errors.deletionStateUnaccepted")
         );
         invalidStateError.code = "ACCOUNT_DELETION_STATE_INVALID";
         return Promise.reject(invalidStateError);
@@ -503,7 +498,7 @@ export function AuthProvider({ children }) {
           setAccountDeletionError(
             error instanceof Error
               ? error
-              : new Error("Could not finish remote account deletion.")
+              : new Error(i18next.t("errors.remoteDeletionIncomplete"))
           );
         }
       });
@@ -610,7 +605,7 @@ export function AuthProvider({ children }) {
             });
           } else {
             const error = new Error(
-              "The pending account deletion could not be reconciled safely. Check your connection and retry."
+              i18next.t("errors.deletionReconcileFailed")
             );
             error.code = "ACCOUNT_DELETION_STATUS_UNKNOWN";
             error.accountDeletionRecoveryRequired = true;
@@ -660,7 +655,7 @@ export function AuthProvider({ children }) {
         setAuthRecoveryError(
           error instanceof Error
             ? error
-            : new Error("The account status could not be verified.")
+            : new Error(i18next.t("errors.accountStatusUnverified"))
         );
       }
     },
@@ -706,7 +701,7 @@ export function AuthProvider({ children }) {
       setAuthRecoveryError(
         error instanceof Error
           ? error
-          : new Error("Local account cleanup could not be checked.")
+          : new Error(i18next.t("errors.localCleanupUnverified"))
       );
     } finally {
       if (isCurrent()) setLoading(false);
@@ -776,7 +771,7 @@ export function AuthProvider({ children }) {
       .then((notice) => {
         if (cancelled || !notice?.message) return;
         setPostAuthNotice({
-          title: String(notice.title || "Account update"),
+          title: String(notice.title || i18next.t("account.updateTitle")),
           message: String(notice.message),
           audienceUid: notice.audienceUid
             ? String(notice.audienceUid)
@@ -791,7 +786,7 @@ export function AuthProvider({ children }) {
 
   const beginProvisioning = useCallback(() => {
     if (provisioningRef.current) {
-      throw new Error("Another account setup is still finishing.");
+      throw new Error(i18next.t("errors.accountSetupInProgress"));
     }
 
     const generation = provisioningGenerationRef.current + 1;
@@ -805,7 +800,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const queuePostAuthNotice = useCallback((notice) => {
-    const title = String(notice?.title || "Account update").trim();
+    const title = String(notice?.title || i18next.t("account.updateTitle")).trim();
     const message = String(notice?.message || "").trim();
     if (!message) return;
     setPostAuthNotice({
@@ -889,7 +884,7 @@ export function AuthProvider({ children }) {
         setAuthRecoveryError(
           error instanceof Error
             ? error
-            : new Error("The incomplete account could not be signed out.")
+            : new Error(i18next.t("errors.incompleteAccountSignedOut"))
         );
       }
       throw error;
@@ -911,7 +906,7 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async (options = {}) => {
     if (accountDeletionRef.current.pending) {
-      throw new Error("Account deletion is already finishing.");
+      throw new Error(i18next.t("errors.deletionAlreadyFinishing"));
     }
     authStateGenerationRef.current += 1;
     const usesGoogle = lastProviderIdsRef.current.includes("google.com");
@@ -943,7 +938,7 @@ export function AuthProvider({ children }) {
 
     const nextUser = rawUserRef.current || auth.currentUser || user;
     if (!nextUser) {
-      return Promise.reject(new Error("Sign in before deleting your account."));
+      return Promise.reject(new Error(i18next.t("errors.signInBeforeDeletion")));
     }
 
     // Close route/session guards synchronously before the first storage or
@@ -1036,7 +1031,7 @@ export function AuthProvider({ children }) {
         setAccountDeletionError(
           error instanceof Error
             ? error
-            : new Error("Could not finish account deletion.")
+            : new Error(i18next.t("errors.deletionFinishFailed"))
         );
       }
     });
@@ -1080,7 +1075,7 @@ export function AuthProvider({ children }) {
       String(currentUser?.uid || "").trim();
     if (!uid) {
       return Promise.reject(
-        new Error("No pending account data was found on this device.")
+        new Error(i18next.t("errors.noPendingAccountData"))
       );
     }
 
@@ -1150,7 +1145,7 @@ export function AuthProvider({ children }) {
           appleMayStillBeLinked
             ? {
                 title: i18next.t("account.finishDisconnectingApple"),
-                message: APPLE_MANUAL_SIGN_IN_REVOCATION_MESSAGE,
+                message: i18next.t("account.manualAppleRevocationMessage"),
               }
             : {
                 title: i18next.t("account.deviceDataCleared"),
@@ -1246,7 +1241,7 @@ export function AuthProvider({ children }) {
       setAuthRecoveryError(
         error instanceof Error
           ? error
-          : new Error("The local session could not be signed out.")
+          : new Error(i18next.t("errors.sessionSignOutFailed"))
       );
     }
   }, [signOut]);

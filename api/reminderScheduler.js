@@ -138,7 +138,7 @@ async function performReminderSync({ settings, fridgeItems }) {
     );
     throw failed.reason instanceof Error
       ? failed.reason
-      : new Error("Could not schedule all reminders.");
+      : new Error(i18next.t("notifications.scheduleFailed"));
   }
   return { scheduled: identifiers.length, permission: "granted" };
 }

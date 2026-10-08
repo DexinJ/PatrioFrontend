@@ -6,10 +6,10 @@
 const MAX_RECIPE_CARDS = 6;
 const MAX_STRING_LENGTH = 300;
 const MAX_INGREDIENT_LENGTH = 160;
-const MAX_INSTRUCTION_LENGTH = MAX_STRING_LENGTH;
 const MAX_MISSING_INGREDIENTS = 30;
 const MAX_USED_INGREDIENTS = 20;
-const MAX_INSTRUCTIONS = 12;
+const MAX_METHOD_BULLETS = 4;
+const MAX_METHOD_LENGTH = 160;
 const MAX_MISSING_PREVIEW_ITEMS = 3;
 
 // Pantry staples are real "missing" ingredients but are rarely the reason a
@@ -189,11 +189,13 @@ export function normalizeRecipeCard(recipe) {
     usedIngredients: clipList(source.usedIngredients, MAX_USED_INGREDIENTS),
     missingIngredients,
     missingItems,
-    instructions: clipList(
-      source.instructions,
-      MAX_INSTRUCTIONS,
-      MAX_INSTRUCTION_LENGTH
-    ),
+    // Publisher step prose is never persisted or rendered. Legacy cards that
+    // still carry `instructions` simply stop showing a method; what renders is
+    // the authored summary the server produced, plus the step count.
+    method: clipList(source.method, MAX_METHOD_BULLETS, MAX_METHOD_LENGTH),
+    stepCount: Number.isFinite(source.stepCount)
+      ? Math.max(0, Math.trunc(source.stepCount))
+      : 0,
     whyRecommended: clipText(source.whyRecommended, 240),
     // Set by the dish pipeline when the named dish had no exact published
     // recipe and this is the closest labelled near match.

@@ -13,6 +13,7 @@ import {
   GlobalContext,
 } from "../context/GlobalContext";
 import { API_BASE_URL, BACKEND_WS_URL } from "./backendConfig";
+import { buildAppleToolGuide } from "./appleToolGuide";
 import { createBackendResponseError } from "./backendErrors";
 import { buildSystemMessage } from "./buildSystemMessage";
 import {
@@ -24,6 +25,7 @@ import {
   // checkAndSummarize,
   // formatConversationMemory,
 } from "./memoryManager";
+import { sendWithReasoningFallback } from "./reasoningPolicy";
 import {
   getAiProviderSlotSettings,
   resolveProviderSlotSelection,
@@ -38,10 +40,22 @@ import {
   RECOMMEND_RECIPES_TOOL,
 } from "./recipeAssistant";
 import {
+  getAppleIntelligenceAvailability,
   generateAppleIntelligenceToolTurn,
   generateAppleIntelligenceToolTurnWithImages,
 } from "../modules/apple-intelligence/src";
+import {
+  appleInputBudgetChars,
+  applePromptFits,
+} from "./appleContextBudget";
+import {
+  APPLE_TOOL_CALL_EXHAUSTED,
+  APPLE_TOOL_CALL_RUN,
+  appleToolCallSignature,
+  createAppleToolCallTracker,
+} from "./appleToolLoop";
 import { insertAssistantAboveStructuredMessage } from "../utils/chatMessageOrder";
+import { isReplayableChatMessage } from "../utils/chatReplayPolicy";
 import { normalizeRecipeCards } from "../utils/recipeCards";
 import {
   applyPostSearchHelpers,
@@ -57,11 +71,16 @@ const APPLE_AI_ISOLATED_TOOL_NAMES = new Set([
   "proposeAddAllToFridge",
   "proposeBulkFridgeUpdate",
 ]);
-const APPLE_AI_MAX_INPUT_CHARS = 28_000;
+// Apple budgets in tokens and the usable window depends on which model answers
+// (4K on-device, 32K on Private Cloud Compute); see appleContextBudget.
+const APPLE_AI_MAX_REPEATED_CALLS = 2;
 const APPLE_AI_TOOL_DESCRIPTION_MAX_CHARS = 220;
 const APPLE_AI_RECIPE_SUMMARY_MAX_RECIPES = 4;
 const APPLE_AI_MISSING_ITEMS_PER_RECIPE = 12;
 const APPLE_AI_CONTEXT_ITEM_LIMIT = 40;
+// Tools this build can execute locally. The backend only offers a tool when the
+// client advertises it, so older builds keep the single-item path.
+const CLIENT_TOOL_CAPABILITIES = Object.freeze(["massAddShoppingItems"]);
 // const MAX_IMAGE_REQUEST_URI_LENGTH = 4 * 1024 * 1024;
 const GptContext = createContext(null);
 
@@ -132,9 +151,19 @@ const fridgeEditPatchField = objectSchema(
   ["expiresInDays"]
 );
 
+const shoppingListItemField = objectSchema(
+  {
+    name: stringField,
+    quantity: stringField,
+    categories: categoriesField,
+  },
+  ["name", "categories"]
+);
+
 export const DIRECT_AI_TOOLS = [
   ["addFridgeItem", "Add an item to the fridge. Always include a whole-day shelf-life estimate in expiresInDays.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField, expiresInDays: expiresInDaysField }, ["name", "categories", "expiresInDays"])],
   ["addShoppingItem", "Add an item to the shopping list.", objectSchema({ name: stringField, quantity: stringField, categories: categoriesField }, ["name", "categories"])],
+  ["massAddShoppingItems", "Add several items to the shopping list in one call. Use this instead of calling addShoppingItem more than once. Items already on the list are skipped.", objectSchema({ items: { type: "array", minItems: 1, maxItems: 40, items: shoppingListItemField } }, ["items"])],
   ["removeFridgeItem", "Remove a fridge item by name.", objectSchema({ name: stringField }, ["name"])],
   ["removeShoppingItem", "Remove a shopping-list item by name.", objectSchema({ name: stringField }, ["name"])],
   ["findInFridge", "Check whether a fridge item exists.", objectSchema({ name: stringField }, ["name"])],
@@ -154,32 +183,19 @@ export const DIRECT_AI_TOOLS = [
 ]);
 
 function compactAppleToolDefinitions() {
-  return DIRECT_AI_TOOLS.map(({ function: tool }) => {
-    const parameters = tool.parameters || {};
-    const propertyNames = Object.keys(parameters.properties || {});
-    const requiredNames = Array.isArray(parameters.required)
-      ? parameters.required
-      : [];
-    const description = String(tool.description || "").slice(
-      0,
-      APPLE_AI_TOOL_DESCRIPTION_MAX_CHARS
-    );
-    const args = propertyNames.length
-      ? `${propertyNames.join(", ")}${
-          requiredNames.length
-            ? ` [required: ${requiredNames.join(", ")}]`
-            : ""
-        }`
-      : "none";
-
-    return `${tool.name}(${args}): ${description}`;
-  }).join("\n");
+  // The tool list is only useful if the model can see argument structure, so
+  // the guide spells out every shape the flattened lines refer to.
+  return buildAppleToolGuide(DIRECT_AI_TOOLS, {
+    descriptionMaxChars: APPLE_AI_TOOL_DESCRIPTION_MAX_CHARS,
+  });
 }
 
 function buildAppleInstructions(systemText) {
   return `${systemText}
 
 You can use the app tools listed below. Choose type "tool" whenever you need to read or change app data. Choose type "final" only when you can answer the user without another tool. Never claim that an action succeeded until its tool result says it succeeded. Use only an exact tool name from this list.
+
+If a tool result reports a problem, change the arguments to match the argument shapes below and call the tool once more. Never repeat a call you have already made.
 
 Current app state can change between messages. Do not answer questions about the current fridge, shopping list, preferences, or any other app data from an older assistant answer or older tool result. Whenever the answer depends on current app data, call the appropriate read tool again first, even if a similar answer appears earlier in this conversation.
 
@@ -234,6 +250,19 @@ function compactAppleToolResult(name, result) {
     };
   }
 
+  if (name === "massAddShoppingItems") {
+    return {
+      ok: true,
+      addedCount: result.addedCount || 0,
+      ...(result.skippedDuplicates
+        ? { skippedDuplicates: result.skippedDuplicates }
+        : {}),
+      ...(Array.isArray(result.skippedInvalid) && result.skippedInvalid.length
+        ? { skippedInvalid: result.skippedInvalid }
+        : {}),
+    };
+  }
+
   if (name === "streamlineLists") {
     const shoppingItems = Array.isArray(result?.items?.shopping)
       ? result.items.shopping
@@ -261,14 +290,21 @@ function compactAppleToolResult(name, result) {
   return result;
 }
 
-function assertApplePromptWithinLimit(instructions, prompt) {
-  const combinedLength = `${instructions}\n\n${prompt}`.length;
+// Errors the chat screen maps to a friendly message. They carry a code so the
+// UI never has to match on prose.
+function createAppleIntelligenceError(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
 
-  if (combinedLength > APPLE_AI_MAX_INPUT_CHARS) {
-    throw new Error(
-      "This conversation is too large for Apple Intelligence. Start a new chat or switch AI provider."
-    );
-  }
+function assertApplePromptWithinLimit(instructions, prompt, budgetChars) {
+  if (applePromptFits(instructions, prompt, budgetChars)) return;
+
+  throw createAppleIntelligenceError(
+    "APPLE_AI_REQUEST_TOO_LARGE",
+    i18next.t("chat.errors.appleRequestTooLarge")
+  );
 }
 
 function extractAppleImageBase64(messages) {
@@ -348,15 +384,9 @@ function makeRecipeCardMessage({ requestId = "", recipes, text = "" }) {
 }
 
 function recipeCardPlaceholderText(count) {
-  const language = String(
-    i18next.currentLanguageCode || i18next.language || "en"
-  ).toLowerCase();
-  const isChinese = language.startsWith("zh");
   // Display-only marker replayed to the model as context. It must read like a
   // natural assistant turn so nothing about the card UI or the pipeline leaks.
-  return isChinese
-    ? `这是为你找到的 ${count} 个菜谱。`
-    : `Here are ${count} recipe idea${count === 1 ? "" : "s"}.`;
+  return i18next.t("chat.recipeCardIntro", { count });
 }
 
 // The model should reply in the app's active language. The UI only ships
@@ -381,6 +411,7 @@ const TOOL_STATUS_KEYS = {
   removeFromFridge: "status.updatingFridge",
   updateFridgeItem: "status.updatingFridge",
   addToShoppingList: "status.updatingList",
+  massAddShoppingItems: "status.updatingList",
   editShoppingListItem: "status.updatingList",
   removeFromShoppingList: "status.updatingList",
   proposeAddAllToFridge: "status.preparingChanges",
@@ -413,6 +444,10 @@ function toChatCompletionsMessages(
     for (let i = 0; i < msgs.length; i++) {
       const m = msgs[i];
       const isLast = i === lastIdx;
+
+      // Error notices exist for the user, not the model. Replaying them leaks
+      // native framework errors and wastes context. See chatReplayPolicy.
+      if (!isReplayableChatMessage(m)) continue;
 
       // Recipe-card messages are display-only, but a one-line placeholder
       // keeps follow-up intent detection (and the model's context) aware that
@@ -1041,7 +1076,7 @@ const useGptRuntime = () => {
             wsRef.current !== ws ||
             ws.readyState !== WebSocket.OPEN
           ) {
-            throw new Error("The chat connection changed during tool execution.");
+            throw new Error(i18next.t("chat.errors.connectionChanged"));
           }
           ws.send(JSON.stringify({
             type: "tool_results",
@@ -1120,7 +1155,9 @@ const useGptRuntime = () => {
 
   async function waitWsOpen(ws) {
     if (ws.readyState === WebSocket.OPEN) return;
-    if (ws.readyState !== WebSocket.CONNECTING) throw new Error("WebSocket not open");
+    if (ws.readyState !== WebSocket.CONNECTING) {
+      throw new Error(i18next.t("chat.errors.connectionNotOpen"));
+    }
 
     await new Promise((resolve, reject) => {
       let timeoutId;
@@ -1139,17 +1176,17 @@ const useGptRuntime = () => {
 
       const onErr = () => {
         cleanup();
-        reject(new Error("WebSocket failed to connect"));
+        reject(new Error(i18next.t("chat.errors.connectionFailed")));
       };
 
       const onClose = () => {
         cleanup();
-        reject(new Error("WebSocket closed before connecting"));
+        reject(new Error(i18next.t("chat.errors.connectionClosedEarly")));
       };
 
       timeoutId = setTimeout(() => {
         cleanup();
-        reject(new Error("WebSocket connect timeout"));
+        reject(new Error(i18next.t("chat.errors.connectionTimeout")));
       }, 8000);
 
       ws.addEventListener("open", onOpen);
@@ -1182,8 +1219,9 @@ const useGptRuntime = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // Ask for the rich payload (ingredients + instructions) so the app can
-        // render interactive recipe cards for custom/Apple providers too.
+        // Ask for the rich payload (ingredients + method summary) so the app can
+        // render interactive recipe cards for custom/Apple providers too. The
+        // publisher's own steps are never part of it.
         body: JSON.stringify({
           overrides,
           recipeContext,
@@ -1333,9 +1371,11 @@ const useGptRuntime = () => {
       });
     const baseUrl = String(slotBaseUrl || configuredBaseUrl || "").trim().replace(/\/+$/, "");
 
-    if (!apiKey) throw new Error("Add an API key in Settings > Advanced.");
-    if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) throw new Error("The custom AI base URL is invalid.");
-    if (!model) throw new Error("Add a model name in Settings > Advanced.");
+    if (!apiKey) throw new Error(i18next.t("chat.errors.apiKeyRequired"));
+    if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
+      throw new Error(i18next.t("chat.errors.baseUrlInvalid"));
+    }
+    if (!model) throw new Error(i18next.t("chat.errors.modelRequired"));
 
     const conversation = [...messages];
     let recipeRecommendationCompleted = false;
@@ -1357,29 +1397,49 @@ const useGptRuntime = () => {
         tool_choice: "auto",
         parallel_tool_calls: false,
       };
-      const { response, data } = await fetchWithLifecycleTimeout(
-        `${baseUrl}/chat/completions`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
+      // BYO always runs at effort "none" (see api/reasoningPolicy.js): the
+      // user's own key pays for this call, and on GPT-5.6 the field is required
+      // whenever tools are attached. The fallback retries without it for custom
+      // endpoints that reject the key outright.
+      const sendRound = async (requestBody) => {
+        const { response, data } = await fetchWithLifecycleTimeout(
+          `${baseUrl}/chat/completions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(requestBody),
           },
-          body: JSON.stringify({
-            model,
-            messages: conversation,
-            ...toolPolicy,
-          }),
+          { signal }
+        );
+        assertCurrentLifecycle(lifecycleGeneration);
+        return { ok: response.ok, status: response.status, data };
+      };
+
+      const attempt = await sendWithReasoningFallback({
+        body: {
+          model,
+          messages: conversation,
+          ...toolPolicy,
         },
-        { signal }
-      );
-      assertCurrentLifecycle(lifecycleGeneration);
-      if (!response.ok) {
-        throw new Error(data?.error?.message || data?.message || `AI provider request failed (${response.status}).`);
+        model,
+        send: sendRound,
+      });
+      const data = attempt.data;
+      if (!attempt.ok) {
+        throw new Error(
+          data?.error?.message ||
+            data?.message ||
+            i18next.t("chat.errors.providerRequestFailed", {
+              status: attempt.status,
+            })
+        );
       }
 
       const message = data?.choices?.[0]?.message;
-      if (!message) throw new Error("The AI provider returned no message.");
+      if (!message) throw new Error(i18next.t("chat.errors.providerEmptyResponse"));
       conversation.push(message);
 
       const calls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
@@ -1476,7 +1536,7 @@ const useGptRuntime = () => {
       }
     }
 
-    throw new Error("The AI provider exceeded the tool-call limit.");
+    throw new Error(i18next.t("chat.errors.toolLimitExceeded"));
   }
 
   async function runAppleAi(
@@ -1495,9 +1555,17 @@ const useGptRuntime = () => {
       }));
     const instructions = buildAppleInstructions(systemText);
     const appleImageBase64 = extractAppleImageBase64(messages);
+    // The native module chooses the model, so ask it which one will answer and
+    // size the request to that window.
+    const inputBudgetChars = appleInputBudgetChars(
+      await getAppleIntelligenceAvailability()
+    );
     let recipeRecommendationCompleted = false;
     let toolsLockedAfterIsolatedAction = false;
     let recipeCardId = null;
+    const callTracker = createAppleToolCallTracker({
+      maxRepeats: APPLE_AI_MAX_REPEATED_CALLS,
+    });
 
     for (let step = 0; step < 6; step += 1) {
       assertCurrentLifecycle(lifecycleGeneration);
@@ -1511,7 +1579,7 @@ const useGptRuntime = () => {
       const prompt = conversation
         .map((message) => `${message.role}: ${message.content}`)
         .join("\n\n");
-      assertApplePromptWithinLimit(turnInstructions, prompt);
+      assertApplePromptWithinLimit(turnInstructions, prompt, inputBudgetChars);
       const turn = appleImageBase64.length
         ? await generateAppleIntelligenceToolTurnWithImages(
             turnInstructions,
@@ -1540,10 +1608,34 @@ const useGptRuntime = () => {
         };
       }
       if (type !== "tool") {
-        throw new Error("Apple Intelligence returned an invalid response.");
+        throw createAppleIntelligenceError(
+          "APPLE_AI_INVALID_RESPONSE",
+          i18next.t("chat.errors.appleInvalidResponse")
+        );
       }
 
       const name = String(turn?.name || "").trim();
+      const callState = callTracker.classify(
+        appleToolCallSignature(name, turn?.arguments || "{}")
+      );
+      if (callState !== APPLE_TOOL_CALL_RUN) {
+        if (callState === APPLE_TOOL_CALL_EXHAUSTED) {
+          throw createAppleIntelligenceError(
+            "APPLE_AI_TOOL_LIMIT",
+            i18next.t("chat.errors.appleRepeatedToolCall")
+          );
+        }
+        conversation.push({
+          role: "assistant",
+          content: `[internal] repeated step=${name}`,
+        });
+        conversation.push({
+          role: "tool",
+          content:
+            '[internal] result={"error":"repeated_call","fix":"That exact call was already made and did not succeed. Change the arguments so they match the required shape, or answer with a final step."}',
+        });
+        continue;
+      }
       const parsed = safeJsonParse(turn?.arguments || "{}");
       const handler =
         name === "recommendRecipes"
@@ -1618,7 +1710,10 @@ const useGptRuntime = () => {
       });
     }
 
-    throw new Error("Apple Intelligence exceeded the tool-call limit.");
+    throw createAppleIntelligenceError(
+      "APPLE_AI_TOOL_LIMIT",
+      i18next.t("chat.errors.appleToolLimit")
+    );
   }
 
   const runStreamMessage = async ({
@@ -1651,7 +1746,7 @@ const useGptRuntime = () => {
     //   throw new Error("The selected image is too large to send.");
     // }
     if (!normalizedText.trim() && !normalizedImageUri.trim()) {
-      throw new Error("A chat message must include text or an image.");
+      throw new Error(i18next.t("chat.errors.messageEmpty"));
     }
     const recipeContext = buildRecipeContext({
       fridgeItems,
@@ -1814,6 +1909,7 @@ const useGptRuntime = () => {
       // Explicit UI actions only. The backend owns text routing.
       ...(normalizedUiAction ? { uiAction: normalizedUiAction } : {}),
       recipeContext,
+      clientCapabilities: CLIENT_TOOL_CAPABILITIES,
     };
 
 

@@ -64,10 +64,21 @@ async function reauthenticateWithGoogle(user) {
   return { method: "google" };
 }
 
-export async function reauthenticateForAccountDeletion(user, options = {}) {
-  if (!user) throw new Error("Sign in before deleting your account.");
+export async function reauthenticateUser(user, options = {}) {
+  if (!user) throw new Error(i18next.t("errors.signInBeforeDeletion"));
 
-  const method = await getAccountDeletionReauthenticationMethod(user);
+  const purpose =
+    options.purpose === "email-change" ? "email-change" : "account-deletion";
+
+  // An email change must be confirmed with the password credential itself. The
+  // shared method chooser prefers Apple when it is linked, which would push a
+  // password account into an unrelated Apple flow - and fail outright on a
+  // device where Apple reauthentication is unavailable.
+  const method =
+    purpose === "email-change"
+      ? "password"
+      : await getAccountDeletionReauthenticationMethod(user);
+
   if (method === "apple") {
     const result = await reauthenticateWithApple(user);
     const appleLinkResult = await tryLinkAppleAuthorizationToBackend({
@@ -84,12 +95,18 @@ export async function reauthenticateForAccountDeletion(user, options = {}) {
   if (method === "password") {
     const password = String(options.password || "");
     if (!password) {
-      const error = new Error("Enter your password to confirm account deletion.");
+      // The account-deletion copy is intentionally unchanged; only the
+      // email-change purpose gets a new message.
+      const error = new Error(
+        purpose === "email-change"
+          ? i18next.t("auth.changeEmailPasswordRequired")
+          : i18next.t("auth.reauthPasswordRequired")
+      );
       error.code = "PASSWORD_REAUTHENTICATION_REQUIRED";
       throw error;
     }
     const email = String(user.email || "").trim();
-    if (!email) throw new Error("This account does not have a sign-in email.");
+    if (!email) throw new Error(i18next.t("auth.reauthNoEmail"));
     await reauthenticateWithCredential(
       user,
       EmailAuthProvider.credential(email, password)
@@ -99,15 +116,20 @@ export async function reauthenticateForAccountDeletion(user, options = {}) {
 
   if (method === "apple_unavailable") {
     const error = new Error(
-      "Apple confirmation is not available on this device. Sign out and sign in again on an Apple device, then delete the account from Settings."
+      i18next.t("auth.reauthAppleUnavailable")
     );
     error.code = "APPLE_REAUTHENTICATION_UNAVAILABLE";
     throw error;
   }
 
   const error = new Error(
-    "This sign-in method cannot be confirmed in the app. Sign out, sign in again, and retry."
+    i18next.t("auth.reauthUnsupported")
   );
   error.code = "UNSUPPORTED_REAUTHENTICATION_PROVIDER";
   throw error;
+}
+
+// Existing callers keep the account-deletion entry point.
+export function reauthenticateForAccountDeletion(user, options = {}) {
+  return reauthenticateUser(user, { ...options, purpose: "account-deletion" });
 }

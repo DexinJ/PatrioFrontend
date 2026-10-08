@@ -28,6 +28,7 @@ import {
   isBulkProposalActionConsumed,
 } from "../utils/bulkProposal";
 import { translateTagLabel } from "../utils/tagTranslation";
+import { joinList } from "../utils/localeList.js";
 
 function toDisplayText(value) {
   if (typeof value === "string") return value;
@@ -87,7 +88,7 @@ function ActionCard({ action, onPress }) {
         ))}
         {items.length > 6 ? (
           <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
-            {t("messageList.more", { count: items.length - 6 })}
+            {t("messageList.moreItems", { count: items.length - 6 })}
           </Text>
         ) : null}
 
@@ -229,12 +230,12 @@ function ActionCard({ action, onPress }) {
         })}
         {changes.length > 8 ? (
           <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
-            {t("messageList.more", { count: changes.length - 8 })}
+            {t("messageList.moreChanges", { count: changes.length - 8 })}
           </Text>
         ) : null}
         {skipped.length > 0 ? (
           <Text style={{ marginTop: 4, opacity: 0.7, color: TextSecondary }}>
-            {t("messageList.skippedChanges", { names: skipped.join(", ") })}
+            {t("messageList.skippedChanges", { names: joinList(skipped) })}
           </Text>
         ) : null}
 
@@ -1074,7 +1075,16 @@ export default function MessageList({ messages, onUiAction }) {
 
 const styles = StyleSheet.create({
   modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
+  // Positioned explicitly: React Native 0.86 removed `absoluteFillObject`, so
+  // spreading it silently dropped the scrim and its tap-to-close target.
+  backdrop: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
 
   sheet: {
     height: "85%",

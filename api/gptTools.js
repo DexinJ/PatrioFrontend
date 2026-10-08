@@ -53,6 +53,7 @@ export function useGPTTools() {
     shoppingListItems,
     addToFridge, // addToFridge(name, quantity, tagIds, expiresAt = null, expiresInDays)
     addToShoppingList, // addToShoppingList(name, quantity, tagIds)
+    addManyToShoppingList, // addManyToShoppingList(items) -> only what was added
     removeFromFridge,
     removeFromShoppingList,
     editFridgeItem,
@@ -299,6 +300,61 @@ export function useGPTTools() {
         success: true,
         message: `${quantity} ${n} added to shopping list.`,
         ...(unmapped.length ? { ignoredCategories: unmapped } : {}),
+      };
+    },
+
+    // Batch sibling of addShoppingItem. One call, one write: the model must not
+    // loop the single-item tool for several items.
+    massAddShoppingItems: async ({ items } = {}) => {
+      const list = Array.isArray(items) ? items : [];
+      if (list.length === 0) {
+        return { success: false, message: "No items were provided." };
+      }
+
+      const valid = [];
+      const skippedInvalid = [];
+      let categoryError = null;
+
+      for (const item of list) {
+        const name = String(item?.name || "").trim();
+        if (!name) {
+          skippedInvalid.push("(missing name)");
+          continue;
+        }
+
+        const validation = validateTypedCategories(item?.categories);
+        if (!validation.ok) {
+          skippedInvalid.push(name);
+          categoryError = categoryError || validation;
+          continue;
+        }
+
+        valid.push({
+          name,
+          quantity: String(item?.quantity || "1"),
+          tagIds: categoriesToPresetTagIds(item.categories),
+        });
+      }
+
+      if (valid.length === 0) {
+        return categoryError
+          ? categoryValidationError(categoryError)
+          : { success: false, message: "Missing item name." };
+      }
+
+      // addManyToShoppingList skips items already on the list and collapses
+      // duplicates inside the batch, returning only what it actually added.
+      const added = addManyToShoppingList(valid);
+      const duplicates = valid.length - added.length;
+
+      return {
+        success: true,
+        message: `${added.length} added to shopping list.`,
+        addedCount: added.length,
+        ...(duplicates > 0 ? { skippedDuplicates: duplicates } : {}),
+        ...(skippedInvalid.length
+          ? { skippedInvalid: skippedInvalid.slice(0, 10) }
+          : {}),
       };
     },
 

@@ -16,11 +16,18 @@ import {
 import { auth } from "../../auth/firebaseClient";
 import { GlobalContext } from "../../context/GlobalContext";
 
+import { requestEmailVerificationPrompt } from "../../api/emailVerificationStorage";
+import { authErrorMessageKey } from "../../auth/authErrorMessages";
 import {
   signInWithApple,
   tryLinkAppleAuthorizationToBackend,
 } from "../../auth/appleAuth"; // ✅ CHANGED: Apple login helper
 import { signInWithGoogleNative } from "../../auth/googleAuth";
+import { needsEmailVerification } from "../../utils/emailVerificationPolicy";
+import {
+  SUPPORT_EMAIL,
+  openSupportContact,
+} from "../../utils/supportContact";
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -57,10 +64,19 @@ export default function SignInScreen() {
     operationBusyRef.current = true;
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, e, pw);
+      const credential = await signInWithEmailAndPassword(auth, e, pw);
+      // The request flag is synchronous, so it is already set by the time the
+      // auth-state reconciliation mounts the tabs and consumes it.
+      if (credential?.user && needsEmailVerification(credential.user)) {
+        requestEmailVerificationPrompt(credential.user.uid);
+      }
     } catch (err) {
       if (mountedRef.current) {
-        Alert.alert(t("auth.loginFailed"), err?.message || t("common.unknownError"));
+        const key = authErrorMessageKey(err);
+        Alert.alert(
+          t("auth.loginFailed"),
+          key ? t(key) : err?.message || t("common.unknownError")
+        );
       }
     } finally {
       operationBusyRef.current = false;
@@ -168,6 +184,15 @@ export default function SignInScreen() {
         ]}
       />
 
+      <Text
+        style={[styles.inlineLink, { color: theme.accent, fontSize }]}
+        onPress={() => router.push("/(auth)/forgot-password")}
+        accessibilityRole="link"
+        accessibilityLabel={t("auth.forgotPassword")}
+      >
+        {t("auth.forgotPassword")}
+      </Text>
+
       <Pressable
         style={[
           styles.button,
@@ -271,6 +296,22 @@ export default function SignInScreen() {
           {t("auth.createAnAccount")}
         </Text>
       </Text>
+
+      <Text style={[styles.footer, { color: theme.textSecondary }]}>
+        <Text
+          style={[styles.link, { color: theme.accent }]}
+          onPress={() =>
+            openSupportContact({
+              title: t("settings.contactSupport"),
+              failureMessage: t("settings.supportOpenFailed", {
+                email: SUPPORT_EMAIL,
+              }),
+            })
+          }
+        >
+          {t("settings.contactSupport")}
+        </Text>
+      </Text>
     </View>
   );
 }
@@ -291,6 +332,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: "#fff", fontWeight: "700" },
+  inlineLink: { alignSelf: "flex-end", fontWeight: "600", marginTop: -2 },
 
   oauthRowWrap: {
     marginTop: 10,

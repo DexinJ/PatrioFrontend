@@ -67,7 +67,7 @@ function RecipeMetaLine({ recipe }) {
 function IngredientSummaryRow({ label, items, moreCount }) {
   const { t } = useTranslation();
   const { theme } = useContext(GlobalContext);
-  const more = moreCount > 0 ? ` ${t("messageList.recipes.haveMore", { count: moreCount })}` : "";
+  const more = moreCount > 0 ? t("messageList.recipes.haveMore", { count: moreCount }) : "";
   if (items.length === 0) {
     return (
       <Text style={[styles.summaryLine, { color: theme.textSecondary }]}>
@@ -193,8 +193,7 @@ function RecipeDetailModal({ recipe, visible, onClose }) {
     }
   };
 
-  const stepsAvailable =
-    Array.isArray(recipe.instructions) && recipe.instructions.length > 0;
+  const method = Array.isArray(recipe.method) ? recipe.method : [];
 
   return (
     <Modal
@@ -263,15 +262,23 @@ function RecipeDetailModal({ recipe, visible, onClose }) {
                 {recipe.whyRecommended}
               </Text>
             ) : null}
-            {stepsAvailable ? (
-              <SectionList
-                title={t("messageList.recipes.stepsTitle")}
-                items={recipe.instructions}
-                numbered
-              />
+            {method.length > 0 ? (
+              <>
+                <SectionList
+                  title={t("messageList.recipes.methodTitle")}
+                  items={method}
+                />
+                <Text style={[styles.noSteps, { color: theme.textSecondary }]}>
+                  {t("messageList.recipes.methodHint", {
+                    steps: recipe.stepCount,
+                  })}
+                </Text>
+              </>
             ) : (
               <Text style={[styles.noSteps, { color: theme.textSecondary }]}>
-                {t("messageList.recipes.stepsNone")}
+                {t("messageList.recipes.methodNone", {
+                  steps: recipe.stepCount,
+                })}
               </Text>
             )}
             <TouchableOpacity
@@ -376,7 +383,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    // React Native 0.86 removed `absoluteFillObject`, so the spread silently
+    // dropped this scrim's positioning and its tap-to-close target.
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     backgroundColor: "rgba(0,0,0,0.35)",
   },
   modalSheet: {

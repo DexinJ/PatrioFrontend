@@ -18,6 +18,7 @@ import { useFocusEffect } from "expo-router";
 import { useGpt } from "../../api/gpt";
 import MessageInput from "../../components/MessageInput";
 import MessageList from "../../components/MessageList";
+import TutorialTarget from "../../components/TutorialTarget";
 import { ChatContext, GlobalContext } from "../../context/GlobalContext";
 import {
   claimFridgeProposalAction,
@@ -35,6 +36,7 @@ import {
   formatRecipePreferencePatch,
   normalizeRecipePreferencePatch,
 } from "../../utils/recipePreferences";
+import { looksLikeNativeErrorText } from "../../utils/chatReplayPolicy";
 
 function getChatErrorMessage(error) {
   const messagesByCode = {
@@ -50,11 +52,24 @@ function getChatErrorMessage(error) {
     UPSTREAM_TIMEOUT: i18next.t("chat.errors.requestTimedOut"),
     UPSTREAM_ERROR: i18next.t("chat.errors.upstreamUnavailable"),
     UPSTREAM_UNAVAILABLE: i18next.t("chat.errors.upstreamUnavailable"),
+    APPLE_AI_REQUEST_TOO_LARGE: i18next.t("chat.errors.requestTooLarge"),
+    APPLE_AI_TOOL_LIMIT: i18next.t("chat.errors.appleCouldNotComplete"),
+    APPLE_AI_INVALID_RESPONSE: i18next.t("chat.errors.appleCouldNotComplete"),
   };
 
   if (messagesByCode[error?.code]) return messagesByCode[error.code];
 
   const message = String(error?.message || "").trim();
+
+  // Native bridge failures carry framework names, source paths, and Apple
+  // framework detail the assistant is told never to reveal. Map them to a
+  // user-facing string instead of echoing the raw text.
+  if (looksLikeNativeErrorText(message)) {
+    return /context window/i.test(message)
+      ? i18next.t("chat.errors.requestTooLarge")
+      : i18next.t("chat.errors.couldNotComplete");
+  }
+
   if (message && message !== i18next.t("common.unknownError")) return message;
 
   return i18next.t("chat.errors.couldNotComplete");
@@ -74,6 +89,9 @@ function ChatEmptyState({ theme }) {
       </Text>
       <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
         {t("chat.chatDescription")}
+      </Text>
+      <Text style={[styles.emptyNote, { color: theme.textSecondary }]}>
+        {t("chat.aiNotice")}
       </Text>
     </View>
   );
@@ -159,6 +177,18 @@ export default function ChatScreen() {
     }, [prewarm])
   );
 
+  // The idle timer closes the socket after 90 seconds without traffic, and
+  // prewarm only ran when the screen was focused — so a send after a long pause
+  // paid the handshake. Re-arm it when the composer is focused instead of
+  // keeping every socket alive for the whole screen visit.
+  const handleComposerFocus = useCallback(() => {
+    try {
+      prewarm();
+    } catch {
+      // Best-effort; the send path reconnects as needed.
+    }
+  }, [prewarm]);
+
   const handleSend = async (message) => {
     const generation = sendGenerationRef.current + 1;
     sendGenerationRef.current = generation;
@@ -185,7 +215,11 @@ export default function ChatScreen() {
         setMessages((prev) => [
           ...(Array.isArray(prev) ? prev : []),
           {
+            id: `assistant-error-${Date.now()}`,
             role: "assistant",
+            // User-facing only: never sent back to a model.
+            // See utils/chatReplayPolicy.
+            isError: true,
             content: [{ type: "output_text", text: errorMessage }],
           },
         ]);
@@ -425,22 +459,27 @@ export default function ChatScreen() {
                 },
               ]}
             >
-              {conversationLoading && activeConversationId ? (
-                <View style={styles.loadingState}>
-                  <ActivityIndicator size="large" color={theme.accent} />
-                </View>
-              ) : messages.length === 0 && !waiting ? (
-                <ChatEmptyState theme={theme} />
-              ) : (
-                <MessageList messages={messages} onUiAction={handleUiAction} />
-              )}
+              <TutorialTarget id="chat.messages" style={{ flex: 1 }}>
+                {conversationLoading && activeConversationId ? (
+                  <View style={styles.loadingState}>
+                    <ActivityIndicator size="large" color={theme.accent} />
+                  </View>
+                ) : messages.length === 0 && !waiting ? (
+                  <ChatEmptyState theme={theme} />
+                ) : (
+                  <MessageList messages={messages} onUiAction={handleUiAction} />
+                )}
+              </TutorialTarget>
             </Animated.View>
 
-            <MessageInput
-              value={input}
-              onChangeText={setInput}
-              onSend={handleSend}
-            />
+            <TutorialTarget id="chat.composer">
+              <MessageInput
+                value={input}
+                onChangeText={setInput}
+                onSend={handleSend}
+                onFocus={handleComposerFocus}
+              />
+            </TutorialTarget>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -467,6 +506,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
+  },
+  emptyNote: {
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
+    marginTop: 6,
   },
   loadingState: {
     flex: 1,

@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system/legacy";
+import i18next from "i18next";
 
 const ROOT_DIRECTORY = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}pantrio-chat-attachments/`
@@ -24,7 +25,7 @@ export function isManagedChatAttachment(uri) {
 
 export async function persistChatAttachment(uid, sourceUri) {
   const normalizedSource = String(sourceUri || "").trim();
-  if (!normalizedSource) throw new Error("The image file is missing.");
+  if (!normalizedSource) throw new Error(i18next.t("chat.errors.imageMissing"));
   if (
     !ROOT_DIRECTORY
   ) return normalizedSource;

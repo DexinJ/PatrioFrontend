@@ -76,6 +76,7 @@ export function getUserStorageKeys(uid) {
     chatMessages: `${namespace}:chatMessages`,
     chatSummary: `${namespace}:chatSummary`,
     chatConversations: `${namespace}:chatConversations`,
+    emailVerificationSnooze: `${namespace}:emailVerificationSnooze`,
     purgeIntent: `${namespace}:purgeIntent`,
   };
 }

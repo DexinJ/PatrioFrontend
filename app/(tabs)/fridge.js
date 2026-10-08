@@ -13,8 +13,10 @@ import SearchAndSortBar from "../../components/SearchAndSortBar";
 import SectionHeaderPill from "../../components/SectionHeaderPill";
 import SelectionActionBar from "../../components/SelectionActionBar";
 import SortSheetModal from "../../components/SortSheetModal";
+import TutorialTarget from "../../components/TutorialTarget";
 import { GlobalContext } from "../../context/GlobalContext";
 import { buildTagMaps, makeGetTagLabelByType, makeLabelToTagId, makeLabelsFromTagIds } from "../../utils/itemTagLabels";
+import { joinList } from "../../utils/localeList.js";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
 
@@ -107,11 +109,13 @@ export default function FridgeScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
-        <HeaderWithButton
-          title={t("fridge.title")}
-          buttonLabel={editMode ? t("common.done") : t("fridge.edit")}
-          onPress={toggleEditMode}
-        />
+        <TutorialTarget id="fridge.editButton">
+          <HeaderWithButton
+            title={t("fridge.title")}
+            buttonLabel={editMode ? t("common.done") : t("fridge.edit")}
+            onPress={toggleEditMode}
+          />
+        </TutorialTarget>
       ),
     });
   }, [navigation, editMode, toggleEditMode, t]);
@@ -331,7 +335,7 @@ export default function FridgeScreen() {
       const displayText = ingredientNames.length
         ? t("fridge.findRecipesUsing", {
             items:
-              ingredientNames.slice(0, 6).join(", ") +
+              joinList(ingredientNames.slice(0, 6)) +
               (ingredientNames.length > 6
                 ? t("fridge.more", { count: ingredientNames.length - 6 })
                 : ""),
@@ -540,16 +544,18 @@ export default function FridgeScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Top controls */}
       <View style={styles.topBlock}>
-        <SearchAndSortBar
-          search={search}
-          onChangeSearch={setSearch}
-          onPressSort={() => setSortSheetVisible(true)}
-          theme={theme}
-          fontSize={fontSize}
-          placeholder={t("fridge.searchPlaceholder")}
-        />
+        <TutorialTarget id="fridge.searchBar">
+          <SearchAndSortBar
+            search={search}
+            onChangeSearch={setSearch}
+            onPressSort={() => setSortSheetVisible(true)}
+            theme={theme}
+            fontSize={fontSize}
+            placeholder={t("fridge.searchPlaceholder")}
+          />
+        </TutorialTarget>
 
-        <View style={{ marginTop: 10 }}>
+        <TutorialTarget id="fridge.filterTabs" style={{ marginTop: 10 }}>
           <FilterTabsRow
             tabs={tabDefs}
             activeKey={activeTab}
@@ -557,56 +563,60 @@ export default function FridgeScreen() {
             theme={theme}
             fontSize={fontSize}
           />
-        </View>
+        </TutorialTarget>
       </View>
 
       {/* List */}
-      {fridgeSections.length === 0 ? (
-        <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>{emptyText}</Text>
-      ) : (
-        <SectionList
-          sections={fridgeSections}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          stickySectionHeadersEnabled
-          renderSectionHeader={({ section }) => {
-            if (!section.title) return null;
-            const isExpired = section.tone === "danger";
-            const isAlmost = section.tone === "warning";
-            const count = isExpired
-              ? expiredItems.length
-              : isAlmost
-                ? almostExpiredItems.length
-                : undefined;
+      <TutorialTarget id="fridge.items" style={styles.listWrap}>
+        {fridgeSections.length === 0 ? (
+          <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>{emptyText}</Text>
+        ) : (
+          <SectionList
+            sections={fridgeSections}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            stickySectionHeadersEnabled
+            renderSectionHeader={({ section }) => {
+              if (!section.title) return null;
+              const isExpired = section.tone === "danger";
+              const isAlmost = section.tone === "warning";
+              const count = isExpired
+                ? expiredItems.length
+                : isAlmost
+                  ? almostExpiredItems.length
+                  : undefined;
 
-            return (
-              <SectionHeaderPill
-                title={section.title}
-                count={typeof count === "number" ? count : undefined}
-                tone={isExpired ? "danger" : isAlmost ? "warning" : "neutral"}
-                theme={theme}
-                fontSize={fontSize}
-              />
-            );
-          }}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: editMode ? 170 : 110, backgroundColor: theme.background },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          initialNumToRender={12}
-          windowSize={7}
-          removeClippedSubviews={false}
-          maxToRenderPerBatch={12}
-          updateCellsBatchingPeriod={50}
-          extraData={{ editMode, selectedCount }}
-        />
-      )}
+              return (
+                <SectionHeaderPill
+                  title={section.title}
+                  count={typeof count === "number" ? count : undefined}
+                  tone={isExpired ? "danger" : isAlmost ? "warning" : "neutral"}
+                  theme={theme}
+                  fontSize={fontSize}
+                />
+              );
+            }}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: editMode ? 170 : 110, backgroundColor: theme.background },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={12}
+            windowSize={7}
+            removeClippedSubviews={false}
+            maxToRenderPerBatch={12}
+            updateCellsBatchingPeriod={50}
+            extraData={{ editMode, selectedCount }}
+          />
+        )}
+      </TutorialTarget>
 
       {/* FAB */}
       <FloatingAddButton
         theme={theme}
         disabled={editMode}
+        accessibilityLabel={t("common.addItem")}
+        tutorialTargetId="fridge.addButton"
         onPress={() => {
           if (editMode) return;
           setAddModalVisible(true);
@@ -717,6 +727,7 @@ export default function FridgeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   topBlock: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 8 },
+  listWrap: { flex: 1 },
   empty: { textAlign: "center", marginTop: 20 },
   list: { paddingHorizontal: 14, paddingTop: 6 },
 });

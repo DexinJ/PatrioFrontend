@@ -323,6 +323,15 @@ export default function OnboardingScreen() {
                 </Text>
               </TouchableOpacity>
 
+              <Text
+                style={[
+                  styles.aiDisclosure,
+                  { color: theme.textPlaceholder, borderTopColor: theme.border },
+                ]}
+              >
+                {t("onboarding.aiDisclosure")}
+              </Text>
+
               {/* If you want: allow “Later” by sending them to tabs,
                   BUT you asked no skipping, so leaving it out. */}
             </>
@@ -447,5 +456,14 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     fontSize: 15,
     fontWeight: "900",
+  },
+
+  aiDisclosure: {
+    marginTop: 6,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
   },
 });

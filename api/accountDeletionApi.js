@@ -2,6 +2,7 @@ import {
   createBackendResponseError,
   parseBackendResponseText,
 } from "./backendErrors";
+import i18next from "i18next";
 import { API_BASE_URL } from "./backendConfig";
 import { fetchWithTimeout } from "./fetchWithTimeout";
 
@@ -19,7 +20,7 @@ async function authenticatedDeletionRequest(
 ) {
   const token = String(bearerToken || "").trim();
   if (!token) {
-    const error = new Error("A Firebase bearer token is required.");
+    const error = new Error(i18next.t("errors.authenticatedUserRequired"));
     error.code = "AUTH_REQUIRED";
     throw error;
   }
@@ -34,8 +35,8 @@ async function authenticatedDeletionRequest(
       timeoutMs,
       timeoutMessage:
         method === "DELETE"
-          ? "Account deletion timed out. Pantrio is checking whether it completed."
-          : "Checking account deletion status timed out.",
+          ? i18next.t("errors.deletionRequestTimedOut")
+          : i18next.t("errors.deletionStatusTimedOut"),
     }
   );
   const payload = await readResponse(response);
@@ -62,7 +63,7 @@ export function getBackendAccountDeletionStatus(uid, bearerToken) {
 
 export function accountDeletionResponseError(
   { httpStatus, payload },
-  fallbackMessage = "Could not delete your account."
+  fallbackMessage = i18next.t("root.couldNotDeleteAccount")
 ) {
   return createBackendResponseError(payload, {
     status: httpStatus,

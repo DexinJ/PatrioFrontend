@@ -4,6 +4,7 @@ import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import TutorialTarget from "../../components/TutorialTarget";
 import { GlobalContext } from "../../context/GlobalContext";
 
 export default function HomeScreen() {
@@ -57,15 +58,17 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingVertical: 20 }}>
         <View style={{ flex: 1, alignItems: "center" }}>
           {/* Greeting */}
-          <Text style={{ fontSize: fontSize * 1.4, fontWeight: "bold", marginBottom: 5, textAlign: "center", color: theme.textPrimary }}>
-            {t("home.welcomeBackName", { name: settings.user.name })}
-          </Text>
-          <Text style={{ fontSize: fontSize, marginBottom: 20, textAlign: "center", color: theme.textSecondary }}>
-            {t("home.whatsHappening")}
-          </Text>
+          <TutorialTarget id="home.greeting" style={{ width: "100%" }}>
+            <Text style={{ fontSize: fontSize * 1.4, fontWeight: "bold", marginBottom: 5, textAlign: "center", color: theme.textPrimary }}>
+              {t("home.welcomeBackName", { name: settings.user.name })}
+            </Text>
+            <Text style={{ fontSize: fontSize, marginBottom: 20, textAlign: "center", color: theme.textSecondary }}>
+              {t("home.whatsHappening")}
+            </Text>
+          </TutorialTarget>
       
           {/* Dashboard Cards */}
-          <View style={{ width: "100%", marginBottom: 30 }}>
+          <TutorialTarget id="home.cards" style={{ width: "100%", marginBottom: 30 }}>
             <TouchableOpacity style={[styles.card, { backgroundColor: theme.card }]} onPress={() => router.push("/fridge")}>
               <Ionicons name="cube-outline" size={fontSize * 2} color={theme.actionButton} />
               <Text style={[styles.cardText, { fontSize, color: theme.textPrimary }]}>
@@ -106,10 +109,10 @@ export default function HomeScreen() {
                 {t("home.onShoppingList", { count: totalShopping })}
               </Text>
             </TouchableOpacity>
-          </View>
+          </TutorialTarget>
 
           {/* Quick Actions */}
-          <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%" }}>
+          <TutorialTarget id="home.quickActions" style={{ flexDirection: "row", justifyContent: "space-around", width: "100%" }}>
             <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.actionButton }]} onPress={() => router.push("/fridge")}>
               <Ionicons name="add-circle-outline" size={fontSize * 1.5} color="#fff" />
               <Text style={[styles.actionText, { fontSize }]}>{t("home.addItem")}</Text>
@@ -119,7 +122,7 @@ export default function HomeScreen() {
               <Ionicons name="chatbubble-ellipses-outline" size={fontSize * 1.5} color="#fff" />
               <Text style={[styles.actionText, { fontSize }]}>{t("home.openChat")}</Text>
             </TouchableOpacity>
-          </View>
+          </TutorialTarget>
         </View>
       </ScrollView>
     </SafeAreaView>

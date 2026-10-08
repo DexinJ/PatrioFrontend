@@ -34,21 +34,22 @@
         "expo-build-properties",
         {
           "ios": {
+            "enableSceneSupport": true,
             "useFrameworks": "static"
           }
         }
       ],
       "expo-font",
-      [
-        "expo-audio",
-        {
-          "microphonePermission": "Allow Pantrio to record audio.",
-          "enableBackgroundPlayback": false,
-          "enableBackgroundRecording": false
-        }
-      ],
       "expo-asset",
       "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pantrio uses your photo library only for pictures you attach to a chat.",
+          "cameraPermission": "Pantrio uses the camera only for pictures you attach to a chat.",
+          "microphonePermission": false
+        }
+      ],
       "expo-status-bar",
       "expo-notifications",
       [
@@ -59,7 +60,8 @@
           "organization": "dexinjin"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withPrivateCloudComputeEntitlement"
     ],
     "experiments": {
       "typedRoutes": true

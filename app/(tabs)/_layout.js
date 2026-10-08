@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname } from "expo-router";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,11 +16,15 @@ import "react-native-get-random-values";
 import { GptProvider } from "../../api/gpt";
 import { useAuth } from "../../auth/useAuth";
 import ConversationDrawer from "../../components/ConversationListModal";
+import EmailVerificationPrompt from "../../components/EmailVerificationPrompt";
 import { IconHeader } from "../../components/Header";
+import TabTutorialOverlay from "../../components/TabTutorialOverlay";
+import TutorialTarget from "../../components/TutorialTarget";
 import {
   AccountSessionProvider,
   useAccountSession,
 } from "../../context/AccountSessionContext";
+import { EmailVerificationProvider } from "../../context/EmailVerificationContext";
 import {
   ChatContext,
   GlobalContext,
@@ -28,6 +32,8 @@ import {
 } from "../../context/GlobalContext";
 import { AppleSubscriptionProvider } from "../../context/SubscriptionContext";
 import { canExposeAccountData } from "../../context/refreshPolicy";
+import { TabTutorialProvider } from "../../context/TabTutorialContext";
+import { getTabKeyForPathname } from "../../utils/tabTutorials";
 
 function ChatTabHeader() {
   const { t } = useTranslation();
@@ -91,17 +97,19 @@ function ChatTabHeader() {
   }
 
   return (
-    <IconHeader
-      title={activeConversationTitle}
-      leftItems={[
-        {
-          icon: "menu-outline",
-          label: t("conversations.openConversations"),
-          onPress: () => setConversationsVisible(true),
-        },
-      ]}
-      rightItems={rightItems}
-    />
+    <TutorialTarget id="chat.header">
+      <IconHeader
+        title={activeConversationTitle}
+        leftItems={[
+          {
+            icon: "menu-outline",
+            label: t("conversations.openConversations"),
+            onPress: () => setConversationsVisible(true),
+          },
+        ]}
+        rightItems={rightItems}
+      />
+    </TutorialTarget>
   );
 }
 
@@ -288,6 +296,8 @@ function ThemedTabs() {
   } = useContext(ChatContext);
   const { width: windowWidth } = useWindowDimensions();
   const drawerWidth = Math.min(windowWidth * 0.82, 380);
+  const pathname = usePathname();
+  const activeTabKey = getTabKeyForPathname(pathname);
   const [drawerProgress] = useState(() => new Animated.Value(0));
   const mountedRef = useRef(false);
   const recoveryLogoutLockedRef = useRef(false);
@@ -469,118 +479,122 @@ function ThemedTabs() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <Animated.View
-        style={{
-          flex: 1,
-          transform: [
-            {
-              translateX: drawerProgress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, drawerWidth],
-              }),
-            },
-          ],
-        }}
-      >
-        <Tabs
-          screenOptions={{
-            headerShown: true,
-            tabBarActiveTintColor: theme.actionButton,
-            tabBarInactiveTintColor: theme.textSecondary,
-            tabBarStyle: { backgroundColor: theme.card, borderColor: theme.border, },
+    <TabTutorialProvider activeTabKey={activeTabKey}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
+        <Animated.View
+          style={{
+            flex: 1,
+            transform: [
+              {
+                translateX: drawerProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, drawerWidth],
+                }),
+              },
+            ],
           }}
         >
-          <Tabs.Screen
-            name="index"
-            options={{
-              headerShown: false,
-              title: t("tabs.home"),
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="home-outline" size={size} color={color} />
-              ),
+          <Tabs
+            screenOptions={{
+              headerShown: true,
+              tabBarActiveTintColor: theme.actionButton,
+              tabBarInactiveTintColor: theme.textSecondary,
+              tabBarStyle: { backgroundColor: theme.card, borderColor: theme.border, },
             }}
-          />
-          <Tabs.Screen
-            name="chat"
-            options={{
-              header: () => <ChatTabHeader />,
-              title: t("tabs.chat"),
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="chatbubble-outline" size={size} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="fridge"
-            options={{
-              title: t("tabs.fridge"),
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="cube-outline" size={size} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="list"
-            options={{
-              title: t("tabs.shoppingList"),
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="cart-outline" size={size} color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="settings"
-            options={{
-              title: t("tabs.settings"),
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="settings-outline" size={size} color={color} />
-              ),
-            }}
-          />
-        </Tabs>
-      </Animated.View>
+          >
+            <Tabs.Screen
+              name="index"
+              options={{
+                headerShown: false,
+                title: t("tabs.home"),
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="home-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="chat"
+              options={{
+                header: () => <ChatTabHeader />,
+                title: t("tabs.chat"),
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="chatbubble-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="fridge"
+              options={{
+                title: t("tabs.fridge"),
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="cube-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="list"
+              options={{
+                title: t("tabs.shoppingList"),
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="cart-outline" size={size} color={color} />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="settings"
+              options={{
+                title: t("tabs.settings"),
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="settings-outline" size={size} color={color} />
+                ),
+              }}
+            />
+          </Tabs>
+        </Animated.View>
 
-      <ConversationDrawer
-        progress={drawerProgress}
-        open={conversationsVisible}
-        drawerWidth={drawerWidth}
-        onClose={() => setConversationsVisible(false)}
-        conversations={conversations}
-        activeConversationId={activeConversationId}
-        onSelect={(id) => {
-          const item = (Array.isArray(conversations) ? conversations : []).find(
-            (conversation) => conversation.id === id
-          );
-          if (item?.status === "archived" || item?.archivedAt) {
-            restoreConversation(id);
-          }
-          selectConversation(id);
-          setConversationsVisible(false);
-        }}
-        onArchive={(id) => archiveConversation(id)}
-        onRestore={(id) => restoreConversation(id)}
-        onDelete={(id) => deleteConversation(id)}
-        onNewChat={() => {
-          createConversation();
-          setConversationsVisible(false);
-        }}
-      />
+        <ConversationDrawer
+          progress={drawerProgress}
+          open={conversationsVisible}
+          drawerWidth={drawerWidth}
+          onClose={() => setConversationsVisible(false)}
+          conversations={conversations}
+          activeConversationId={activeConversationId}
+          onSelect={(id) => {
+            const item = (Array.isArray(conversations) ? conversations : []).find(
+              (conversation) => conversation.id === id
+            );
+            if (item?.status === "archived" || item?.archivedAt) {
+              restoreConversation(id);
+            }
+            selectConversation(id);
+            setConversationsVisible(false);
+          }}
+          onArchive={(id) => archiveConversation(id)}
+          onRestore={(id) => restoreConversation(id)}
+          onDelete={(id) => deleteConversation(id)}
+          onNewChat={() => {
+            createConversation();
+            setConversationsVisible(false);
+          }}
+        />
 
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          width: 20,
-          left: drawerProgress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [-30, drawerWidth - 30],
-          }),
-        }}
-      />
-    </View>
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            width: 20,
+            left: drawerProgress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-30, drawerWidth - 30],
+            }),
+          }}
+        />
+        <TabTutorialOverlay />
+        <EmailVerificationPrompt />
+      </View>
+    </TabTutorialProvider>
   );
 }
 
@@ -596,7 +610,9 @@ export default function TabsLayout() {
       <AccountSessionProvider authUser={user}>
         <SessionBackedGlobalProvider authUser={user}>
           <GptProvider>
-            <ThemedTabs />
+            <EmailVerificationProvider>
+              <ThemedTabs />
+            </EmailVerificationProvider>
           </GptProvider>
         </SessionBackedGlobalProvider>
       </AccountSessionProvider>

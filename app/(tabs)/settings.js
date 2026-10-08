@@ -50,16 +50,24 @@ import { resolveAiProvider } from "../../api/aiProviderPolicy";
 import { API_BASE_URL } from "../../api/backendConfig";
 import { fetchWithTimeout } from "../../api/fetchWithTimeout";
 import { clearChatData } from "../../api/memoryManager";
+import { sendWithReasoningFallback } from "../../api/reasoningPolicy";
 import { requestReminderPermissions } from "../../api/reminderScheduler";
+import {
+  SUPPORT_EMAIL,
+  openSupportContact,
+} from "../../utils/supportContact";
 import {
   getAccountDeletionReauthenticationMethod,
   reauthenticateForAccountDeletion,
 } from "../../auth/accountReauthentication";
 import { useAuth } from "../../auth/useAuth";
 import { HeaderWithHiddenButton } from "../../components/Header";
+import TutorialTarget from "../../components/TutorialTarget";
 import { useAccountSession } from "../../context/AccountSessionContext";
+import { useEmailVerification } from "../../context/EmailVerificationContext";
 import { ChatActionsContext, GlobalContext } from "../../context/GlobalContext";
 import { useAppleSubscription } from "../../context/SubscriptionContext";
+import { useTabTutorial } from "../../context/TabTutorialContext";
 import { SUPPORTED_LANGUAGES, setAppLanguage } from "../../i18n";
 import {
   getAppleIntelligenceAvailability,
@@ -138,6 +146,28 @@ const APPLE_SUBSCRIPTION_ATTENTION_STATUSES = new Set([
   "expired",
   "revoked",
 ]);
+
+// The native Apple Intelligence bridge reports both a status code and an
+// English `reason`. Map the status to localized copy and fall back to the
+// bridge's own text for any status we do not know yet.
+const APPLE_AI_REASON_KEYS = {
+  available: "settings.appleIntelligenceReady",
+  device_not_eligible: "settings.appleIntelligenceDeviceNotEligible",
+  not_enabled: "settings.appleIntelligenceNotEnabled",
+  model_not_ready: "settings.appleIntelligenceModelNotReady",
+  unavailable: "settings.appleIntelligenceUnavailableReason",
+  unsupported_os: "settings.appleIntelligenceUnsupportedOs",
+  quota_limited: "settings.appleIntelligenceQuotaLimited",
+  system_not_ready: "settings.appleIntelligenceSystemNotReady",
+  development_build_required: "settings.appleIntelligenceDevelopmentBuild",
+  unsupported_platform: "settings.appleIntelligenceUnsupportedDevice",
+};
+
+function appleAvailabilityReason(availability, t) {
+  if (!availability) return t("settings.checkingThisDevice");
+  const key = APPLE_AI_REASON_KEYS[availability.status];
+  return key ? t(key) : availability.reason || "";
+}
 
 const SETTINGS_CATEGORIES = [
   {
@@ -487,6 +517,11 @@ export default function SettingsScreen() {
 
   const { user, signOut, loggedIn, deleteAccount } = useAuth();
   const {
+    needsVerification: emailVerificationNeeded,
+    openPrompt: openVerificationPrompt,
+    showEmailStatus,
+  } = useEmailVerification();
+  const {
     subscription,
     loading: subscriptionLoading,
     error: subscriptionError,
@@ -517,6 +552,7 @@ export default function SettingsScreen() {
   const mountedRef = useRef(false);
   const navigation = useNavigation();
   const [opened, setOpened] = useState(false);
+  const { replayTutorials } = useTabTutorial();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -842,7 +878,7 @@ export default function SettingsScreen() {
           Alert.alert(
             t("settings.turnOnAppleIntelligenceAlertTitle"),
             t("settings.turnOnAppleIntelligenceAlertMessage", {
-              reason: availability.reason,
+              reason: appleAvailabilityReason(availability, t),
             }),
             [
               { text: t("common.notNow"), style: "cancel" },
@@ -855,7 +891,7 @@ export default function SettingsScreen() {
         } else {
           Alert.alert(
             t("settings.appleIntelligenceUnavailable"),
-            availability.reason
+            appleAvailabilityReason(availability, t)
           );
         }
         return;
@@ -946,42 +982,54 @@ export default function SettingsScreen() {
 
     setTestingAi(true);
     try {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/chat/completions`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
+      // The test has to go out exactly like a real chat round does, so a
+      // GPT-5.6 model gets the same explicit `reasoning_effort` here.
+      const sendTest = async (requestBody) => {
+        const response = await fetchWithTimeout(
+          `${baseUrl}/chat/completions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(requestBody),
           },
-          body: JSON.stringify({
-            model,
-            messages: [
-              {
-                role: "user",
-                content: "Reply with only OK.",
-              },
-            ],
-          }),
-        },
-        {
-          timeoutMs: 20_000,
-          timeoutMessage: t("settings.connectionTestTimedOut"),
-        }
-      );
-      const data = await response.json().catch(() => null);
+          {
+            timeoutMs: 20_000,
+            timeoutMessage: t("settings.connectionTestTimedOut"),
+          }
+        );
+        const data = await response.json().catch(() => null);
+        return { ok: response.ok, status: response.status, data };
+      };
 
-      if (!response.ok) {
+      const attempt = await sendWithReasoningFallback({
+        body: {
+          model,
+          messages: [
+            {
+              role: "user",
+              content: "Reply with only OK.",
+            },
+          ],
+        },
+        model,
+        send: sendTest,
+      });
+      const data = attempt.data;
+
+      if (!attempt.ok) {
         const providerMessage = String(
           data?.error?.message || data?.message || ""
         ).trim();
         throw new Error(
           providerMessage
             ? providerMessage.slice(0, 300)
-            : response.status === 404
+            : attempt.status === 404
               ? t("settings.noChatCompletionsEndpoint")
               : t("settings.providerRejected", {
-                  status: response.status,
+                  status: attempt.status,
                 })
         );
       }
@@ -1358,10 +1406,23 @@ export default function SettingsScreen() {
   const handleDeleteAccount = () => {
     if (!user || deletingAccount) return;
 
+    const hasSubscription =
+      Boolean(entitlement?.active) || Boolean(subscription?.productId);
+
     Alert.alert(
       t("settings.deleteAccountAlertTitle"),
       t("settings.deleteAccountAlertMessage"),
       [
+        ...(hasSubscription
+          ? [
+              {
+                text: t("settings.manageAppleSubscription"),
+                onPress: () => {
+                  void openAppleSubscriptions();
+                },
+              },
+            ]
+          : []),
         { text: t("common.cancel"), style: "cancel" },
         {
           text: t("common.continue"),
@@ -1474,32 +1535,34 @@ export default function SettingsScreen() {
       contentContainerStyle={stylesWithFont.mainMenu}
       showsVerticalScrollIndicator={false}
     >
-      {SETTINGS_CATEGORIES.map((cat) => (
-        <TouchableOpacity
-          key={cat.key}
-          style={stylesWithFont.sectionHeader}
-          onPress={() => openSubMenu(cat.key)}
-          accessibilityRole="button"
-          accessibilityLabel={t(cat.titleKey)}
-          accessibilityHint={t("settings.categoryA11y", {
-            title: t(cat.titleKey),
-          })}
-        >
-          <View style={stylesWithFont.sectionIcon}>
-            <Ionicons name={cat.icon} size={fontSize * 1.25} color={theme.accent} />
-          </View>
+      <TutorialTarget id="settings.categories">
+        {SETTINGS_CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            key={cat.key}
+            style={stylesWithFont.sectionHeader}
+            onPress={() => openSubMenu(cat.key)}
+            accessibilityRole="button"
+            accessibilityLabel={t(cat.titleKey)}
+            accessibilityHint={t("settings.categoryA11y", {
+              title: t(cat.titleKey),
+            })}
+          >
+            <View style={stylesWithFont.sectionIcon}>
+              <Ionicons name={cat.icon} size={fontSize * 1.25} color={theme.accent} />
+            </View>
 
-          <Text style={stylesWithFont.sectionTitle}>
-            {t(cat.titleKey)}
-          </Text>
+            <Text style={stylesWithFont.sectionTitle}>
+              {t(cat.titleKey)}
+            </Text>
 
-          <Ionicons
-            name="chevron-forward"
-            size={fontSize * 1.25}
-            color={theme.textSecondary}
-          />
-        </TouchableOpacity>
-      ))}
+            <Ionicons
+              name="chevron-forward"
+              size={fontSize * 1.25}
+              color={theme.textSecondary}
+            />
+          </TouchableOpacity>
+        ))}
+      </TutorialTarget>
     </ScrollView>
   );
 
@@ -1780,9 +1843,117 @@ export default function SettingsScreen() {
                       {signInMethodLabel}
                     </Text>
                   </View>
+                  {showEmailStatus ? (
+                    <View style={stylesWithFont.subscriptionDetailRow}>
+                      <Text style={stylesWithFont.subscriptionDetailLabel}>
+                        {t("settings.emailStatus")}
+                      </Text>
+                      <Text style={stylesWithFont.subscriptionDetailValue}>
+                        {emailVerificationNeeded
+                          ? t("settings.emailNotVerified")
+                          : t("settings.emailVerified")}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
+                {showEmailStatus && emailVerificationNeeded ? (
+                  <>
+                    <Text style={stylesWithFont.accountCardSubtitle}>
+                      {t("settings.emailNotVerifiedBody")}
+                    </Text>
+                    <CustomButton
+                      title={t("settings.sendVerificationEmail")}
+                      onPress={openVerificationPrompt}
+                      fontSize={fontSize}
+                      color={theme.accent}
+                    />
+                  </>
+                ) : null}
               </View>
             ) : null}
+
+            <View style={stylesWithFont.settingColumn}>
+              <TouchableOpacity
+                style={stylesWithFont.settingRow}
+                activeOpacity={0.75}
+                onPress={() =>
+                  openSupportContact({
+                    title: t("settings.contactSupport"),
+                    failureMessage: t("settings.supportOpenFailed", {
+                      email: SUPPORT_EMAIL,
+                    }),
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={t("settings.contactSupport")}
+              >
+                <View style={stylesWithFont.sectionIcon}>
+                  <Ionicons
+                    name="help-buoy-outline"
+                    size={fontSize * 1.25}
+                    color={theme.accent}
+                  />
+                </View>
+                <View style={stylesWithFont.accountCardCopy}>
+                  <Text style={stylesWithFont.accountCardTitle}>
+                    {t("settings.contactSupport")}
+                  </Text>
+                  <Text style={stylesWithFont.accountCardSubtitle}>
+                    {t("settings.contactSupportBody")}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={stylesWithFont.accountCardHeader}>
+                <View style={stylesWithFont.sectionIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={fontSize * 1.25}
+                    color={theme.accent}
+                  />
+                </View>
+                <View style={stylesWithFont.accountCardCopy}>
+                  <Text style={stylesWithFont.accountCardTitle}>
+                    {t("settings.legalTitle")}
+                  </Text>
+                </View>
+              </View>
+              <View style={stylesWithFont.accountLegalLinks}>
+                <TouchableOpacity
+                  onPress={() =>
+                    openLegalDocument(TERMS_OF_USE_URL, t("settings.termsOfUse"))
+                  }
+                  accessibilityRole="link"
+                >
+                  <Text style={stylesWithFont.appleLegalLinkText}>
+                    {t("settings.termsOfUse")}
+                  </Text>
+                </TouchableOpacity>
+                {PRIVACY_POLICY_URL ? (
+                  <TouchableOpacity
+                    onPress={() =>
+                      openLegalDocument(
+                        PRIVACY_POLICY_URL,
+                        t("settings.privacyPolicy")
+                      )
+                    }
+                    accessibilityRole="link"
+                  >
+                    <Text style={stylesWithFont.appleLegalLinkText}>
+                      {t("settings.privacyPolicy")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  onPress={() => router.push("/legal/licenses")}
+                  accessibilityRole="link"
+                >
+                  <Text style={stylesWithFont.appleLegalLinkText}>
+                    {t("settings.licences")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
               </>
             ) : null}
 
@@ -2247,7 +2418,7 @@ export default function SettingsScreen() {
               <View style={stylesWithFont.appleLegalLinks}>
                 <TouchableOpacity
                   onPress={() =>
-                    openLegalDocument(TERMS_OF_USE_URL, "Terms of Use")
+                    openLegalDocument(TERMS_OF_USE_URL, t("settings.termsOfUse"))
                   }
                   accessibilityRole="link"
                 >
@@ -2260,7 +2431,7 @@ export default function SettingsScreen() {
                     onPress={() =>
                       openLegalDocument(
                         PRIVACY_POLICY_URL,
-                        "Privacy Policy"
+                        t("settings.privacyPolicy")
                       )
                     }
                     accessibilityRole="link"
@@ -2565,6 +2736,28 @@ export default function SettingsScreen() {
                   color={theme.textSecondary}
                 />
               </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={stylesWithFont.settingRow}
+              activeOpacity={0.75}
+              onPress={replayTutorials}
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.replayTutorialsA11y")}
+            >
+              <View style={stylesWithFont.settingCopy}>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.replayTutorials")}
+                </Text>
+                <Text style={stylesWithFont.helpText}>
+                  {t("settings.replayTutorialsBody")}
+                </Text>
+              </View>
+              <Ionicons
+                name="play-circle-outline"
+                size={Math.max(18, fontSize * 1.2)}
+                color={theme.accent}
+              />
             </TouchableOpacity>
 
             <CollapsibleSection
@@ -3211,8 +3404,9 @@ export default function SettingsScreen() {
                   value: "apple",
                   label: t("settings.appleIntelligence"),
                   detail:
-                    appleAvailability?.reason ||
-                    t("settings.checkingThisDevice"),
+                    appleAvailability
+                      ? appleAvailabilityReason(appleAvailability, t)
+                      : t("settings.checkingThisDevice"),
                 },
                 {
                   value: "custom",
@@ -3823,6 +4017,12 @@ const dynamicStyles = (theme, fontSize) =>
       gap: 22,
       marginTop: 14,
       marginBottom: 2,
+    },
+    accountLegalLinks: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 18,
+      marginTop: 12,
     },
     appleLegalLinkText: {
       fontSize: Math.max(11, fontSize - 3),

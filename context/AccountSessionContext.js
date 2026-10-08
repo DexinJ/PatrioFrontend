@@ -52,8 +52,8 @@ function accountOperationInProgressError(activeOperation) {
   const isTeardown = ACCOUNT_TEARDOWN_OPERATIONS.has(activeOperation);
   const error = new Error(
     isTeardown
-      ? "Account sign-out is already in progress."
-      : "Finish the current Apple subscription action before signing out or deleting the account."
+      ? i18next.t("subscriptions.signOutInProgress")
+      : i18next.t("subscriptions.finishAppleActionFirst")
   );
   error.code = "ACCOUNT_OPERATION_IN_PROGRESS";
   error.activeOperation = activeOperation || null;
@@ -125,10 +125,24 @@ function isSupersededAppleRequest(error) {
 
 function supersededAppleRequestError() {
   const error = new Error(
-    "The signed-in account changed before the Apple action completed."
+    i18next.t("subscriptions.accountChanged")
   );
   error.code = "APPLE_REQUEST_SUPERSEDED";
   return error;
+}
+
+// A chain that belongs to another Pantrio account is a normal server answer for
+// background work: the device's Apple Account can own subscriptions bought for a
+// different Pantrio account, and revealing that as an in-app error would blame
+// the signed-in user for someone else's purchase. Only user-initiated actions
+// (Subscribe, Restore) surface these codes.
+const BENIGN_BACKGROUND_APPLE_ERROR_CODES = new Set([
+  "APPLE_PURCHASE_ACCOUNT_CONFLICT",
+  "APPLE_PURCHASE_ACCOUNT_MISMATCH",
+]);
+
+function isBenignBackgroundAppleError(error) {
+  return BENIGN_BACKGROUND_APPLE_ERROR_CODES.has(error?.code);
 }
 
 function catalogProductIds(sessionPayload) {
@@ -144,7 +158,15 @@ function catalogFingerprint(sessionPayload) {
   return [...catalogProductIds(sessionPayload)].sort().join("\n");
 }
 
-function normalizeAppleEvidence(envelope, expectedAppAccountToken) {
+/**
+ * Trim, de-duplicate, and cap evidence before submission. The account-token
+ * comparison deliberately does not happen here: a chain's transaction carries
+ * the token that purchased it, which after a restore of a deleted account is a
+ * different account's token. The server decides ownership per chain and returns
+ * per-item rejections, so filtering or throwing client-side would hide exactly
+ * the evidence it needs to adopt.
+ */
+function normalizeAppleEvidence(envelope) {
   const evidence = Array.isArray(envelope?.evidence) ? envelope.evidence : [];
   const normalized = [];
   const seenTransactions = new Set();
@@ -157,19 +179,6 @@ function normalizeAppleEvidence(envelope, expectedAppAccountToken) {
     if (!signedTransactionInfo || seenTransactions.has(signedTransactionInfo)) {
       continue;
     }
-    if (
-      item.appAccountToken &&
-      expectedAppAccountToken &&
-      String(item.appAccountToken).trim().toLowerCase() !==
-        String(expectedAppAccountToken).trim().toLowerCase()
-    ) {
-      const error = new Error(
-        "This Apple transaction belongs to a different Pantrio account."
-      );
-      error.code = "APPLE_ACCOUNT_TOKEN_MISMATCH";
-      throw error;
-    }
-
     seenTransactions.add(signedTransactionInfo);
     normalized.push({ signedTransactionInfo });
     if (normalized.length === APPLE_EVIDENCE_MAX_ITEMS) break;
@@ -177,7 +186,7 @@ function normalizeAppleEvidence(envelope, expectedAppAccountToken) {
 
   if (!normalized.length) {
     const error = new Error(
-      "StoreKit did not provide signed transaction evidence. Please try again."
+      i18next.t("subscriptions.storeKitNoEvidence")
     );
     error.code = "APPLE_EVIDENCE_MISSING";
     throw error;
@@ -203,14 +212,21 @@ function evidenceFingerprint(envelope) {
 
 function evidenceForAppAccount(envelope, appAccountToken) {
   const expectedToken = String(appAccountToken || "").trim().toLowerCase();
-  const evidence = (Array.isArray(envelope?.evidence) ? envelope.evidence : [])
-    .filter(
-      (item) =>
-        expectedToken &&
-        String(item?.appAccountToken || "").trim().toLowerCase() ===
-          expectedToken
-    );
-  return { ...(envelope || {}), evidence };
+  const evidence = Array.isArray(envelope?.evidence) ? envelope.evidence : [];
+  if (!expectedToken) return { ...(envelope || {}), evidence };
+
+  // This account's own evidence is submitted first, but evidence carrying
+  // another token is never dropped: that is how a subscription bought before an
+  // account was deleted (or before the account was recreated) reaches the
+  // server to be adopted. The server is the authority on ownership and answers
+  // with per-item rejection codes.
+  const matching = [];
+  const rest = [];
+  for (const item of evidence) {
+    const token = String(item?.appAccountToken || "").trim().toLowerCase();
+    (token === expectedToken ? matching : rest).push(item);
+  }
+  return { ...(envelope || {}), evidence: [...matching, ...rest] };
 }
 
 function mergeApplePlans(sessionPayload, storeKitProducts) {
@@ -229,7 +245,7 @@ function mergeApplePlans(sessionPayload, storeKitProducts) {
     const planId = String(catalogProduct?.planId || "").trim();
     const fallbackName = planId
       ? planId.charAt(0).toUpperCase() + planId.slice(1)
-      : "Pantrio subscription";
+      : i18next.t("settings.pantrioSubscription");
 
     return {
       ...catalogProduct,
@@ -415,7 +431,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
     async (path, options = {}) => {
       if (!authUser) {
         const authError = new Error(
-          "Sign in to verify your Apple subscription."
+          i18next.t("subscriptions.signInToVerify")
         );
         authError.code = "AUTH_REQUIRED";
         throw authError;
@@ -433,7 +449,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
           timedOut = true;
           controller.abort();
           const timeoutError = new Error(
-            "Apple subscription verification timed out. Please try again."
+            i18next.t("subscriptions.verificationTimedOut")
           );
           timeoutError.code = "APPLE_VERIFICATION_TIMEOUT";
           reject(timeoutError);
@@ -469,7 +485,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
               authUserUidRef.current !== requestUid
             ) {
               const supersededError = new Error(
-                "The signed-in account changed before verification completed."
+                i18next.t("subscriptions.accountChangedDuringVerification")
               );
               supersededError.code = "APPLE_REQUEST_SUPERSEDED";
               throw supersededError;
@@ -481,7 +497,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
       } catch (nextError) {
         if (timedOut) {
           const timeoutError = new Error(
-            "Apple subscription verification timed out. Please try again."
+            i18next.t("subscriptions.verificationTimedOut")
           );
           timeoutError.code = "APPLE_VERIFICATION_TIMEOUT";
           throw timeoutError;
@@ -553,7 +569,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
         timedOut = true;
         controller.abort();
         const timeoutError = new Error(
-          "Checking account access timed out. Please try again."
+            i18next.t("subscriptions.accessCheckTimedOut")
         );
         timeoutError.code = "SESSION_TIMEOUT";
         reject(timeoutError);
@@ -612,7 +628,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
           cancelConcurrentAccountWork();
           if (!payload.deletionDisposition?.shouldPurge) {
             const bindingError = new Error(
-              "The server returned account deletion for a different account."
+              i18next.t("subscriptions.deletionOtherAccount")
             );
             bindingError.code = "ACCOUNT_DELETION_UID_MISMATCH";
             setError(bindingError.message);
@@ -634,11 +650,13 @@ export function AccountSessionProvider({ authUser = null, children }) {
 
         const errorToReport = timedOut
           ? Object.assign(
-              new Error("Checking account access timed out. Please try again."),
+              new Error(i18next.t("subscriptions.accessCheckTimedOut")),
               { code: "SESSION_TIMEOUT" }
             )
           : nextError;
-        setError(errorToReport?.message || "Could not load account access.");
+        setError(
+          errorToReport?.message || i18next.t("subscriptions.couldNotLoadAccess")
+        );
         throw errorToReport;
       } finally {
         clearTimeout(timeoutId);
@@ -673,13 +691,13 @@ export function AccountSessionProvider({ authUser = null, children }) {
       const appAccountToken = sessionPayload?.apple?.appAccountToken;
       if (!appAccountToken) {
         const tokenError = new Error(
-          "Pantrio has not prepared this account for Apple purchases yet. Retry the account check."
+          i18next.t("subscriptions.accountNotReadyForPurchases")
         );
         tokenError.code = "APPLE_ACCOUNT_TOKEN_MISSING";
         throw tokenError;
       }
 
-      const evidence = normalizeAppleEvidence(envelope, appAccountToken);
+      const evidence = normalizeAppleEvidence(envelope);
       if (!evidence.length) return null;
       const verificationGeneration = authGenerationRef.current;
       if (authUserUidRef.current !== authUserUid) {
@@ -757,7 +775,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
             !isSupersededAppleRequest(nextError)
           ) {
             setAppleError(
-              nextError?.message || "Could not verify the Apple subscription."
+              nextError?.message || i18next.t("subscriptions.couldNotVerify")
             );
           }
           throw nextError;
@@ -930,11 +948,11 @@ export function AccountSessionProvider({ authUser = null, children }) {
           apple?.enabled !== true ||
           !apple?.appAccountToken
         ) {
-          throw new Error("Apple purchases are not available for this account.");
+          throw new Error(i18next.t("subscriptions.purchasesUnavailable"));
         }
         if (!catalog.some((product) => product?.productId === productId)) {
           const productError = new Error(
-            "This subscription plan is not available for this Pantrio account."
+            i18next.t("subscriptions.planUnavailable")
           );
           productError.code = "APPLE_PRODUCT_NOT_ALLOWED";
           throw productError;
@@ -958,7 +976,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
         if (envelope?.outcome === "purchased") {
           if (!envelope?.evidence?.length) {
             throw new Error(
-              "Apple completed the purchase but did not return verification evidence. Retry account verification."
+              i18next.t("subscriptions.purchaseNoEvidence")
             );
           }
           const verification = await verifyAppleEvidence(
@@ -971,7 +989,10 @@ export function AccountSessionProvider({ authUser = null, children }) {
         return envelope;
       } catch (nextError) {
         if (mountedRef.current && !isSupersededAppleRequest(nextError)) {
-          setAppleError(nextError?.message || "Could not complete the purchase.");
+          setAppleError(
+            nextError?.message ||
+              i18next.t("settings.couldNotCompleteApplePurchase")
+          );
         }
         throw nextError;
       } finally {
@@ -1000,7 +1021,7 @@ export function AccountSessionProvider({ authUser = null, children }) {
         apple?.enabled !== true ||
         !apple?.appAccountToken
       ) {
-        throw new Error("Apple purchases are not available for this account.");
+        throw new Error(i18next.t("subscriptions.purchasesUnavailable"));
       }
 
       await configureProductCatalog(apple.products || []);
@@ -1030,7 +1051,9 @@ export function AccountSessionProvider({ authUser = null, children }) {
       };
     } catch (nextError) {
       if (mountedRef.current && !isSupersededAppleRequest(nextError)) {
-        setAppleError(nextError?.message || "Could not restore purchases.");
+        setAppleError(
+          nextError?.message || i18next.t("settings.couldNotRestorePurchases")
+        );
       }
       throw nextError;
     } finally {
@@ -1058,7 +1081,8 @@ export function AccountSessionProvider({ authUser = null, children }) {
     } catch (nextError) {
       if (mountedRef.current && !isSupersededAppleRequest(nextError)) {
         setAppleError(
-          nextError?.message || "Could not refresh the Apple subscription."
+          nextError?.message ||
+            i18next.t("settings.couldNotRefreshSubscription")
         );
       }
       throw nextError;
@@ -1207,10 +1231,11 @@ export function AccountSessionProvider({ authUser = null, children }) {
           if (
             mountedRef.current &&
             !isSupersededAppleRequest(nextError) &&
+            !isBenignBackgroundAppleError(nextError) &&
             nextError?.code !== "ACCOUNT_OPERATION_IN_PROGRESS"
           ) {
             setAppleError(
-              nextError?.message || "Could not verify the Apple subscription."
+              nextError?.message || i18next.t("subscriptions.couldNotVerify")
             );
           }
         }
@@ -1243,10 +1268,12 @@ export function AccountSessionProvider({ authUser = null, children }) {
         if (
           !cancelled &&
           mountedRef.current &&
-          !isSupersededAppleRequest(nextError)
+          !isSupersededAppleRequest(nextError) &&
+          !isBenignBackgroundAppleError(nextError)
         ) {
           setAppleError(
-            nextError?.message || "Could not verify an Apple transaction update."
+            nextError?.message ||
+              i18next.t("subscriptions.couldNotVerifyTransaction")
           );
         }
       });

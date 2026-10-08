@@ -9,11 +9,36 @@
 // recipe cards. Our own key is never involved, and web search stays on the
 // backend where it has always been.
 
+// Explicit `.js` because the unit tests import this module directly through
+// Node's ESM resolver, which does not do extensionless resolution.
+import { sendWithReasoningFallback } from "./reasoningPolicy.js";
+import { filterOriginalMethod } from "../utils/recipeMethodGuard.js";
+
+// Helper kinds this client knows how to merge. A task of any other kind is
+// dropped before it runs, so a newer server cannot make an older app spend the
+// user's tokens on work whose result it would then ignore.
+const SUPPORTED_HELPER_KINDS = new Set([
+  "missingItems",
+  "methodSummary",
+  "translation",
+  "estimation",
+  "dedupe",
+]);
+
 const TASK_TIMEOUT_MS = 12_000;
 const MAX_CONCURRENT_TASKS = 2;
 const MAX_TASKS_PER_REQUEST = 5;
 const DEFAULT_MAX_OUTPUT_TOKENS = 1_200;
 const MANIFEST_CACHE_MS = 10 * 60 * 1000;
+// The translation task is the one helper whose output grows with its input.
+// Sending all 240 strings in a single call left custom-provider cards with one
+// translated step and the rest of the publisher text, so it is chunked the same
+// way the server translator chunks its own calls. Each chunk degrades on its
+// own instead of taking the whole card down with it.
+const TRANSLATION_CHUNK_CHARS = 2_000;
+const TRANSLATION_CHUNK_STRINGS = 40;
+const TRANSLATION_MAX_OUTPUT_TOKENS = 4_000;
+const TRANSLATION_CONCURRENCY = 4;
 
 let manifestCache = null;
 
@@ -74,32 +99,46 @@ async function runCustomTask(task, provider, { fetchImpl = fetch } = {}) {
   const model = String(provider?.model || "").trim();
   if (!baseUrl || !apiKey || !model) return null;
 
-  const response = await withTimeout((signal) =>
-    fetchImpl(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: String(task.prompt || "") },
-          { role: "user", content: JSON.stringify(task.input ?? {}) },
-        ],
-        max_completion_tokens:
-          Number.isFinite(task.maxOutputTokens) && task.maxOutputTokens > 0
-            ? task.maxOutputTokens
-            : DEFAULT_MAX_OUTPUT_TOKENS,
-        temperature: 0,
-      }),
-      signal,
-    })
-  ).catch(() => null);
+  const requestBody = {
+    model,
+    messages: [
+      { role: "system", content: String(task.prompt || "") },
+      { role: "user", content: JSON.stringify(task.input ?? {}) },
+    ],
+    max_completion_tokens:
+      Number.isFinite(task.maxOutputTokens) && task.maxOutputTokens > 0
+        ? task.maxOutputTokens
+        : DEFAULT_MAX_OUTPUT_TOKENS,
+    temperature: 0,
+  };
 
-  if (!response || !response.ok) return null;
-  const data = await response.json().catch(() => null);
-  const content = data?.choices?.[0]?.message?.content;
+  // Helper tasks never reason: the user's key pays for them, and they are
+  // single-shot structured extractions. See api/reasoningPolicy.js.
+  const send = async (body) => {
+    const response = await withTimeout((signal) =>
+      fetchImpl(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal,
+      })
+    ).catch(() => null);
+
+    if (!response) return { ok: false, status: 0, data: null };
+    const data = await response.json().catch(() => null);
+    return { ok: response.ok, status: response.status, data };
+  };
+
+  const attempt = await sendWithReasoningFallback({
+    body: requestBody,
+    model,
+    send,
+  });
+  if (!attempt.ok) return null;
+  const content = attempt.data?.choices?.[0]?.message?.content;
   return typeof content === "string" ? content : null;
 }
 
@@ -156,6 +195,92 @@ export async function runHelperTask(task, provider, options = {}) {
 }
 
 /**
+ * Bounds translation work the same way the server translator does: 40 strings
+ * or 2000 characters per provider call.
+ */
+function splitTranslationStrings(values) {
+  const chunks = [];
+  let pending = [];
+  let pendingChars = 0;
+  for (const value of values) {
+    const length = typeof value === "string" ? value.length : 0;
+    if (
+      pending.length > 0 &&
+      (pendingChars + length > TRANSLATION_CHUNK_CHARS ||
+        pending.length >= TRANSLATION_CHUNK_STRINGS)
+    ) {
+      chunks.push(pending);
+      pending = [];
+      pendingChars = 0;
+    }
+    pending.push(value);
+    pendingChars += length;
+  }
+  if (pending.length > 0) chunks.push(pending);
+  return chunks;
+}
+
+/**
+ * Runs the translation descriptor in bounded chunks on the user's provider and
+ * returns one array of the same length and order as the input. A chunk that
+ * fails or comes back misaligned keeps its own strings, so a flaky provider
+ * leaves one slice in the publisher language instead of truncating the rest.
+ */
+async function runTranslationTask(task, provider, options = {}) {
+  const strings = Array.isArray(task?.input?.strings)
+    ? task.input.strings
+    : [];
+  if (strings.length === 0) return null;
+  const chunks = splitTranslationStrings(strings);
+  const results = new Array(chunks.length).fill(null);
+
+  let cursor = 0;
+  const worker = async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= chunks.length) return;
+      const values = chunks[index];
+      const parsed = await runHelperTask(
+        {
+          ...task,
+          // A distinct kind stops this from recursing back into the chunker.
+          kind: "translationChunk",
+          maxOutputTokens: TRANSLATION_MAX_OUTPUT_TOKENS,
+          input: { ...task.input, strings: values },
+        },
+        provider,
+        options
+      );
+      results[index] = Array.isArray(parsed?.strings) ? parsed.strings : null;
+    }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(TRANSLATION_CONCURRENCY, chunks.length) },
+      () => worker()
+    )
+  );
+
+  const merged = [];
+  chunks.forEach((values, index) => {
+    const translated = results[index];
+    values.forEach((value, offset) => {
+      const candidate = translated?.[offset];
+      merged.push(
+        translated &&
+          translated.length === values.length &&
+          typeof candidate === "string" &&
+          candidate.trim()
+          ? candidate
+          : value
+      );
+    });
+  });
+  return { strings: merged };
+}
+
+/**
  * Runs the tasks the server asked for, in small batches, and returns a map of
  * `kind -> parsed`. Tasks the provider cannot do are simply absent.
  */
@@ -180,7 +305,10 @@ export async function runHelperTasks(tasks, provider, options = {}) {
         results.set(resultKey, { parsed: cache.get(key), task });
         continue;
       }
-      const parsed = await runHelperTask(task, provider, options);
+      const parsed =
+        task.kind === "translation"
+          ? await runTranslationTask(task, provider, options)
+          : await runHelperTask(task, provider, options);
       if (parsed == null) continue;
       results.set(resultKey, { parsed, task });
       cache?.set(key, parsed);
@@ -209,6 +337,13 @@ export function mergeHelperResults(recipes, results) {
   const parsedOf = (kind) => results.get(kind)?.parsed;
   applyMissingItems(list, parsedOf("missingItems"));
   applyTranslation(list, parsedOf("translation"), results.get("translation")?.task);
+  // The source steps live on the task input, not on the recipe: the payload the
+  // server sends no longer carries publisher prose.
+  applyMethodSummary(
+    list,
+    parsedOf("methodSummary"),
+    results.get("methodSummary")?.task
+  );
   applyEstimation(list, parsedOf("estimation"));
   const deduped = applyDedupe(list, parsedOf("dedupe"));
   return deduped;
@@ -266,9 +401,63 @@ function applyTranslation(recipes, parsed, task) {
     if (Array.isArray(recipe.ingredients)) {
       recipe.ingredients = recipe.ingredients.map(translateValue);
     }
-    if (Array.isArray(recipe.instructions)) {
-      recipe.instructions = recipe.instructions.map(translateValue);
+    // `method` is authored in the app language by the summarizer and
+    // `instructions` is no longer carried at all, so neither is translated
+    // here. Translating the publisher's steps would be a derivative work.
+    // The card renders the split views, not the full ingredient list. Once the
+    // missingItems task has run, its `line` is what the card and modal actually
+    // show, so both fields have to be translated for the card to read as one
+    // language. (`name` is localized by the missingItems prompt, which now
+    // receives the app language.)
+    if (Array.isArray(recipe.missingIngredients)) {
+      recipe.missingIngredients = recipe.missingIngredients.map(translateValue);
     }
+    if (Array.isArray(recipe.missingItems)) {
+      recipe.missingItems = recipe.missingItems.map((item) =>
+        item && typeof item === "object"
+          ? {
+              ...item,
+              line: translateValue(item.line),
+              name: translateValue(item.name),
+            }
+          : item
+      );
+    }
+  }
+}
+
+/**
+ * Merges the client-side method summary and runs the originality guard.
+ *
+ * The comparison source is the step list the server sent in the task input —
+ * the only place the publisher's text exists on this side, because the recipe
+ * payload itself no longer carries it. A task that never ran, or returned
+ * nothing, simply leaves the recipe without a method.
+ */
+function applyMethodSummary(recipes, parsed, task) {
+  const returned = Array.isArray(parsed?.recipes) ? parsed.recipes : [];
+  if (returned.length === 0) return;
+  const sourceByIndex = new Map(
+    (Array.isArray(task?.input?.recipes) ? task.input.recipes : []).map(
+      (entry) => [
+        Number(entry?.index),
+        (Array.isArray(entry?.steps) ? entry.steps : []).join(" "),
+      ]
+    )
+  );
+
+  for (const entry of returned) {
+    const index = Number(entry?.index);
+    const target = Number.isInteger(index) ? recipes[index] : null;
+    if (!target) continue;
+    const method = (Array.isArray(entry.method) ? entry.method : [])
+      .map((line) =>
+        typeof line === "string" ? line.trim().slice(0, 160) : ""
+      )
+      .filter(Boolean)
+      .slice(0, 4);
+    if (method.length === 0) continue;
+    target.method = filterOriginalMethod(method, sourceByIndex.get(index) || "");
   }
 }
 
@@ -451,7 +640,9 @@ export async function applyPostSearchHelpers(
   }
 
   const serverTasks = tasks.filter(
-    (task) => task.kind !== "textExtraction"
+    (task) =>
+      task.kind !== "textExtraction" &&
+      SUPPORTED_HELPER_KINDS.has(task.kind)
   );
   const extractionTasks = tasks.filter(
     (task) => task.kind === "textExtraction"

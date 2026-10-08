@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import i18next from "i18next";
 
 const ACCOUNT_DELETION_PREFIX = "pantrio.accountDeletion.v1.";
 const APPLE_LINK_PREFIX = "pantrio.appleLink.v1.";
@@ -81,7 +82,7 @@ export async function getDurablePostAuthNotice() {
 }
 
 export async function setDurablePostAuthNotice(notice) {
-  const title = String(notice?.title || "Account update").trim();
+  const title = String(notice?.title || i18next.t("account.updateTitle")).trim();
   const message = String(notice?.message || "").trim();
   if (!message) return null;
   const value = {

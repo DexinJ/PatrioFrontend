@@ -336,7 +336,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    // React Native 0.86 dropped `absoluteFillObject`; the spread was a no-op,
+    // which pushed this cover out of the flex column instead of over the app.
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: "center",
     backgroundColor: "#ffffff",
     justifyContent: "center",

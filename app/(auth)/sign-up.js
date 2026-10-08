@@ -29,15 +29,24 @@ import {
   clearAuthProvisioningIntent,
   markAuthProvisioningStarted,
 } from "../../api/authProvisioningStorage";
+import {
+  clearEmailVerificationPromptRequest,
+  requestEmailVerificationPrompt,
+} from "../../api/emailVerificationStorage";
 import { API_BASE_URL } from "../../api/backendConfig";
 import { fetchWithTimeout } from "../../api/fetchWithTimeout";
 import { auth } from "../../auth/firebaseClient";
+import { authErrorMessageKey } from "../../auth/authErrorMessages";
 import {
   signInWithGoogleNative,
   signOutFromGoogleNative,
 } from "../../auth/googleAuth";
 import { useAuth } from "../../auth/useAuth";
 import { GlobalContext } from "../../context/GlobalContext";
+import {
+  needsEmailVerification,
+  suggestEmailCorrection,
+} from "../../utils/emailVerificationPolicy";
 
 const PROFILE_REQUEST_TIMEOUT_MS = 15000;
 
@@ -113,6 +122,7 @@ export default function SignUpScreen() {
 
   const [username, setUsernameInput] = useState("");
   const [email, setEmail] = useState("");
+  const [email2, setEmail2] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [loading, setLoading] = useState(false);
@@ -149,15 +159,22 @@ export default function SignUpScreen() {
 
   const isBusy = loading || googleLoading || appleLoading; // ✅ CHANGED
 
-  const submit = async () => {
-    const e = email.trim();
+  const submit = () => {
     const u = username.trim();
+    const e = email.trim();
+    const e2 = email2.trim();
 
-    if (!u || !e || !pw || !pw2) {
+    if (!u || !e || !e2 || !pw || !pw2) {
       return Alert.alert(t("auth.missingInfo"), t("auth.fillAllFields"));
     }
     if (u.length < 2 || u.length > 20) {
       return Alert.alert(t("auth.username"), t("auth.usernameRules"));
+    }
+    if (e.toLowerCase() !== e2.toLowerCase()) {
+      return Alert.alert(
+        t("auth.emailsDontMatch"),
+        t("auth.emailsDontMatchBody")
+      );
     }
     if (pw !== pw2) {
       return Alert.alert(
@@ -171,6 +188,40 @@ export default function SignUpScreen() {
         t("auth.passwordMinLength")
       );
     }
+
+    const correction = suggestEmailCorrection(e);
+    if (correction) {
+      return Alert.alert(
+        t("auth.emailTypoTitle"),
+        t("auth.emailTypoSuggestion", { email: correction }),
+        [
+          {
+            text: t("auth.useSuggestion"),
+            // Continue immediately with the corrected address instead of
+            // sending the user back to tap Create account again.
+            onPress: () => {
+              setEmail(correction);
+              setEmail2(correction);
+              void runSignUp({ email: correction, username: u });
+            },
+          },
+          {
+            text: t("auth.keepTypedEmail"),
+            style: "cancel",
+            onPress: () => void runSignUp({ email: e, username: u }),
+          },
+        ]
+      );
+    }
+
+    return runSignUp({ email: e, username: u });
+  };
+
+  // Declared as a function so the validation wrapper above can call it.
+  async function runSignUp({
+    email: signUpEmail,
+    username: signUpUsername,
+  }) {
     if (operationBusyRef.current) return;
 
     operationBusyRef.current = true;
@@ -190,7 +241,7 @@ export default function SignUpScreen() {
         return;
       }
 
-      const cred = await createUserWithEmailAndPassword(auth, e, pw);
+      const cred = await createUserWithEmailAndPassword(auth, signUpEmail, pw);
       createdUser = cred.user;
       ensureProvisioningIsActive(generation);
       await bindAuthProvisioningUser(cred.user.uid);
@@ -203,7 +254,7 @@ export default function SignUpScreen() {
       try {
         await saveUserProfileToBackend({
           idToken,
-          username: u,
+          username: signUpUsername,
           signal: profileController.signal,
         });
       } finally {
@@ -212,15 +263,22 @@ export default function SignUpScreen() {
         }
       }
       backendProfileSaved = true;
+      // Sent while the account is brand new: this is the moment a typo is most
+      // likely to be caught, and it costs nothing if it is ignored.
+      await cred.user.sendEmailVerification().catch(() => {});
+      if (needsEmailVerification(cred.user)) {
+        requestEmailVerificationPrompt(cred.user.uid);
+      }
       await clearAuthProvisioningIntent().catch(() => {});
       ensureProvisioningIsActive(generation);
 
-      if (mountedRef.current) setUsernameInApp(u);
+      if (mountedRef.current) setUsernameInApp(signUpUsername);
       activeProvisioningRef.current = null;
       activeProvisioningProviderRef.current = null;
       completeProvisioning(generation);
     } catch (err) {
       if (createdUser && !backendProfileSaved) {
+        clearEmailVerificationPromptRequest(createdUser.uid);
         try {
           await deleteUser(createdUser);
           firebaseUserDeleted = true;
@@ -241,14 +299,18 @@ export default function SignUpScreen() {
       activeProvisioningRef.current = null;
       activeProvisioningProviderRef.current = null;
       if (mountedRef.current && err?.code !== "ACCOUNT_SETUP_CANCELLED") {
-        Alert.alert(t("auth.signUpFailed"), err?.message || t("common.unknownError"));
+        const key = authErrorMessageKey(err);
+        Alert.alert(
+          t("auth.signUpFailed"),
+          key ? t(key) : err?.message || t("common.unknownError")
+        );
       }
     } finally {
       profileRequestControllerRef.current = null;
       operationBusyRef.current = false;
       if (mountedRef.current) setLoading(false);
     }
-  };
+  }
 
   const onPressGoogle = async () => {
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -481,6 +543,28 @@ export default function SignUpScreen() {
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        keyboardType="email-address"
+        placeholder={t("auth.emailPlaceholder")}
+        placeholderTextColor={theme.textPlaceholder}
+        style={[
+          styles.input,
+          {
+            backgroundColor: theme.inputBackground,
+            borderColor: theme.border,
+            color: theme.inputText,
+            fontSize,
+          },
+        ]}
+      />
+
+      <Text style={[styles.label, { color: theme.textSecondary }]}>
+        {t("auth.confirmEmail")}
+      </Text>
+      <TextInput
+        value={email2}
+        onChangeText={setEmail2}
+        autoCapitalize="none"
+        autoCorrect={false}
         keyboardType="email-address"
         placeholder={t("auth.emailPlaceholder")}
         placeholderTextColor={theme.textPlaceholder}

@@ -10,19 +10,28 @@
       "distribution": "internal",
       "environment": "development",
       "channel": "development",
-      "node": "22.13.0"
+      "node": "22.13.0",
+      "ios": {
+        "image": "macos-tahoe-26.6-xcode-27.0"
+      }
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
       "channel": "preview",
-      "node": "22.13.0"
+      "node": "22.13.0",
+      "ios": {
+        "image": "macos-tahoe-26.6-xcode-27.0"
+      }
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
       "channel": "production",
-      "node": "22.13.0"
+      "node": "22.13.0",
+      "ios": {
+        "image": "macos-tahoe-26.6-xcode-27.0"
+      }
     }
   },
   "submit": {

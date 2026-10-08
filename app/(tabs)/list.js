@@ -30,6 +30,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HeaderWithButton } from "../../components/Header";
+import TutorialTarget from "../../components/TutorialTarget";
 import { GlobalContext } from "../../context/GlobalContext";
 
 // ✅ pills UI
@@ -558,14 +559,16 @@ export default function ShoppingListScreen() {
 
     navigation.setOptions({
       header: () => (
-        <HeaderWithButton
-          title={t("shoppingList.title")}
-          buttonLabel={editMode ? t("common.done") : t("common.edit")}
-          onPress={toggleEditMode}
-          showLeftButton={true}
-          leftButtonLabel={leftButtonLabel}
-          onLeftPress={onLeftPress}
-        />
+        <TutorialTarget id="list.editButton">
+          <HeaderWithButton
+            title={t("shoppingList.title")}
+            buttonLabel={editMode ? t("common.done") : t("common.edit")}
+            onPress={toggleEditMode}
+            showLeftButton={true}
+            leftButtonLabel={leftButtonLabel}
+            onLeftPress={onLeftPress}
+          />
+        </TutorialTarget>
       ),
     });
   }, [
@@ -680,16 +683,18 @@ export default function ShoppingListScreen() {
       >
         {/* ✅ NEW: Search + Sort (like FridgeScreen) */}
         <View style={styles.topBlock}>
-          <SearchAndSortBar
-            search={search}
-            onChangeSearch={setSearch}
-            onPressSort={() => setSortSheetVisible(true)}
-            theme={theme}
-            fontSize={fontSize}
-            placeholder={t("shoppingList.searchPlaceholder")}
-          />
+          <TutorialTarget id="list.searchBar">
+            <SearchAndSortBar
+              search={search}
+              onChangeSearch={setSearch}
+              onPressSort={() => setSortSheetVisible(true)}
+              theme={theme}
+              fontSize={fontSize}
+              placeholder={t("shoppingList.searchPlaceholder")}
+            />
+          </TutorialTarget>
 
-          <View style={{ marginTop: 10 }}>
+          <TutorialTarget id="list.filterTabs" style={{ marginTop: 10 }}>
             <FilterTabsRow
               tabs={categoryTabs}
               activeKey={effectiveActiveCategory}
@@ -697,48 +702,50 @@ export default function ShoppingListScreen() {
               theme={theme}
               fontSize={fontSize}
             />
-          </View>
+          </TutorialTarget>
         </View>
 
         {/* List */}
-        {sortedShoppingItems.length === 0 ? (
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>
-                {shoppingListItems.length === 0
-                  ? t("shoppingList.emptyList")
-                  : t("shoppingList.noMatches")}
-              </Text>
-            </View>
-          </TouchableWithoutFeedback>
-        ) : (
-          <SectionList
-            sections={sections}
-            keyExtractor={(item) => item.id}
-            renderItem={renderRow}
-            renderSectionHeader={({ section }) => (
-              <View style={[styles.sectionHeaderWrap, { backgroundColor: theme.background }]}>
-                <Text
-                  style={[
-                    styles.sectionHeader,
-                    { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.8) },
-                  ]}
-                >
-                  {(section.title === "Uncategorized"
-                    ? t("shoppingList.uncategorized")
-                    : section.title
-                  ).toUpperCase()}
+        <TutorialTarget id="list.items" style={styles.listWrap}>
+          {sortedShoppingItems.length === 0 ? (
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>
+                  {shoppingListItems.length === 0
+                    ? t("shoppingList.emptyList")
+                    : t("shoppingList.noMatches")}
                 </Text>
               </View>
-            )}
-            stickySectionHeadersEnabled
-            contentContainerStyle={styles.list}
-            keyboardShouldPersistTaps="handled"
-          />
-        )}
+            </TouchableWithoutFeedback>
+          ) : (
+            <SectionList
+              sections={sections}
+              keyExtractor={(item) => item.id}
+              renderItem={renderRow}
+              renderSectionHeader={({ section }) => (
+                <View style={[styles.sectionHeaderWrap, { backgroundColor: theme.background }]}>
+                  <Text
+                    style={[
+                      styles.sectionHeader,
+                      { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.8) },
+                    ]}
+                  >
+                    {(section.title === "Uncategorized"
+                      ? t("shoppingList.uncategorized")
+                      : section.title
+                    ).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              stickySectionHeadersEnabled
+              contentContainerStyle={styles.list}
+              keyboardShouldPersistTaps="handled"
+            />
+          )}
+        </TutorialTarget>
 
         {/* Input Row */}
-        <View style={styles.inputRow}>
+        <TutorialTarget id="list.inputRow" style={styles.inputRow}>
           <TextInput
             style={[
               styles.input,
@@ -770,7 +777,7 @@ export default function ShoppingListScreen() {
           <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.actionButton }]} onPress={handleAdd}>
             <Ionicons name="add" size={fontSize * 1.5} color="#fff" />
           </TouchableOpacity>
-        </View>
+        </TutorialTarget>
 
         {/* ✅ Done Shopping Button (DISABLED in edit mode) */}
         {hasCheckedItems && !editMode && (
@@ -925,6 +932,8 @@ const styles = StyleSheet.create({
 
   // ✅ NEW: like FridgeScreen "topBlock"
   topBlock: { paddingTop: 10, paddingBottom: 8 },
+
+  listWrap: { flex: 1 },
 
   empty: { textAlign: "center", marginTop: 20 },
 

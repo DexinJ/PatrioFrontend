@@ -4,6 +4,7 @@ import {
   clearCustomAiProviderSettings,
   clearLegacyCustomAiProviderSettingsForUser,
 } from "./aiProviderSettings";
+import { clearEmailVerificationSnooze } from "./emailVerificationStorage";
 import { clearChatData } from "./memoryManager";
 import { cancelPantrioReminders } from "./reminderScheduler";
 import {
@@ -27,6 +28,7 @@ export async function purgeStoredUserData(uid) {
       () => AsyncStorage.removeItem(storageKeys.shoppingListItems),
     ],
     ["settings", () => AsyncStorage.removeItem(storageKeys.appSettings)],
+    ["emailVerification", () => clearEmailVerificationSnooze(uid)],
     ["customAi", () => clearCustomAiProviderSettings(uid)],
     ["legacyStorage", () => clearLegacyStorageForUser(uid)],
     ["legacyCustomAi", () => clearLegacyCustomAiProviderSettingsForUser(uid)],

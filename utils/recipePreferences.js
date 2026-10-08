@@ -1,4 +1,5 @@
 import i18next from "i18next";
+import { joinList } from "./localeList.js";
 
 export const RECIPE_PREFERENCES_SCHEMA_VERSION = 1;
 
@@ -270,7 +271,7 @@ export function applyRecipePreferenceProposal(
 
 function formatPreferenceList(value) {
   if (!value.length) return i18next.t("common.none");
-  const visible = value.slice(0, 5).join(", ");
+  const visible = joinList(value.slice(0, 5));
   return value.length > 5
     ? i18next.t("recipePreferences.visibleMore", {
         visible,

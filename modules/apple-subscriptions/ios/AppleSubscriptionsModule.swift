@@ -529,6 +529,24 @@ public final class AppleSubscriptionsModule: Module {
     return (subscriptionStatus.renewalInfo.jwsRepresentation, verification)
   }
 
+  /// StoreKit transaction identifiers grow over time. The JS layer caps the
+  /// submitted list at 20 items, so ordering decides which evidence survives:
+  /// newest first keeps the current entitlement. The previous string comparison
+  /// ordered oldest first and could drop the transaction that matters.
+  private static func transactionIdentifierValue(
+    _ evidence: [String: Any]
+  ) -> UInt64 {
+    guard let raw = evidence["transactionId"] as? String else { return 0 }
+    return UInt64(raw) ?? 0
+  }
+
+  private static func newestFirst(
+    _ left: [String: Any],
+    _ right: [String: Any]
+  ) -> Bool {
+    transactionIdentifierValue(left) > transactionIdentifierValue(right)
+  }
+
   private static func currentAndUnfinishedEvidence(
     productIDs: [String],
     source: String
@@ -557,10 +575,7 @@ public final class AppleSubscriptionsModule: Module {
       )
     }
 
-    return evidenceByTransactionID.values.sorted {
-      ($0["transactionId"] as? String ?? "") <
-        ($1["transactionId"] as? String ?? "")
-    }
+    return evidenceByTransactionID.values.sorted(by: Self.newestFirst)
   }
 
   private static func unfinishedEvidence(
@@ -577,10 +592,7 @@ public final class AppleSubscriptionsModule: Module {
         await makeEvidence(verificationResult, source: source)
       )
     }
-    return evidence.sorted {
-      ($0["transactionId"] as? String ?? "") <
-        ($1["transactionId"] as? String ?? "")
-    }
+    return evidence.sorted(by: Self.newestFirst)
   }
 
   private static func unfinishedTransactionIDs(

@@ -80,6 +80,7 @@ import {
   findPresetTagId,
   normalizeToPresetTagIds,
 } from "../utils/tags";
+import { normalizeSeenTabs } from "../utils/tabTutorials";
 import {
   boundRuntimeChatMessages,
   CONVERSATION_STATUS_ACTIVE,
@@ -252,6 +253,9 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
   const storedUser = isPlainRecord(parsedSettings.user)
     ? parsedSettings.user
     : {};
+  const storedTutorial = isPlainRecord(parsedSettings.tutorial)
+    ? parsedSettings.tutorial
+    : {};
   const restoredAiProvider = resolveAiProvider(
     storedAdvanced.aiProvider,
     storedAdvanced.useCustomAi
@@ -299,6 +303,11 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
     recipePreferences: normalizeRecipePreferences(
       parsedSettings.recipePreferences ?? previousSettings.recipePreferences
     ),
+    tutorial: {
+      ...previousSettings.tutorial,
+      ...storedTutorial,
+      seenTabs: normalizeSeenTabs(storedTutorial.seenTabs),
+    },
     user: { ...previousSettings.user, ...storedUser },
   };
 }
@@ -350,6 +359,11 @@ export const GlobalProvider = ({
         urgencyDays: DEFAULT_URGENCY_DAYS,
       },
       recipePreferences: createDefaultRecipePreferences(),
+      // Which tab tours the user has already seen, keyed by tab and stored
+      // per tutorial version so a future bump can re-teach a changed screen.
+      tutorial: {
+        seenTabs: {},
+      },
       user: {
         uid: null,
         name: "freeUser",

@@ -77,7 +77,7 @@ export const RECOMMEND_RECIPES_TOOL = {
       mustUseIngredients: stringArray(20),
       excludedIngredients: stringArray(20),
       servings: { type: "integer", minimum: 1, maximum: 12 },
-      resultCount: { type: "integer", minimum: 1, maximum: 6 },
+      resultCount: { type: "integer", minimum: 1, maximum: 4 },
     }),
   },
 };

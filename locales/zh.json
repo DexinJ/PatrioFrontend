@@ -42,12 +42,44 @@
   "tutorial": {
     "next": "下一步",
     "skip": "跳过",
+    "back": "上一步",
     "done": "知道了",
     "stepOf": "第 {{current}} 步，共 {{total}} 步",
     "a11y": {
       "next": "下一步",
+      "back": "上一步",
       "finish": "结束引导",
       "skip": "跳过本页引导"
+    },
+    "samples": {
+      "itemsNotice": "示例食材",
+      "chatNotice": "示例对话",
+      "fridge": {
+        "yogurt": {
+          "name": "希腊酸奶"
+        },
+        "spinach": {
+          "name": "嫩菠菜"
+        },
+        "peas": {
+          "name": "冷冻豌豆"
+        }
+      },
+      "list": {
+        "milk": {
+          "name": "牛奶"
+        },
+        "apples": {
+          "name": "苹果"
+        },
+        "bread": {
+          "name": "面包"
+        }
+      },
+      "chat": {
+        "user": "今晚做什么好？",
+        "assistant": "可以做菠菜烘蛋：快，又能把快到期的绿叶菜用掉。要步骤吗？"
+      }
     },
     "tabs": {
       "home": {
@@ -78,8 +110,12 @@
           "body": "助手能看到你的库存和购物清单。可以问今晚做什么、先吃哪个、还缺什么。"
         },
         "attach": {
-          "title": "发一张照片",
-          "body": "点加号拍照或选图。助手能看懂小票、置物架或你的冰箱，并把认出来的食材加入库存。"
+          "title": "用照片提问",
+          "body": "点加号，打开照片选项。"
+        },
+        "attachOptions": {
+          "title": "拍照或从相册选",
+          "body": "可以现拍置物架、小票或冰箱，也可以选一张已有的照片。助手会读图，并把认出来的食材加入库存。"
         },
         "composer": {
           "title": "输入你的问题",
@@ -97,11 +133,19 @@
         },
         "items": {
           "title": "先处理最要紧的",
-          "body": "已过期和快过期的排在最上面。长按任意食材，可以找菜谱、加入购物清单、编辑或删除。"
+          "body": "已过期和快过期的排在最上面。搜索或排序可以找到其余的食材。"
+        },
+        "itemsMenu": {
+          "title": "长按食材打开菜单",
+          "body": "长按任意食材，可以找菜谱、加入购物清单、编辑或删除。"
         },
         "addButton": {
           "title": "添加食材",
-          "body": "点加号记录新食材：名称、数量、存放位置、类型和保质期，输入时应用会自动推荐标签。也可以直接让 AI 帮你添加。"
+          "body": "点加号打开添加菜单：拍张照片、从相册选一张，或手动添加。"
+        },
+        "addOptions": {
+          "title": "拍照添加或手动添加",
+          "body": "拍一张货架、小票或冰箱的照片，或从相册选一张；助手会读出里面的食材并加进冰箱。也可以手动逐项添加。"
         },
         "editButton": {
           "title": "批量编辑",
@@ -167,10 +211,22 @@
     "tip": "提示：设置随时都能改。",
     "createAccountButton": "注册",
     "logInButton": "登录",
-    "aiDisclosure": "Pantrio 助手由 AI 系统生成回答，可能出现错误，也不构成食品安全建议——请务必自行确认食材、过敏原以及食物是否安全。"
+    "aiDisclosure": "Pantrio 助手是 AI 系统。你发送的文字和照片会传送到 Pantrio 的服务器，并由第三方 AI 服务（OpenAI）处理以生成回答。回答可能出现错误，也不构成食品安全建议——请务必自行确认食材、过敏原以及食物是否安全。"
   },
   "auth": {
     "createAccount": "注册",
+    "legalLinkLabel": "《{{name}}》",
+    "termsAgreementPrefix": "我同意",
+    "termsAgreementMiddle": "并确认",
+    "termsAgreementSuffix": "。",
+    "termsAgreementA11y": "我同意《使用条款》并确认《隐私政策》。",
+    "acceptTermsTitle": "需要同意条款",
+    "acceptTermsToContinue": "请先同意《使用条款》并确认《隐私政策》以创建账号。",
+    "termsScreenTitle": "继续之前",
+    "termsScreenBody": "Pantrio 需要你同意后才能完成账号设置。",
+    "termsVersionLabel": "生效日期 {{version}}",
+    "termsAcceptAndContinue": "同意并继续",
+    "termsSignOut": "退出登录",
     "logIn": "登录",
     "username": "用户名",
     "usernamePlaceholder": "比如 johndoe",
@@ -217,6 +273,10 @@
     "errorNetwork": "无法连接服务器，请检查网络后重试。",
     "errorUserMismatch": "该凭据属于其他账号。",
     "errorOperationNotAllowed": "应用未启用该登录方式。",
+    "errorConfiguration": "本应用的登录服务配置有误，请联系支持。",
+    "errorQuotaExceeded": "今天发送的邮件过多，请稍后再试。",
+    "errorInternal": "我们这边出了点问题，请稍后重试。",
+    "errorEmailSendFailed": "邮件发送失败，请稍后重试。",
     "confirmEmail": "确认邮箱",
     "emailsDontMatch": "邮箱不一致",
     "emailsDontMatchBody": "请重新输入邮箱地址。",
@@ -227,7 +287,7 @@
     "verifyEmailTitle": "验证邮箱",
     "verifyEmailMessage": "我们已向 {{email}} 发送验证链接。完成验证后，即使忘记密码也能找回账号。",
     "verifyEmailResend": "重新发送链接",
-    "verifyEmailResent": "已重新发送至 {{email}}。",
+    "verifyEmailResent": "已为 {{email}} 请求发送新的链接。",
     "verifyEmailResendIn": "请在 {{seconds}} 秒后重试。",
     "verifyEmailWrongAddress": "邮箱填错了",
     "verifyEmailLater": "稍后再说",
@@ -282,7 +342,7 @@
     "findRecipesUsing": "用这些做菜：{{items}}",
     "findRecipesWithItems": "用冰箱里的食材做菜",
     "more": "，还有 {{count}} 件食材",
-    "findRecipesPrompt": "用尽可能多的所选冰箱食材推荐 4 道快手菜：\n{{items}}\n\n请只写一句指向下方菜谱卡片的介绍；卡片会显示菜名、热量、已有食材和缺少食材，点击卡片可查看完整步骤和菜谱页。如果没有匹配的菜谱，请直接说明并不要提及卡片。不要逐条复述菜谱内容、步骤、解释或编造细节。",
+    "findRecipesPrompt": "用尽可能多的所选冰箱食材推荐 4 道菜：\n{{items}}\n\n请只写一句指向下方菜谱卡片的介绍；卡片会显示菜名、热量、已有食材和缺少食材，点击卡片可查看完整步骤和菜谱页。如果没有匹配的菜谱，请直接说明并不要提及卡片。不要逐条复述菜谱内容、步骤、解释或编造细节。",
     "recipes": "菜谱",
     "shopList": "加进清单",
     "edit": "编辑",
@@ -296,7 +356,14 @@
     "selectOneToEdit": "一次只能编辑 1 件，请重新选择。",
     "recipeGenerationFailed": "菜谱生成失败，请重试。",
     "emptyFridge": "冰箱还空着，先加点东西吧 👇",
-    "noMatches": "没找到，换个关键词或标签页试试。"
+    "noMatches": "没找到，换个关键词或标签页试试。",
+    "addManually": "手动添加",
+    "takePhotoA11y": "拍一张冰箱、货架或小票的照片",
+    "pickPhotoA11y": "从相册选一张冰箱、货架或小票的照片",
+    "photoPrompt": "把这张照片里能看出来的食材都加进我的冰箱；数量或保质期看不清的话，可以估算。",
+    "photoDisplayText": "从照片添加食材",
+    "photoTitle": "从照片添加",
+    "photoFailed": "这张照片读不出来，再试一次，或手动添加。"
   },
   "shoppingList": {
     "title": "🛒 购物清单",
@@ -329,11 +396,38 @@
     "deleteItemsQuestion_other": "删除后无法恢复，确定删除这 {{count}} 件吗？"
   },
   "chat": {
+    "errorNotice": {
+      "title": "消息未发送",
+      "dismiss": "关闭"
+    },
     "startNewChat": "开始新聊天",
     "photoChat": "照片对话",
     "switchedToNewConversation": "已切换到新对话。",
     "chatDescription": "问问 Pantrio：今天吃什么、冰箱里还有什么、把什么加入购物清单。",
-    "aiNotice": "Pantrio 助手由 AI 系统生成答案，可能出现错误，也不构成食品安全建议。",
+    "aiNotice": "Pantrio 助手是 AI 系统。消息会由第三方 AI 服务处理，回答可能出现错误，也不构成食品安全建议。",
+    "aiConsentTitle": "开始聊天前",
+    "aiConsentA11y": "开始聊天前：你的消息会如何被处理",
+    "aiConsentBody": "Pantrio 助手是 AI 系统。你发送的文字和照片会传送到 Pantrio 的服务器，并由第三方 AI 服务（OpenAI）处理以生成回答。回答可能出现错误，也不构成食品安全建议——请务必自行确认食材、过敏原以及食物是否安全。",
+    "aiConsentAccept": "继续",
+    "aiConsentSendBlockedBody": "Pantrio 助手会把你输入的文字和拍摄的照片发送给第三方 AI 服务。请先在聊天中同意这一点，再向助手发送内容。",
+    "aiConsentGoToChat": "前往聊天",
+    "reportResponse": "举报此回答",
+    "reportResponseTitle": "举报此回答",
+    "reportResponseMessage": "将打开我们的支持表单，方便你说明问题所在。回答不会自动发送——如需我们查看，请自行粘贴到表单中。",
+    "reportResponseConfirm": "打开支持表单",
+    "reportResponseFailed": "无法打开支持表单。请发送邮件至 {{email}}。",
+    "suggestions": {
+      "cookLabel": "{{meal}}做什么菜？",
+      "cookPrompt": "{{meal}}做什么菜？",
+      "expiredRestockLabel": "把过期食材加入购物清单",
+      "expiredRestockPrompt": "把过期食材加入购物清单",
+      "photoLabel": "拍照添加食材到冰箱",
+      "meals": {
+        "breakfast": "早餐",
+        "lunch": "午餐",
+        "dinner": "晚餐"
+      }
+    },
     "savedPreferences": "已保存你的菜谱偏好：\n{{summary}}",
     "savedPreferencesShort": "已保存你的菜谱偏好。",
     "addedToFridge_one": "✅ 已把 {{count}} 件加进冰箱。",
@@ -373,7 +467,9 @@
       "appleRequestTooLarge": "对话内容太长，Apple 智能无法处理。请新建对话或切换 AI 服务。",
       "appleInvalidResponse": "Apple 智能返回了无效响应。",
       "appleRepeatedToolCall": "Apple 智能重复了相同的工具调用且未做修改。",
-      "appleToolLimit": "Apple 智能超出工具调用次数上限。"
+      "appleToolLimit": "Apple 智能超出工具调用次数上限。",
+      "imageRetryTitle": "无法重新发送这张照片",
+      "imageRetryUnavailable": "这张照片已不保存在本设备上，而且这条消息没有文字内容。请重新发送一张照片。"
     }
   },
   "conversations": {
@@ -406,7 +502,9 @@
     "messagePantrio": "给 Pantrio 发消息…",
     "typeAMessage": "输入消息…",
     "sendMessage": "发送消息",
-    "sendMessageHint": "发送聊天框里的文字。"
+    "sendMessageHint": "发送聊天框里的文字。",
+    "stopResponse": "停止回复",
+    "stopResponseHint": "取消正在生成的回复。"
   },
   "messageList": {
     "foundItems_one": "我找到了 {{count}} 件：",
@@ -484,8 +582,8 @@
       "nearMatch": "近似匹配",
       "openRecipe": "查看完整菜谱",
       "addMissingItems": "把缺少的食材加入购物清单",
-      "addMissingItemsCount_one": "加入 {{count}} 样缺少的食材",
-      "addMissingItemsCount_other": "加入 {{count}} 样缺少的食材",
+      "addMissingItemsCount_one": "把 {{count}} 样缺少的食材加入购物清单",
+      "addMissingItemsCount_other": "把 {{count}} 样缺少的食材加入购物清单",
       "alreadyOnList": "购物清单中已有",
       "addedToShoppingList_one": "已加入 {{count}} 样食材到购物清单",
       "addedToShoppingList_other": "已加入 {{count}} 样食材到购物清单",
@@ -849,8 +947,6 @@
     "resetRecipePreferencesAlertMessage": "将清除本机保存的菜系、饮食需求、食材偏好、营养目标及学习到的菜谱偏好，此操作不可恢复。",
     "resetPreferencesButton": "重置偏好",
     "notifications": "通知",
-    "dailyReminders": "每日提醒",
-    "dailyRemindersA11y": "每日提醒",
     "expirationReminders": "过期提醒",
     "expirationAlerts": "过期提醒",
     "expirationAlertsA11y": "过期提醒",
@@ -876,6 +972,9 @@
     "incognitoMode": "无痕模式",
     "incognitoModeA11y": "无痕模式",
     "incognitoBody": "无痕模式下，新聊天记录不会保存在本机；关闭后会清除当前私密对话。",
+    "diagnosticsTitle": "分享诊断数据",
+    "diagnosticsBody": "发送崩溃报告，以及出错会话的遮蔽屏幕录制；绝不包含聊天消息和照片。可随时关闭。",
+    "diagnosticsSaveFailed": "无法保存此设置，请重试。",
     "storedData": "已存数据",
     "storedDataBody": "以下操作仅影响本机保存的账号数据，不会删除你的 Pantrio 账号。",
     "resetDataOnDevice": "重置本机数据",
@@ -1033,7 +1132,7 @@
     "defaultServingsHelp": "未指定份数时使用该默认值。",
     "customUrgencyOn": "使用自定义天数范围划分紧急程度。",
     "customUrgencyOff": "使用预设天数范围划分紧急程度。",
-    "pantrioCloudAiDetail": "使用 Pantrio 提供的 AI 服务。",
+    "pantrioCloudAiDetail": "使用 Pantrio 提供的 AI 服务（OpenAI）。",
     "checkingThisDevice": "正在检查本机…",
     "myOwnAiApiDetail": "使用 OpenAI 兼容的 AI 服务及你自己的密钥。",
     "saveAiProvider": "保存 AI 服务",
@@ -1063,12 +1162,8 @@
     "couldNotVerifyTransaction": "无法验证 Apple 交易更新。"
   },
   "notifications": {
-    "dailyCheckTitle": "Pantrio 冰箱检查",
-    "expiringSoon_one": "有 {{count}} 件食材即将过期。",
-    "expiringSoon_other": "有 {{count}} 件食材即将过期。",
     "nearingExpirationTitle": "有食材即将过期",
     "reviewBody": "打开 Pantrio，查看未来 {{days}} 天内过期的食材。",
-    "reviewFridgeBody": "抽空看看冰箱和购物清单。",
     "couldNotCancel_one": "有 {{count}} 个提醒未能取消。",
     "couldNotCancel_other": "有 {{count}} 个提醒未能取消。",
     "scheduleFailed": "无法安排全部提醒。"
@@ -1092,6 +1187,7 @@
   },
   "errors": {
     "requestFailed": "请求失败，请重试。",
+    "termsAcceptanceFailed": "无法保存你的同意，请重试。",
     "requestTimedOut": "请求超时，请重试。",
     "requestCouldNotBeCompleted": "请求未完成，请重试。",
     "chatCancelledSession": "会话结束，聊天请求已取消。",

@@ -9,10 +9,13 @@ import {
   View,
 } from "react-native";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
+import { useTabTutorial } from "../context/TabTutorialContext";
 import {
   COMPOSER_BORDER_WIDTH,
   calculateComposerLayout,
 } from "../utils/composerLayout";
+import { isChatStreaming } from "../utils/composerActions";
+import { shouldRevealMenu } from "../utils/tabTutorials";
 import {
   normalizeComposerText,
   shouldShowSendButton,
@@ -20,14 +23,23 @@ import {
 import PlusMenu from "./PlusMenu";
 import TutorialTarget from "./TutorialTarget";
 
-export default function MessageInput({ value, onChangeText, onSend, onFocus }) {
+export default function MessageInput({
+  value,
+  onChangeText,
+  onSend,
+  onStop,
+  onFocus,
+}) {
   const { t } = useTranslation();
   const { settings, theme } = useContext(GlobalContext);
-  const { receiving } = useContext(ChatContext);
+  const { receiving, waiting } = useContext(ChatContext);
+  const { currentStep, isActive } = useTabTutorial();
   const { height: viewportHeight } = useWindowDimensions();
 
   const fontSize = settings?.ux?.fontSize || 16;
   const chatgptStyle = Boolean(settings?.chat?.chatgptStyle);
+  // While a reply streams, the primary control stops it instead of sending.
+  const streaming = isChatStreaming({ receiving, waiting });
 
   const [composerContentHeight, setComposerContentHeight] = useState(0);
   const composerInputRef = useRef(null);
@@ -68,7 +80,7 @@ export default function MessageInput({ value, onChangeText, onSend, onFocus }) {
   };
 
   const handleSendText = () => {
-    if (receiving) return;
+    if (streaming) return;
 
     const trimmedValue = normalizeComposerText(value);
 
@@ -92,11 +104,24 @@ export default function MessageInput({ value, onChangeText, onSend, onFocus }) {
   };
 
   const handleSendImage = (imageData) => {
-    if (receiving) return;
+    if (streaming) return;
     sendMessageSafely(imageData);
   };
 
+  const handleStop = () => {
+    try {
+      onStop?.();
+    } catch (error) {
+      console.error("Failed to stop the response:", error);
+    }
+  };
+
   const showSendButton = shouldShowSendButton(value);
+
+  // The tour cannot be advanced by tapping the plus button, so when its photo
+  // step is showing the menu opens itself instead.
+  const revealAttachOptions =
+    isActive && shouldRevealMenu("chat", currentStep?.id);
 
   return (
     <View
@@ -110,7 +135,7 @@ export default function MessageInput({ value, onChangeText, onSend, onFocus }) {
       ]}
     >
       <TutorialTarget id="chat.attach">
-        <PlusMenu onSend={handleSendImage} />
+        <PlusMenu onSend={handleSendImage} revealOptions={revealAttachOptions} />
       </TutorialTarget>
 
       <TextInput
@@ -141,7 +166,7 @@ export default function MessageInput({ value, onChangeText, onSend, onFocus }) {
           setComposerContentHeight(nativeEvent.contentSize.height);
         }}
         placeholder={
-          receiving
+          streaming
             ? t("voiceInput.waitingForResponse")
             : chatgptStyle
               ? t("voiceInput.messagePantrio")
@@ -154,27 +179,46 @@ export default function MessageInput({ value, onChangeText, onSend, onFocus }) {
         accessibilityHint={t("voiceInput.messageHint")}
       />
 
-      <TouchableOpacity
-        style={[
-          styles.micButton,
-          {
-            backgroundColor: theme.actionButton,
-            opacity: !showSendButton || receiving ? 0.5 : 1,
-          },
-        ]}
-        onPress={handleSendText}
-        disabled={!showSendButton || receiving}
-        accessibilityRole="button"
-        accessibilityLabel={t("voiceInput.sendMessage")}
-        accessibilityHint={t("voiceInput.sendMessageHint")}
-        accessibilityState={{ disabled: !showSendButton || receiving }}
-      >
-        <Ionicons
-          name="send"
-          size={fontSize * 1.2}
-          color={theme.inputBackground}
-        />
-      </TouchableOpacity>
+      {streaming ? (
+        // Streaming turns the same control into a Stop button, using the
+        // cancellation path that already exists for conversation switches and
+        // backgrounding (api/chatLifecycle.js + useGpt().cancelAll).
+        <TouchableOpacity
+          style={[styles.micButton, { backgroundColor: theme.actionButton }]}
+          onPress={handleStop}
+          accessibilityRole="button"
+          accessibilityLabel={t("voiceInput.stopResponse")}
+          accessibilityHint={t("voiceInput.stopResponseHint")}
+        >
+          <Ionicons
+            name="stop"
+            size={fontSize * 1.2}
+            color={theme.inputBackground}
+          />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.micButton,
+            {
+              backgroundColor: theme.actionButton,
+              opacity: !showSendButton ? 0.5 : 1,
+            },
+          ]}
+          onPress={handleSendText}
+          disabled={!showSendButton}
+          accessibilityRole="button"
+          accessibilityLabel={t("voiceInput.sendMessage")}
+          accessibilityHint={t("voiceInput.sendMessageHint")}
+          accessibilityState={{ disabled: !showSendButton }}
+        >
+          <Ionicons
+            name="send"
+            size={fontSize * 1.2}
+            color={theme.inputBackground}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

@@ -26,7 +26,33 @@ export const AUTH_ERROR_MESSAGE_KEYS = Object.freeze({
   "auth/network-request-failed": "auth.errorNetwork",
   "auth/user-mismatch": "auth.errorUserMismatch",
   "auth/operation-not-allowed": "auth.errorOperationNotAllowed",
+  "auth/invalid-api-key": "auth.errorConfiguration",
+  "auth/quota-exceeded": "auth.errorQuotaExceeded",
+  "auth/internal-error": "auth.errorInternal",
+  // Token expiry and a stale session are the same instruction to the user.
+  "auth/user-token-expired": "auth.errorRequiresRecentLogin",
 });
+
+// The fallback for a code we have never seen. An unattributed "something went
+// wrong" is the failure mode this module exists to prevent, so the generic line
+// still carries the code in a development build (see formatAuthErrorMessage).
+export const AUTH_EMAIL_SEND_FAILED_KEY = "auth.errorEmailSendFailed";
+
+export function authErrorCodeMessageKey(code) {
+  return (
+    AUTH_ERROR_MESSAGE_KEYS[String(code || "").trim()] ||
+    AUTH_EMAIL_SEND_FAILED_KEY
+  );
+}
+
+// The Firebase code is developer detail. It is appended only when the caller
+// says it is a development build, so a release user never sees auth/....
+export function formatAuthErrorMessage(message, code, { isDev = false } = {}) {
+  const text = String(message || "");
+  const raw = String(code || "").trim();
+  if (!isDev || !raw) return text;
+  return `${text} (${raw})`;
+}
 
 export function authErrorMessageKey(error) {
   const code = String(error?.code || "").trim();

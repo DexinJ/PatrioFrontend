@@ -3,7 +3,7 @@
 // objects the chat history stores and the chat list renders as cards.
 // Keeping this module free of React/i18n imports makes it unit-testable.
 
-const MAX_RECIPE_CARDS = 6;
+const MAX_RECIPE_CARDS = 4;
 const MAX_STRING_LENGTH = 300;
 const MAX_INGREDIENT_LENGTH = 160;
 const MAX_MISSING_INGREDIENTS = 30;

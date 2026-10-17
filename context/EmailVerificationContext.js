@@ -14,16 +14,25 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState } from "react-native";
+import { sendEmailVerification } from "firebase/auth";
 import {
   clearEmailVerificationSnooze,
   getEmailVerificationSnoozeUntil,
   snoozeEmailVerificationPrompt,
   takeEmailVerificationPromptRequest,
 } from "../api/emailVerificationStorage";
-import { authErrorMessageKey } from "../auth/authErrorMessages";
+import {
+  authErrorCodeMessageKey,
+  authErrorMessageKey,
+  formatAuthErrorMessage,
+} from "../auth/authErrorMessages";
 import { changeAccountEmail } from "../auth/emailChange";
 import { auth } from "../auth/firebaseClient";
 import { useAuth } from "../auth/useAuth";
+import {
+  attemptAuthEmailSend,
+  reportAuthEmailSendFailure,
+} from "../utils/authEmailSend";
 import {
   EMAIL_VERIFICATION_PROMPT_SNOOZE_MS,
   EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
@@ -46,6 +55,7 @@ export function EmailVerificationProvider({ children }) {
   const [passwordRequired, setPasswordRequired] = useState(false);
   const [verificationConfirmed, setVerificationConfirmed] = useState(false);
   const [lastSentAt, setLastSentAt] = useState(0);
+  const [lastSendErrorCode, setLastSendErrorCode] = useState(null);
 
   const noticeShownRef = useRef(false);
   const activeUidRef = useRef(null);
@@ -61,7 +71,10 @@ export function EmailVerificationProvider({ children }) {
   const describeError = useCallback(
     (nextError) => {
       const key = authErrorMessageKey(nextError);
-      return key ? t(key) : nextError?.message || t("common.unknownError");
+      const message = key
+        ? t(key)
+        : nextError?.message || t("common.unknownError");
+      return formatAuthErrorMessage(message, nextError?.code, { isDev: __DEV__ });
     },
     [t]
   );
@@ -78,6 +91,7 @@ export function EmailVerificationProvider({ children }) {
     setError("");
     setPasswordRequired(false);
     setLastSentAt(0);
+    setLastSendErrorCode(null);
   }, [userId]);
 
   const confirmVerified = useCallback(async () => {
@@ -123,14 +137,25 @@ export function EmailVerificationProvider({ children }) {
       );
       if (cancelled) return;
       if (!shouldPromptEmailVerification({ user, snoozedUntilMs })) return;
-      if (!takeEmailVerificationPromptRequest(userId)) return;
+      const request = takeEmailVerificationPromptRequest(userId);
+      if (!request) return;
+      if (request.sendErrorCode) {
+        setLastSendErrorCode(request.sendErrorCode);
+        setError(
+          formatAuthErrorMessage(
+            t(authErrorCodeMessageKey(request.sendErrorCode)),
+            request.sendErrorCode,
+            { isDev: __DEV__ }
+          )
+        );
+      }
       setPromptVisible(true);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId, user]);
+  }, [t, userId, user]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
@@ -157,12 +182,24 @@ export function EmailVerificationProvider({ children }) {
     setBusy(true);
     setError("");
     try {
-      await user.sendEmailVerification();
+      const result = await attemptAuthEmailSend({
+        scope: "resend-verify",
+        send: () => sendEmailVerification(user),
+      });
+      if (!result.ok) {
+        if (mountedRef.current) {
+          setLastSendErrorCode(result.code);
+          setError(
+            formatAuthErrorMessage(t(result.messageKey), result.code, {
+              isDev: __DEV__,
+            })
+          );
+        }
+        return false;
+      }
       setLastSentAt(Date.now());
+      setLastSendErrorCode(null);
       return true;
-    } catch (nextError) {
-      if (mountedRef.current) setError(describeError(nextError));
-      return false;
     } finally {
       if (mountedRef.current) setBusy(false);
     }
@@ -195,6 +232,9 @@ export function EmailVerificationProvider({ children }) {
         setPasswordRequired(false);
         return true;
       } catch (nextError) {
+        // The change path owns its own copy (it latches a password field on a
+        // custom code), so it reports the failure without rerouting the text.
+        reportAuthEmailSendFailure(nextError, { scope: "email-change" });
         if (mountedRef.current) {
           // Latch upward only. A wrong password returns auth/invalid-credential,
           // and clearing the flag there would hide the field the user is
@@ -236,6 +276,7 @@ export function EmailVerificationProvider({ children }) {
       error,
       passwordRequired,
       lastSentAt,
+      lastSendErrorCode,
       openPrompt: () => {
         setError("");
         setPromptVisible(true);
@@ -260,6 +301,7 @@ export function EmailVerificationProvider({ children }) {
       dismissPrompt,
       error,
       lastSentAt,
+      lastSendErrorCode,
       passwordRequired,
       promptVisible,
       refreshVerification,
@@ -285,4 +327,12 @@ export function useEmailVerification() {
     );
   }
   return context;
+}
+
+// Non-throwing view of just the nudge's visibility, for consumers that only
+// need to know whether that Modal is on screen. The per-tab tour renders under
+// this provider in the tabs layout, but it must not hard-depend on it: a tour
+// mounted without the provider should wait its turn, not crash.
+export function useEmailVerificationPromptVisible() {
+  return useContext(EmailVerificationContext)?.promptVisible === true;
 }

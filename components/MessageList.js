@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import MessageBubble from "./MessageBubble";
 import RecipeResultCards from "./RecipeResultCards";
+import ChatErrorNotice from "./ChatErrorNotice";
 import { ChatContext, GlobalContext } from "../context/GlobalContext";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useTranslation } from "react-i18next";
@@ -29,6 +30,14 @@ import {
 } from "../utils/bulkProposal";
 import { translateTagLabel } from "../utils/tagTranslation";
 import { joinList } from "../utils/localeList.js";
+import {
+  noticeToneForErrorCode,
+  retryPayloadFromMessages,
+} from "../utils/chatErrorNotice";
+import {
+  isInFlightStructuredMessage,
+  lastUserMessageIndex,
+} from "../utils/chatMessageVisibility";
 
 function toDisplayText(value) {
   if (typeof value === "string") return value;
@@ -915,7 +924,12 @@ function TypingIndicator({ theme, status, chatgptStyle }) {
   );
 }
 
-export default function MessageList({ messages, onUiAction }) {
+export default function MessageList({
+  messages,
+  onUiAction,
+  onRetry,
+  onDismiss,
+}) {
   const listRef = useRef(null);
   const scrollTimerRef = useRef(null);
   const { settings, theme } = useContext(GlobalContext);
@@ -957,17 +971,21 @@ export default function MessageList({ messages, onUiAction }) {
 
   const data = useMemo(() => {
     const sourceMessages = Array.isArray(messages) ? messages : [];
-    const base = sourceMessages
-      .filter((msg) => !toDisplayText(msg?.text).startsWith("[fromTool]"))
+    const visibleMessages = sourceMessages.filter(
+      (msg) => !toDisplayText(msg?.text).startsWith("[fromTool]")
+    );
+    // Structured items (recipe cards, confirmation cards) that sit after the
+    // newest user message belong to the turn still streaming, so they stay
+    // hidden until it settles. Cards from earlier turns sit before this
+    // boundary and keep rendering.
+    const lastUserIndex = lastUserMessageIndex(visibleMessages);
+    const base = visibleMessages
       .map((msg, index) => {
         const key =
           toDisplayText(msg?.id || msg?.requestId) ||
           `message-${index}-${toDisplayText(msg?.role)}-${toDisplayText(msg?.type)}`;
 
-        if (
-          receiving &&
-          (msg?.type === "recipe_cards" || msg?.type === "ui_action")
-        ) {
+        if (receiving && isInFlightStructuredMessage(msg, index, lastUserIndex)) {
           return null;
         }
 
@@ -1005,6 +1023,21 @@ export default function MessageList({ messages, onUiAction }) {
 
         const isUser = msg?.role === "user";
 
+        // A failed turn renders as a notice, never as an assistant bubble, so
+        // it cannot be mistaken for a reply.
+        if (msg?.isError === true) {
+          if (!text) return null;
+          return {
+            kind: "error",
+            noticeId: msg?.id || key,
+            text,
+            tone: noticeToneForErrorCode(msg?.errorCode),
+            canRetry:
+              retryPayloadFromMessages(sourceMessages, msg?.id) !== null,
+            key,
+          };
+        }
+
         if (!text && !imageUri) return null;
 
         return {
@@ -1039,6 +1072,19 @@ export default function MessageList({ messages, onUiAction }) {
             return <ActionCard action={item.action} onPress={actionPress} />;
           }
           if (item.kind === "typing") return <TypingIndicator theme={theme} status={item.status} chatgptStyle={chatgptStyle} />;
+          if (item.kind === "error") {
+            return (
+              <ChatErrorNotice
+                text={item.text}
+                tone={item.tone}
+                chatgptStyle={chatgptStyle}
+                disabled={receiving}
+                canRetry={item.canRetry}
+                onRetry={() => onRetry?.(item.noticeId)}
+                onDismiss={() => onDismiss?.(item.noticeId)}
+              />
+            );
+          }
           if (item.kind === "recipe_cards") {
             return <RecipeResultCards recipes={item.recipes} />;
           }

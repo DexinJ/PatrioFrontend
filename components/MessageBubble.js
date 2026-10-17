@@ -19,6 +19,7 @@ import { getLinkPreview } from "link-preview-js";
 import { useTranslation } from "react-i18next";
 import { GlobalContext } from "../context/GlobalContext";
 import { markdownToPlainText } from "../utils/markdownFlow";
+import { SUPPORT_EMAIL, openSupportContact } from "../utils/supportContact";
 import {
   canFetchLinkPreview,
   shouldAutoLoadLinkPreview,
@@ -74,6 +75,26 @@ function MessageBubble({ text, imageUri, isUser, usage }) {
     if (displayText) setSelectModeVisible(true);
   };
   const closeSelectMode = () => setSelectModeVisible(false);
+
+  // Guideline 1.2 expects a way to report generated content. The report routes
+  // through support and is never attached automatically, so no chat content
+  // leaves the device unless the user pastes it themselves.
+  const handleReport = () => {
+    setSelectModeVisible(false);
+    Alert.alert(t("chat.reportResponseTitle"), t("chat.reportResponseMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("chat.reportResponseConfirm"),
+        onPress: () =>
+          void openSupportContact({
+            title: t("chat.reportResponseTitle"),
+            failureMessage: t("chat.reportResponseFailed", {
+              email: SUPPORT_EMAIL,
+            }),
+          }),
+      },
+    ]);
+  };
 
   // --- Extract URLs (dedupe, keep order) ---
   const urls = useMemo(() => {
@@ -387,6 +408,20 @@ function MessageBubble({ text, imageUri, isUser, usage }) {
             style={[styles.selectCard, { backgroundColor: theme.card }]}
           >
             <View style={styles.selectCardHeader}>
+              {/* Only assistant text can be reported; reporting the user's own
+                  words would be meaningless. */}
+              {isUser ? null : (
+                <TouchableOpacity
+                  onPress={handleReport}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("chat.reportResponse")}
+                >
+                  <Text style={[styles.selectClose, { color: theme.accent }]}>
+                    {t("chat.reportResponse")}
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 onPress={closeSelectMode}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -548,7 +583,7 @@ const styles = StyleSheet.create({
   },
   selectCardHeader: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     paddingTop: 6,
     paddingHorizontal: 8,
   },

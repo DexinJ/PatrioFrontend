@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { shouldClearLegacyOwnedData } = require("./legacyPurgePolicy.cjs");
+const { isGuestStorageOwner } = require("./guestStoragePolicy.cjs");
 
 const USER_STORAGE_PREFIX = "@pantrio:user";
 const LEGACY_STORAGE_OWNER_KEY = "@pantrio:legacyStorageOwner:v1";
@@ -307,6 +308,12 @@ export async function clearLegacyStorageQuarantine() {
 }
 
 export async function clearLegacyStorageForUser(uid) {
+  if (isGuestStorageOwner(uid)) {
+    // Ownerless legacy values belong to no guest, so leave them for the next
+    // signed-in user, who runs the real attribution check.
+    return 0;
+  }
+
   const normalizedUid = normalizeUid(uid);
 
   return withLegacyMigrationLock(async () => {
@@ -334,6 +341,13 @@ export async function clearLegacyStorageForUser(uid) {
 }
 
 export async function migrateLegacyAsyncStorageForUser(uid) {
+  if (isGuestStorageOwner(uid)) {
+    // The sweep below deletes values it cannot attribute to an owner. A guest is
+    // a device, not an account, so running it here could destroy data left by a
+    // previously signed-in user on the same phone.
+    return { claimed: false, migratedKeys: [], skippedGuestOwner: true };
+  }
+
   const normalizedUid = normalizeUid(uid);
 
   return withLegacyMigrationLock(async () => {

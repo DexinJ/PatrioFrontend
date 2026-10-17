@@ -42,12 +42,44 @@
   "tutorial": {
     "next": "Next",
     "skip": "Skip",
+    "back": "Back",
     "done": "Got it",
     "stepOf": "Step {{current}} of {{total}}",
     "a11y": {
       "next": "Next step",
+      "back": "Previous step",
       "finish": "Finish tutorial",
       "skip": "Skip tutorial"
+    },
+    "samples": {
+      "itemsNotice": "Example items",
+      "chatNotice": "Example conversation",
+      "fridge": {
+        "yogurt": {
+          "name": "Greek yogurt"
+        },
+        "spinach": {
+          "name": "Baby spinach"
+        },
+        "peas": {
+          "name": "Frozen peas"
+        }
+      },
+      "list": {
+        "milk": {
+          "name": "Milk"
+        },
+        "apples": {
+          "name": "Apples"
+        },
+        "bread": {
+          "name": "Bread"
+        }
+      },
+      "chat": {
+        "user": "What should I cook tonight?",
+        "assistant": "Try a spinach frittata \u2014 it's quick, and a good way to use up greens before they go off. Want the steps?"
+      }
     },
     "tabs": {
       "home": {
@@ -78,8 +110,12 @@
           "body": "The assistant can see your inventory and shopping list. Ask what to cook tonight, what to use first, or what you still need to buy."
         },
         "attach": {
-          "title": "Send a photo",
-      "body": "Tap plus to take or choose a picture. The assistant can read a receipt, a shelf, or your fridge and add what it finds to your inventory."
+          "title": "Ask with a photo",
+          "body": "Tap the plus button to open your photo options."
+        },
+        "attachOptions": {
+          "title": "Take a photo or pick one",
+          "body": "Take a live photo of a shelf, a receipt, or your fridge — or choose one you already have. The assistant reads it and adds what it finds to your inventory."
         },
         "composer": {
           "title": "Type your question",
@@ -97,11 +133,19 @@
         },
         "items": {
           "title": "What needs attention first",
-          "body": "Expired and expiring items are pinned to the top. Long-press any item to find recipes for it, add it to your shopping list, edit it, or delete it."
+          "body": "Expired and expiring items are pinned to the top. Search or sort to find the rest."
+        },
+        "itemsMenu": {
+          "title": "Hold an item for actions",
+          "body": "Press and hold any item to find recipes, add it to your shopping list, edit it, or delete it."
         },
         "addButton": {
           "title": "Add to your inventory",
-      "body": "Tap the plus button to log a new item: name, quantity, storage, food type, and expiry date, with tags suggested as you type. You can also ask AI to add the item for you."
+          "body": "Tap the plus button to open the add menu: take a photo, choose one from your gallery, or add an item by hand."
+        },
+        "addOptions": {
+          "title": "Add by photo or by hand",
+          "body": "Take a live photo of a shelf, a receipt, or your fridge - or choose one you already have. The assistant reads it and adds what it finds. You can still add an item by hand."
         },
         "editButton": {
           "title": "Bulk edits",
@@ -167,10 +211,22 @@
     "tip": "Tip: You can change settings anytime.",
     "createAccountButton": "Create account",
     "logInButton": "Log in",
-    "aiDisclosure": "Pantrio's assistant is an AI system. Its answers are generated automatically, can be wrong, and are not food-safety advice — always check ingredients, allergens, and whether food is safe yourself."
+    "aiDisclosure": "Pantrio's assistant is an AI system. The messages and photos you send are processed by Pantrio's servers and by a third-party AI provider (OpenAI) to generate answers. Answers can be wrong and are not food-safety advice — always check ingredients, allergens, and whether food is safe yourself."
   },
   "auth": {
     "createAccount": "Create account",
+    "legalLinkLabel": "{{name}}",
+    "termsAgreementPrefix": "I agree to the ",
+    "termsAgreementMiddle": " and acknowledge the ",
+    "termsAgreementSuffix": ".",
+    "termsAgreementA11y": "I agree to the Terms of Use and acknowledge the Privacy Policy.",
+    "acceptTermsTitle": "Agreement required",
+    "acceptTermsToContinue": "Agree to the Terms of Use and acknowledge the Privacy Policy to create your account.",
+    "termsScreenTitle": "Before you continue",
+    "termsScreenBody": "Pantrio needs your agreement to finish setting up your account.",
+    "termsVersionLabel": "Effective {{version}}",
+    "termsAcceptAndContinue": "Accept and continue",
+    "termsSignOut": "Sign out",
     "logIn": "Log in",
     "username": "Username",
     "usernamePlaceholder": "e.g. johndoe",
@@ -217,6 +273,10 @@
     "errorNetwork": "Couldn't reach the server. Check your connection and try again.",
     "errorUserMismatch": "That credential belongs to a different account.",
     "errorOperationNotAllowed": "This sign-in method isn't enabled for the app.",
+    "errorConfiguration": "This app's sign-in service isn't configured correctly. Contact support.",
+    "errorQuotaExceeded": "Too many emails have been sent from this app today. Try again later.",
+    "errorInternal": "Something went wrong on our side. Try again in a moment.",
+    "errorEmailSendFailed": "Couldn't send the email. Try again in a moment.",
     "confirmEmail": "Confirm email",
     "emailsDontMatch": "Emails don't match",
     "emailsDontMatchBody": "Please retype your email address.",
@@ -227,7 +287,7 @@
     "verifyEmailTitle": "Verify your email",
     "verifyEmailMessage": "We sent a verification link to {{email}}. Verifying it means you can recover your account if you ever forget your password.",
     "verifyEmailResend": "Resend link",
-    "verifyEmailResent": "Sent again to {{email}}.",
+    "verifyEmailResent": "Requested a new link for {{email}}.",
     "verifyEmailResendIn": "Wait {{seconds}}s before resending.",
     "verifyEmailWrongAddress": "My email is wrong",
     "verifyEmailLater": "Not now",
@@ -282,7 +342,7 @@
     "findRecipesUsing": "Find recipes using: {{items}}",
     "findRecipesWithItems": "Find recipes with my fridge items",
     "more": " +{{count}} more",
-    "findRecipesPrompt": "Recommend 4 quick recipes using as many of these selected fridge items as practical:\n{{items}}\n\nKeep your reply to a one-line intro pointing to the recipe cards the app shows below; the cards carry the title, calories, ingredients you have, and missing ingredients, and tapping one reveals the full steps and recipe page. If no recipes are found, say so plainly and do not mention cards. Never add per-recipe text, steps, explanations, or invented details.",
+    "findRecipesPrompt": "Recommend 4 recipes using as many of these selected fridge items as practical:\n{{items}}\n\nKeep your reply to a one-line intro pointing to the recipe cards the app shows below; the cards carry the title, calories, ingredients you have, and missing ingredients, and tapping one reveals the full steps and recipe page. If no recipes are found, say so plainly and do not mention cards. Never add per-recipe text, steps, explanations, or invented details.",
     "recipes": "Recipes",
     "shopList": "Shop list",
     "edit": "Edit",
@@ -296,7 +356,14 @@
     "selectOneToEdit": "Select exactly 1 item to edit.",
     "recipeGenerationFailed": "Failed to generate recipes.",
     "emptyFridge": "👇 Your fridge is empty. Add some items!",
-    "noMatches": "No matches. Try a different search or tab."
+    "noMatches": "No matches. Try a different search or tab.",
+    "addManually": "Add manually",
+    "takePhotoA11y": "Take a photo of your fridge, a shelf, or a receipt",
+    "pickPhotoA11y": "Choose a photo of your fridge, a shelf, or a receipt",
+    "photoPrompt": "Add everything you can identify in this photo to my fridge. If a quantity or expiry date is unclear, make a reasonable guess.",
+    "photoDisplayText": "Add items from a photo",
+    "photoTitle": "Add from a photo",
+    "photoFailed": "Couldn't read that photo. Try again, or add the items by hand."
   },
   "shoppingList": {
     "title": "🛒 Shopping List",
@@ -329,11 +396,38 @@
     "deleteItemsQuestion_other": "Delete {{count}} items?"
   },
   "chat": {
+    "errorNotice": {
+      "title": "Message not sent",
+      "dismiss": "Dismiss"
+    },
     "startNewChat": "Start a new chat",
     "photoChat": "Photo chat",
     "switchedToNewConversation": "Switched to a new conversation.",
     "chatDescription": "Ask Pantrio about meals, your fridge, or your shopping list.",
-    "aiNotice": "Pantrio's assistant is an AI system. Answers are generated automatically, can be wrong, and are not food-safety advice.",
+    "aiNotice": "Pantrio's assistant is an AI system. Messages are processed by a third-party AI provider, and answers can be wrong. They are not food-safety advice.",
+    "aiConsentTitle": "Before you chat",
+    "aiConsentA11y": "Before you chat: how your messages are processed",
+    "aiConsentBody": "Pantrio's assistant is an AI system. The messages and photos you send are processed by Pantrio's servers and by a third-party AI provider (OpenAI) to generate answers. Answers can be wrong and are not food-safety advice — always check ingredients, allergens, and whether food is safe yourself.",
+    "aiConsentAccept": "Continue",
+    "aiConsentSendBlockedBody": "Pantrio's assistant sends what you write and photograph to a third-party AI provider. Agree to that in Chat before sending anything to the assistant.",
+    "aiConsentGoToChat": "Go to Chat",
+    "reportResponse": "Report this response",
+    "reportResponseTitle": "Report this response",
+    "reportResponseMessage": "This opens our support form so you can tell us what went wrong. The response is not sent automatically — paste it there if you want us to look at it.",
+    "reportResponseConfirm": "Open support",
+    "reportResponseFailed": "Could not open support. Email us at {{email}}.",
+    "suggestions": {
+      "cookLabel": "What should I cook for {{meal}}?",
+      "cookPrompt": "What should I cook for {{meal}}?",
+      "expiredRestockLabel": "Add expired items to shopping list",
+      "expiredRestockPrompt": "Add expired items to shopping list",
+      "photoLabel": "Add items from a photo",
+      "meals": {
+        "breakfast": "breakfast",
+        "lunch": "lunch",
+        "dinner": "dinner"
+      }
+    },
     "savedPreferences": "Saved your recipe preferences:\n{{summary}}",
     "savedPreferencesShort": "Saved your recipe preferences.",
     "addedToFridge_one": "✅ Added {{count}} item to fridge.",
@@ -373,7 +467,9 @@
       "appleRequestTooLarge": "This conversation is too large for Apple Intelligence. Start a new chat or switch AI provider.",
       "appleInvalidResponse": "Apple Intelligence returned an invalid response.",
       "appleRepeatedToolCall": "Apple Intelligence repeated the same tool call without changing it.",
-      "appleToolLimit": "Apple Intelligence exceeded the tool-call limit."
+      "appleToolLimit": "Apple Intelligence exceeded the tool-call limit.",
+      "imageRetryTitle": "Couldn't re-send that photo",
+      "imageRetryUnavailable": "That photo is no longer stored on this device, and the message had no text. Send a new photo instead."
     }
   },
   "conversations": {
@@ -406,7 +502,9 @@
     "messagePantrio": "Message Pantrio AI…",
     "typeAMessage": "Type a message...",
     "sendMessage": "Send message",
-    "sendMessageHint": "Send the text in the chat message field."
+    "sendMessageHint": "Send the text in the chat message field.",
+    "stopResponse": "Stop the response",
+    "stopResponseHint": "Cancels the reply that is currently being generated."
   },
   "messageList": {
     "foundItems_one": "I found {{count}} item:",
@@ -484,8 +582,8 @@
       "nearMatch": "Near match",
       "openRecipe": "View full recipe",
       "addMissingItems": "Add missing items to shopping list",
-      "addMissingItemsCount_one": "Add {{count}} missing item",
-      "addMissingItemsCount_other": "Add {{count}} missing items",
+      "addMissingItemsCount_one": "Add {{count}} missing item to shopping list",
+      "addMissingItemsCount_other": "Add {{count}} missing items to shopping list",
       "alreadyOnList": "Already on your shopping list",
       "addedToShoppingList_one": "Added {{count}} item to your shopping list",
       "addedToShoppingList_other": "Added {{count}} items to your shopping list",
@@ -849,8 +947,6 @@
     "resetRecipePreferencesAlertMessage": "This clears cuisines, dietary needs, ingredient preferences, nutrition targets, and learned recipe signals on this device.",
     "resetPreferencesButton": "Reset Preferences",
     "notifications": "Notifications",
-    "dailyReminders": "Daily Reminders",
-    "dailyRemindersA11y": "Daily reminders",
     "expirationReminders": "Expiration reminders",
     "expirationAlerts": "Expiration Alerts",
     "expirationAlertsA11y": "Expiration alerts",
@@ -876,6 +972,9 @@
     "incognitoMode": "Incognito Mode",
     "incognitoModeA11y": "Incognito mode",
     "incognitoBody": "Keeps new chat messages off this device. Leaving Incognito clears the private conversation.",
+    "diagnosticsTitle": "Share diagnostics",
+    "diagnosticsBody": "Sends crash reports, plus a masked screen recording of sessions that error. Chat messages and photos are never included. Turn this off at any time.",
+    "diagnosticsSaveFailed": "Could not save this preference. Please try again.",
     "storedData": "Stored data",
     "storedDataBody": "These actions affect only data saved for this account on this device. They do not delete your Pantrio account.",
     "resetDataOnDevice": "Reset Data on This Device",
@@ -1033,7 +1132,7 @@
     "defaultServingsHelp": "Used when a request does not specify a serving count.",
     "customUrgencyOn": "Use your own day ranges for urgency labels.",
     "customUrgencyOff": "Use the preset day ranges for urgency labels.",
-    "pantrioCloudAiDetail": "Uses Pantrio's hosted AI service.",
+    "pantrioCloudAiDetail": "Uses Pantrio's hosted AI service (OpenAI).",
     "checkingThisDevice": "Checking this device…",
     "myOwnAiApiDetail": "Uses an OpenAI-compatible provider and your API key.",
     "saveAiProvider": "Save AI Provider",
@@ -1063,12 +1162,8 @@
     "couldNotVerifyTransaction": "Could not verify an Apple transaction update."
   },
   "notifications": {
-    "dailyCheckTitle": "Pantrio fridge check",
-    "expiringSoon_one": "{{count}} item nearing expiration.",
-    "expiringSoon_other": "{{count}} items nearing expiration.",
     "nearingExpirationTitle": "An item is nearing expiration",
     "reviewBody": "Open Pantrio to review items expiring within {{days}} days.",
-    "reviewFridgeBody": "Take a moment to review your fridge and shopping list.",
     "couldNotCancel_one": "Could not cancel {{count}} scheduled Pantrio reminder.",
     "couldNotCancel_other": "Could not cancel {{count}} scheduled Pantrio reminders.",
     "scheduleFailed": "Could not schedule all reminders."
@@ -1092,6 +1187,7 @@
   },
   "errors": {
     "requestFailed": "The request failed.",
+    "termsAcceptanceFailed": "Could not save your agreement. Please try again.",
     "requestTimedOut": "The request timed out.",
     "requestCouldNotBeCompleted": "The request could not be completed.",
     "chatCancelledSession": "The chat request was cancelled because the session ended.",

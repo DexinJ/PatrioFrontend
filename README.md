@@ -14,7 +14,7 @@ The client application provides the mobile interface, local data storage, Fireba
 * Image selection and food recognition support
 * Firebase Authentication
 * Light and dark themes
-* Configurable notifications and expiration reminders
+* Configurable expiration reminders that open the item they are about
 * Account profile management
 * Account-linked Apple subscriptions with server-verified StoreKit transactions
 * Permanent account deletion
@@ -103,14 +103,17 @@ before an authenticated backend session is available:
 
 ```env
 EXPO_PUBLIC_APPLE_SUBSCRIPTION_PRODUCT_IDS=com.chilltech.pantrio.subscription.monthly,com.chilltech.pantrio.subscription.yearly
-EXPO_PUBLIC_TERMS_OF_USE_URL=https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+EXPO_PUBLIC_TERMS_OF_USE_URL=https://example.com/terms-of-use.html
 EXPO_PUBLIC_PRIVACY_POLICY_URL=https://example.com/privacy
 ```
 
 `EXPO_PUBLIC_PRIVACY_POLICY_URL` must be set to Pantrio's real, public privacy
 policy before a production build. The app does not invent or default that URL.
-If `EXPO_PUBLIC_TERMS_OF_USE_URL` is omitted, the UI links to Apple's standard
-EULA.
+`EXPO_PUBLIC_TERMS_OF_USE_URL` is required for production builds too: the
+sign-up checkbox and the acceptance gate make the user agree to whatever it
+points at, so a build that fell back to Apple's standard EULA would record
+agreement to the wrong document. Only development and preview builds keep that
+fallback.
 
 The backend creates one stable anonymous `appAccountToken` UUID for every
 Firebase user and returns it from `GET /api/session`. Every purchase includes
@@ -325,7 +328,6 @@ The settings screen includes:
 * Account deletion
 * Theme settings
 * Font-size settings
-* Notification settings
 * Expiration reminder settings
 * Privacy controls
 * Local data clearing

@@ -45,6 +45,14 @@ for (const dir of SRC_DIRS) {
 }
 
 const usedKeys = new Set();
+// Keys built from a template literal (for example
+// `chat.suggestions.meals.${mealForDate(now)}`) cannot be compared against the
+// catalog by this scanner, because the parts that matter are only known at
+// runtime. They are counted and reported instead of being reported as missing;
+// the runtime half of that contract is asserted by the module's own test (for
+// the meal keys, tests/chatSuggestions.test.js checks every variant exists in
+// both locales).
+const templateKeys = new Set();
 const KEY_RE = /(?:^|[^A-Za-z0-9_.])t\(\s*["'`]([^"'`]+)["'`]/g;
 
 for (const file of files) {
@@ -53,6 +61,10 @@ for (const file of files) {
   while ((match = KEY_RE.exec(source))) {
     const key = match[1];
     if (key.startsWith("tags.") || key.includes("{{")) continue;
+    if (key.includes("${")) {
+      templateKeys.add(key);
+      continue;
+    }
     usedKeys.add(key);
   }
 }
@@ -66,7 +78,14 @@ if (missing.length) {
 }
 
 console.log(
-  `OK: ${usedKeys.size} translation key(s) used in code, all present in locales/en.json.`
+  `OK: ${usedKeys.size} translation key(s) used in code, all present in locales/en.json.` +
+    (templateKeys.size
+      ? ` ${templateKeys.size} template key(s) skipped (not statically checkable): ${[
+          ...templateKeys,
+        ]
+          .sort()
+          .join(", ")}`
+      : "")
 );
 
 // Every locale file must mirror en.json's key set exactly so translated apps

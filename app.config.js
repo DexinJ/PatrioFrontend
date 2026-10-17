@@ -108,6 +108,7 @@ function validateBuildEnvironment(productionBuild) {
         ...REQUIRED_EAS_ENV,
         "EXPO_PUBLIC_APPLE_SUBSCRIPTION_PRODUCT_IDS",
         "EXPO_PUBLIC_PRIVACY_POLICY_URL",
+        "EXPO_PUBLIC_TERMS_OF_USE_URL",
       ]
     : REQUIRED_EAS_ENV;
   const missing = requiredNames.filter((name) => !envValue(name));

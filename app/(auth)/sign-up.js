@@ -1,12 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import i18next from "i18next";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
-  Platform, // ✅ CHANGED: needed to show Apple only on iOS
   Pressable,
   StyleSheet,
   Text,
@@ -17,6 +15,7 @@ import {
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  sendEmailVerification,
   signOut as firebaseSignOut,
 } from "firebase/auth";
 
@@ -24,6 +23,7 @@ import {
   signInWithApple,
   tryLinkAppleAuthorizationToBackend,
 } from "../../auth/appleAuth"; // ✅ CHANGED: Apple login helper
+import AppleSignInButton from "../../components/AppleSignInButton";
 import {
   bindAuthProvisioningUser,
   clearAuthProvisioningIntent,
@@ -33,8 +33,11 @@ import {
   clearEmailVerificationPromptRequest,
   requestEmailVerificationPrompt,
 } from "../../api/emailVerificationStorage";
-import { API_BASE_URL } from "../../api/backendConfig";
-import { fetchWithTimeout } from "../../api/fetchWithTimeout";
+import {
+  accountSetupCancelledError,
+  makeFallbackUsername,
+  saveUserProfileToBackend,
+} from "../../api/userProfile";
 import { auth } from "../../auth/firebaseClient";
 import { authErrorMessageKey } from "../../auth/authErrorMessages";
 import {
@@ -42,69 +45,13 @@ import {
   signOutFromGoogleNative,
 } from "../../auth/googleAuth";
 import { useAuth } from "../../auth/useAuth";
+import TermsAcceptanceRow from "../../components/TermsAcceptanceRow";
 import { GlobalContext } from "../../context/GlobalContext";
+import { attemptAuthEmailSend } from "../../utils/authEmailSend";
 import {
   needsEmailVerification,
   suggestEmailCorrection,
 } from "../../utils/emailVerificationPolicy";
-
-const PROFILE_REQUEST_TIMEOUT_MS = 15000;
-
-function accountSetupCancelledError() {
-  const error = new Error("Account setup was cancelled.");
-  error.code = "ACCOUNT_SETUP_CANCELLED";
-  return error;
-}
-
-async function saveUserProfileToBackend({ idToken, username, signal }) {
-  let resp;
-
-  try {
-    resp = await fetchWithTimeout(
-      `${API_BASE_URL}/api/users`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ username }),
-        signal,
-      },
-      {
-        timeoutMs: PROFILE_REQUEST_TIMEOUT_MS,
-        timeoutMessage: i18next.t("errors.accountSetupTimedOut"),
-      }
-    );
-  } catch (error) {
-    if (error?.name === "AbortError" && signal?.aborted) {
-      throw accountSetupCancelledError();
-    }
-    throw error;
-  }
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(
-      i18next.t("errors.backendSaveFailed", {
-        status: resp.status,
-        message: text.slice(0, 200),
-      })
-    );
-  }
-
-  return resp.json().catch(() => ({}));
-}
-
-function makeFallbackUsername(user, typedUsername = "") {
-  // ✅ CHANGED: shared fallback username helper for Google + Apple
-  return (
-    typedUsername.trim() ||
-    user?.displayName?.replace(/\s+/g, "").slice(0, 20) ||
-    user?.email?.split("@")[0].slice(0, 20) ||
-    "user"
-  );
-}
 
 export default function SignUpScreen() {
   const { t } = useTranslation();
@@ -125,6 +72,7 @@ export default function SignUpScreen() {
   const [email2, setEmail2] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false); // ✅ CHANGED
@@ -159,7 +107,16 @@ export default function SignUpScreen() {
 
   const isBusy = loading || googleLoading || appleLoading; // ✅ CHANGED
 
+  // One guard for all three creation paths, so Google and Apple cannot slip
+  // past the checkbox the form path enforces.
+  const requireTermsAccepted = () => {
+    if (termsAccepted) return true;
+    Alert.alert(t("auth.acceptTermsTitle"), t("auth.acceptTermsToContinue"));
+    return false;
+  };
+
   const submit = () => {
+    if (!requireTermsAccepted()) return;
     const u = username.trim();
     const e = email.trim();
     const e2 = email2.trim();
@@ -255,6 +212,7 @@ export default function SignUpScreen() {
         await saveUserProfileToBackend({
           idToken,
           username: signUpUsername,
+          termsAccepted: true,
           signal: profileController.signal,
         });
       } finally {
@@ -264,10 +222,17 @@ export default function SignUpScreen() {
       }
       backendProfileSaved = true;
       // Sent while the account is brand new: this is the moment a typo is most
-      // likely to be caught, and it costs nothing if it is ignored.
-      await cred.user.sendEmailVerification().catch(() => {});
+      // likely to be caught, and it costs nothing if it is ignored. A rejected
+      // send is never fatal and never silent: the failure rides the prompt
+      // request so the nudge can explain why no link arrived.
+      const verificationSend = await attemptAuthEmailSend({
+        scope: "sign-up-verify",
+        send: () => sendEmailVerification(cred.user),
+      });
       if (needsEmailVerification(cred.user)) {
-        requestEmailVerificationPrompt(cred.user.uid);
+        requestEmailVerificationPrompt(cred.user.uid, {
+          sendErrorCode: verificationSend.ok ? null : verificationSend.code,
+        });
       }
       await clearAuthProvisioningIntent().catch(() => {});
       ensureProvisioningIsActive(generation);
@@ -320,6 +285,7 @@ export default function SignUpScreen() {
         t("auth.googleNotConfiguredMessage")
       );
     }
+    if (!requireTermsAccepted()) return;
     if (operationBusyRef.current) return;
 
     operationBusyRef.current = true;
@@ -359,6 +325,7 @@ export default function SignUpScreen() {
         await saveUserProfileToBackend({
           idToken: firebaseIdToken,
           username: fallbackUsername,
+          termsAccepted: true,
           signal: profileController.signal,
         });
       } finally {
@@ -404,6 +371,7 @@ export default function SignUpScreen() {
 
   // ✅ CHANGED: Apple sign-up/sign-in handler
   const onPressApple = async () => {
+    if (!requireTermsAccepted()) return;
     if (operationBusyRef.current) return;
 
     operationBusyRef.current = true;
@@ -457,6 +425,7 @@ export default function SignUpScreen() {
         await saveUserProfileToBackend({
           idToken: firebaseIdToken,
           username: fallbackUsername,
+          termsAccepted: true,
           signal: profileController.signal,
         });
       } finally {
@@ -619,6 +588,20 @@ export default function SignUpScreen() {
         ]}
       />
 
+      <TermsAcceptanceRow
+        checked={termsAccepted}
+        onToggle={setTermsAccepted}
+        disabled={isBusy}
+        fontSize={fontSize - 1}
+        colors={{
+          text: theme.textSecondary,
+          link: theme.accent,
+          border: theme.border,
+          accent: theme.actionButton,
+          tick: "#fff",
+        }}
+      />
+
       <Pressable
         style={[
           styles.button,
@@ -644,6 +627,14 @@ export default function SignUpScreen() {
           {t("auth.orContinueWith")}
         </Text>
 
+        {/* Apple's own control, so the label, logo, and localisation are the
+            ones App Store review expects for Sign in with Apple. */}
+        <AppleSignInButton
+          onPress={onPressApple}
+          disabled={isBusy}
+          style={styles.appleSignInButton}
+        />
+
         <View style={styles.oauthRow}>
           <Pressable
             style={[
@@ -665,34 +656,6 @@ export default function SignUpScreen() {
               <Ionicons name="logo-google" size={22} color={theme.accent} />
             )}
           </Pressable>
-
-          {/* ✅ CHANGED: Apple is now enabled on iOS */}
-          {Platform.OS === "ios" && (
-            <Pressable
-              style={[
-                styles.oauthIconButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                  opacity: isBusy ? 0.35 : 1,
-                },
-              ]}
-              onPress={onPressApple}
-              disabled={isBusy}
-              accessibilityRole="button"
-              accessibilityLabel={t("auth.continueWithApple")}
-            >
-              {appleLoading ? (
-                <ActivityIndicator color={theme.accent} />
-              ) : (
-                <Ionicons
-                  name="logo-apple"
-                  size={22}
-                  color={theme.textPrimary}
-                />
-              )}
-            </Pressable>
-          )}
 
           <Pressable
             style={[
@@ -752,6 +715,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   oauthLabel: { fontSize: 12, fontWeight: "700", opacity: 0.7 },
+  appleSignInButton: { alignSelf: "stretch" },
   oauthRow: {
     flexDirection: "row",
     gap: 12,

@@ -1,12 +1,9 @@
 import * as Notifications from "expo-notifications";
 import i18next from "i18next";
-import {
-  buildExpirationReminderSchedule,
-  countItemsExpiringWithin,
-} from "../utils/reminderPolicy";
+import { REMINDER_MARKER } from "../utils/notificationRouting";
+import { buildExpirationReminderSchedule } from "../utils/reminderPolicy";
 import { createLatestTaskQueue } from "../utils/latestTaskQueue";
 
-const REMINDER_MARKER = "pantrio-local-reminder-v1";
 const reminderTaskQueue = createLatestTaskQueue();
 
 Notifications.setNotificationHandler({
@@ -62,10 +59,9 @@ export async function requestReminderPermissions() {
 async function performReminderSync({ settings, fridgeItems }) {
   await cancelPantrioRemindersRaw();
 
-  const dailyEnabled = Boolean(settings?.notifications?.dailyReminders);
   const expirationEnabled = Boolean(settings?.expiration?.expirationAlerts);
   const notificationsEnabled = settings?.notifications?.turnOn !== false;
-  if (!notificationsEnabled || (!dailyEnabled && !expirationEnabled)) {
+  if (!notificationsEnabled || !expirationEnabled) {
     return { scheduled: 0, permission: "not-requested" };
   }
 
@@ -77,51 +73,26 @@ async function performReminderSync({ settings, fridgeItems }) {
     };
   }
 
-  const requests = [];
   const remindDays = settings?.expiration?.remindDays ?? 5;
-
-  if (dailyEnabled) {
-    const expiringCount = countItemsExpiringWithin(fridgeItems, remindDays);
-    requests.push({
+  const requests = buildExpirationReminderSchedule(fridgeItems, remindDays).map(
+    (reminder) => ({
       content: {
-        title: i18next.t("notifications.dailyCheckTitle"),
-        body: expiringCount
-          ? i18next.t("notifications.expiringSoon", {
-              count: expiringCount,
-            })
-          : i18next.t("notifications.reviewFridgeBody"),
-        data: { pantrioReminder: REMINDER_MARKER, kind: "daily" },
+        title: i18next.t("notifications.nearingExpirationTitle"),
+        body: i18next.t("notifications.reviewBody", {
+          days: Math.round(Number(remindDays) || 5),
+        }),
+        data: {
+          pantrioReminder: REMINDER_MARKER,
+          kind: "expiration",
+          itemId: reminder.itemId,
+        },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: 9,
-        minute: 0,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: reminder.trigger,
       },
-    });
-  }
-
-  if (expirationEnabled) {
-    const schedule = buildExpirationReminderSchedule(fridgeItems, remindDays);
-    for (const reminder of schedule) {
-      requests.push({
-        content: {
-          title: i18next.t("notifications.nearingExpirationTitle"),
-          body: i18next.t("notifications.reviewBody", {
-            days: Math.round(Number(remindDays) || 5),
-          }),
-          data: {
-            pantrioReminder: REMINDER_MARKER,
-            kind: "expiration",
-            itemId: reminder.itemId,
-          },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: reminder.trigger,
-        },
-      });
-    }
-  }
+    })
+  );
 
   const scheduleResults = await Promise.allSettled(
     requests.map((request) => Notifications.scheduleNotificationAsync(request))

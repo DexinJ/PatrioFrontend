@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
-  Platform, // ✅ CHANGED: needed to show Apple only on iOS
   Pressable,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../../auth/firebaseClient";
+import AppleSignInButton from "../../components/AppleSignInButton";
 import { GlobalContext } from "../../context/GlobalContext";
 
 import { requestEmailVerificationPrompt } from "../../api/emailVerificationStorage";
@@ -216,6 +216,14 @@ export default function SignInScreen() {
           {t("auth.orContinueWith")}
         </Text>
 
+        {/* Apple's own control, so the label, logo, and localisation are the
+            ones App Store review expects for Sign in with Apple. */}
+        <AppleSignInButton
+          onPress={onApple}
+          disabled={isBusy}
+          style={styles.appleSignInButton}
+        />
+
         <View style={styles.oauthRow}>
           <Pressable
             style={[
@@ -237,34 +245,6 @@ export default function SignInScreen() {
               <Ionicons name="logo-google" size={22} color={theme.accent} />
             )}
           </Pressable>
-
-          {/* ✅ CHANGED: Apple login is now enabled on iOS */}
-          {Platform.OS === "ios" && (
-            <Pressable
-              style={[
-                styles.oauthIconButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                  opacity: isBusy ? 0.35 : 1,
-                },
-              ]}
-              onPress={onApple}
-              disabled={isBusy}
-              accessibilityRole="button"
-              accessibilityLabel={t("auth.continueWithApple")}
-            >
-              {appleLoading ? (
-                <ActivityIndicator color={theme.accent} />
-              ) : (
-                <Ionicons
-                  name="logo-apple"
-                  size={22}
-                  color={theme.textPrimary}
-                />
-              )}
-            </Pressable>
-          )}
 
           <Pressable
             style={[
@@ -340,6 +320,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   oauthLabel: { fontSize: 12, fontWeight: "700", opacity: 0.7 },
+  appleSignInButton: { alignSelf: "stretch" },
   oauthRow: {
     flexDirection: "row",
     gap: 12,

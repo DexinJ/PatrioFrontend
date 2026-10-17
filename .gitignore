@@ -44,7 +44,11 @@ app-example
 # Local recipe-card proposal artifacts (patch + docs)
 recipe-card-feature/
 
-# New unit tests kept local for recipe-card work
-tests/
+# The suite is product evidence: `npm test` is only meaningful if the tests are
+# in the repository, so tests/ is versioned.
 
-docs/
+# Documentation: the plan/report markdown is versioned, the generated artefacts
+# (docx, pdf, html, emoji pngs) that sit beside it are not.
+docs/*
+!docs/*.md
+docs/assets/

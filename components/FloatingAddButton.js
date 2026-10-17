@@ -16,6 +16,7 @@ export default function FloatingAddButton({
   theme,
   icon = "add",
   size = 28,
+  expanded,
   style,
   testID,
   accessibilityLabel,
@@ -36,7 +37,10 @@ export default function FloatingAddButton({
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        accessibilityState={{ disabled }}
+        accessibilityState={{
+          disabled,
+          ...(typeof expanded === "boolean" ? { expanded } : {}),
+        }}
       >
         <Ionicons name={icon} size={size} color="#fff" />
       </TouchableOpacity>

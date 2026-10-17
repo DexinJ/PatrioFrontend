@@ -10,6 +10,7 @@ export const CONVERSATION_STATUS_ACTIVE = "active";
 export const CONVERSATION_STATUS_ARCHIVED = "archived";
 
 const MAX_TEXT_CHARACTERS = 60_000;
+const MAX_ERROR_CODE_CHARACTERS = 40;
 const DATA_IMAGE_PREFIX = "data:image/";
 const MANAGED_ATTACHMENT_PATH = "/pantrio-chat-attachments/";
 const textEncoder = typeof TextEncoder === "function" ? new TextEncoder() : null;
@@ -178,6 +179,17 @@ function boundedText(value) {
   return `${value.slice(0, MAX_TEXT_CHARACTERS)}\n[message truncated]`;
 }
 
+// Failed turns are rendered as a notice rather than a bubble. The notice needs
+// a small machine-readable code (never user copy) so the transcript can pick a
+// tone, and the `isError` flag must survive sanitizing so chatReplayPolicy can
+// keep the notice out of model context. See design-plans/chat-failed-turn-card.md.
+function boundedErrorCode(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, MAX_ERROR_CODE_CHARACTERS);
+}
+
 function imageUrlFromPart(part) {
   const value = part?.image_url ?? part?.imageUri ?? part?.imageUrl;
   if (typeof value === "string") return value.trim();
@@ -304,10 +316,14 @@ function sanitizeMessage(message, { persist }) {
     (Array.isArray(content) && content.length > 0);
   if (!hasContent && !text && !imageUri) return null;
   const usage = sanitizeUsage(message.usage);
+  const isError = message.isError === true;
+  const errorCode = isError ? boundedErrorCode(message.errorCode) : null;
 
   return {
     ...(typeof message.id === "string" ? { id: message.id } : {}),
     role: message.role.trim(),
+    ...(isError ? { isError: true } : {}),
+    ...(errorCode ? { errorCode } : {}),
     ...(hasContent ? { content } : {}),
     ...(text ? { text } : {}),
     ...(imageUri ? { imageUri } : {}),

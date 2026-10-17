@@ -21,48 +21,22 @@ import {
   getDeviceLanguageCode,
   getSavedLanguageCode,
 } from "../i18n";
+import { setAuthEmailSendReporter } from "../utils/authEmailSend";
+import { initDiagnosticsIfEnabled } from "../utils/diagnostics";
 
-Sentry.init({
-  dsn: "https://9d707a565864181830d59147b126ac25@o4511787964432384.ingest.us.sentry.io/4511787964563456",
-  environment:
-    process.env.EXPO_PUBLIC_APP_ENV ||
-    (__DEV__ ? "development" : "production"),
-  sendDefaultPii: false,
+// Sentry is initialised by utils/diagnostics once the stored "share
+// diagnostics" preference has been read, so an opt-out is honoured from the
+// first event. The error boundary and `Sentry.wrap` below do not need a client
+// to be present, so they stay mounted from the first render.
 
-  // Prevent independent transmission of application logs.
-  enableLogs: false,
-
-  // Do not record ordinary sessions.
-  replaysSessionSampleRate: 0,
-
-  // Keep replay useful for diagnosing production-only failures without
-  // recording every error session.
-  replaysOnErrorSampleRate: __DEV__ ? 0 : 0.1,
-
-  integrations: [
-    Sentry.mobileReplayIntegration({
-      maskAllText: true,
-      maskAllImages: true,
-      maskAllVectors: true,
-    }),
-  ],
-  beforeSend(event) {
-    if (event.request?.headers) {
-      const headers = { ...event.request.headers };
-      delete headers.Authorization;
-      delete headers.authorization;
-      delete headers.Cookie;
-      delete headers.cookie;
-      event.request.headers = headers;
-    }
-
-    if (event.user) {
-      event.user = event.user.id ? { id: event.user.id } : undefined;
-    }
-
-    return event;
-  },
-});
+// Auth email sends are non-blocking by design, so their rejections never reach
+// an error boundary. They are reported here instead, tagged by scope so a
+// "user says no email arrived" report can be matched to a cause.
+setAuthEmailSendReporter((error, { scope, code }) =>
+  Sentry.captureException(error, {
+    tags: { area: "auth-email", scope, code: code || "none" },
+  })
+);
 
 function RootErrorFallback({ resetError }) {
   const { t } = useTranslation();
@@ -161,6 +135,25 @@ function AppNavigator({
     );
   }
 
+  // While the session is being restored, neither Stack.Protected group below is
+  // mounted. If the navigator rendered now, expo-router would drop the `(tabs)`
+  // route from the initial state and fall back to the first remaining route —
+  // the legal notices page — so a cold start would open on /legal/licenses
+  // instead of the home tab. Waiting means the navigator mounts once with a
+  // destination (the initial URL resolves to `(tabs)/index`).
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View
+          style={styles.loadingOverlay}
+          accessibilityLabel={t("root.checkingSignInStatus")}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Stack screenOptions={{ headerShown: false }}>
@@ -169,17 +162,13 @@ function AppNavigator({
         </Stack.Protected>
         <Stack.Protected guard={!loading && Boolean(user)}>
           <Stack.Screen name="(tabs)" />
+          {/* Declared here so it is only ever reachable inside the signed-in
+              app; an undeclared page would stay in the root navigator and be
+              picked as the startup fallback (that was the /legal/licenses
+              cold-start bug). */}
+          <Stack.Screen name="legal" />
         </Stack.Protected>
       </Stack>
-
-      {loading ? (
-        <View
-          style={styles.loadingOverlay}
-          accessibilityLabel={t("root.checkingSignInStatus")}
-        >
-          <ActivityIndicator size="large" />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -300,9 +289,12 @@ function RootLayoutContent() {
 
 export default Sentry.wrap(function Layout() {
   // Restore the language preference: explicit user choice > device locale > en.
+  // The diagnostics preference is read in the same pass, before any event can
+  // be sent; see utils/diagnostics.
   useEffect(() => {
     let active = true;
     (async () => {
+      await initDiagnosticsIfEnabled();
       const saved = await getSavedLanguageCode();
       if (!active) return;
       const deviceCode = getDeviceLanguageCode();

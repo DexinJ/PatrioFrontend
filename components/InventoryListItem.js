@@ -3,6 +3,7 @@ import React, { memo, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { translateTagLabel } from "../utils/tagTranslation";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import TutorialTarget from "./TutorialTarget";
 
 /**
  * Reusable list item card for inventory-like items.
@@ -26,12 +27,16 @@ function InventoryListItem({
   // selection/edit mode
   editMode = false,
   selected = false,
+  highlighted = false,
   onToggleSelect,
   onPress,
 
   // long press / measurement
   onMeasuredLongPress, // receives (rect, item)
   longPressDelayMs = 200,
+
+  // optional tutorial anchor; undefined leaves the row unregistered
+  tutorialTargetId,
 
   // optional overrides
   subtitleText,
@@ -114,7 +119,13 @@ function InventoryListItem({
   }, [subtitleText, isExpired, isAlmost, item?._expiresAtMs, item?._daysUntilExpire, item?.createdAt, t]);
 
   const bg = isExpired ? theme?.dangerBackground : isAlmost ? theme?.warningBackground : theme?.card;
-  const border = isExpired ? theme?.danger : isAlmost ? theme?.warning : theme?.border;
+  const border = highlighted
+    ? theme?.accent
+    : isExpired
+      ? theme?.danger
+      : isAlmost
+        ? theme?.warning
+        : theme?.border;
 
   const statusColor = isExpired
     ? theme?.danger
@@ -141,91 +152,97 @@ function InventoryListItem({
   };
 
   return (
-    <View collapsable={false} ref={rowRef}>
-      <TouchableOpacity
-        activeOpacity={0.86}
-        delayLongPress={longPressDelayMs}
-        onLongPress={handleLongPress}
-        onPress={handlePress}
-        style={[styles.card, { backgroundColor: bg, borderColor: border }]}
-        accessibilityRole={editMode ? "checkbox" : "button"}
-        accessibilityLabel={t("inventoryItem.a11yItem", {
-          name: item?.name || t("inventoryItem.item"),
-          subtitle: computedSubtitle,
-          count: computedRightBottom || t("inventoryItem.notSpecified"),
-        })}
-        accessibilityState={editMode ? { checked: selected } : undefined}
-        accessibilityHint={
-          editMode ? t("inventoryItem.togglesSelection") : t("inventoryItem.opensActions")
-        }
-      >
-        {editMode && (
-          <TouchableOpacity
-            onPress={() => onToggleSelect?.(item?.id)}
-            activeOpacity={0.8}
-            style={styles.checkboxHit}
-            accessibilityRole="checkbox"
-            accessibilityLabel={t("inventoryItem.a11ySelect", {
-              name: item?.name || t("inventoryItem.item"),
-            })}
-            accessibilityState={{ checked: selected }}
-          >
-            <Ionicons
-              name={selected ? "checkbox" : "square-outline"}
-              size={fontSize * 1.25}
-              color={selected ? theme?.textPrimary : theme?.textSecondary}
-            />
-          </TouchableOpacity>
-        )}
+    <TutorialTarget id={tutorialTargetId}>
+      <View collapsable={false} ref={rowRef}>
+        <TouchableOpacity
+          activeOpacity={0.86}
+          delayLongPress={longPressDelayMs}
+          onLongPress={handleLongPress}
+          onPress={handlePress}
+          style={[
+            styles.card,
+            { backgroundColor: bg, borderColor: border },
+            highlighted ? styles.highlighted : null,
+          ]}
+          accessibilityRole={editMode ? "checkbox" : "button"}
+          accessibilityLabel={t("inventoryItem.a11yItem", {
+            name: item?.name || t("inventoryItem.item"),
+            subtitle: computedSubtitle,
+            count: computedRightBottom || t("inventoryItem.notSpecified"),
+          })}
+          accessibilityState={editMode ? { checked: selected } : undefined}
+          accessibilityHint={
+            editMode ? t("inventoryItem.togglesSelection") : t("inventoryItem.opensActions")
+          }
+        >
+          {editMode && (
+            <TouchableOpacity
+              onPress={() => onToggleSelect?.(item?.id)}
+              activeOpacity={0.8}
+              style={styles.checkboxHit}
+              accessibilityRole="checkbox"
+              accessibilityLabel={t("inventoryItem.a11ySelect", {
+                name: item?.name || t("inventoryItem.item"),
+              })}
+              accessibilityState={{ checked: selected }}
+            >
+              <Ionicons
+                name={selected ? "checkbox" : "square-outline"}
+                size={fontSize * 1.25}
+                color={selected ? theme?.textPrimary : theme?.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
 
-        <View style={styles.left}>
-          <Text
-            style={[styles.title, { fontSize: fontSize * 1.06, color: theme?.textPrimary }]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item?.name}
-          </Text>
-
-          <Text
-            style={[styles.subtitle, { fontSize: fontSize * 0.92, color: statusColor }]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {computedSubtitle}
-          </Text>
-
-          {!!(metaText ?? computedMeta) && (
+          <View style={styles.left}>
             <Text
-              style={[styles.meta, { fontSize: fontSize * 0.82, color: theme?.textSecondary }]}
+              style={[styles.title, { fontSize: fontSize * 1.06, color: theme?.textPrimary }]}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {metaText ?? computedMeta}
+              {item?.name}
             </Text>
-          )}
-        </View>
 
-        <View style={styles.right}>
-          <Text
-            style={[styles.rightTop, { fontSize: fontSize * 0.82, color: theme?.textSecondary }]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {rightTopText ?? computedRightTop}
-          </Text>
-
-          <View style={styles.rightBottomWrap}>
             <Text
-              style={[styles.rightBottom, { fontSize: fontSize * 0.98, color: theme?.textPrimary }]}
+              style={[styles.subtitle, { fontSize: fontSize * 0.92, color: statusColor }]}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
-              {rightBottomText ?? computedRightBottom}
+              {computedSubtitle}
             </Text>
+
+            {!!(metaText ?? computedMeta) && (
+              <Text
+                style={[styles.meta, { fontSize: fontSize * 0.82, color: theme?.textSecondary }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {metaText ?? computedMeta}
+              </Text>
+            )}
           </View>
-        </View>
-      </TouchableOpacity>
-    </View>
+
+          <View style={styles.right}>
+            <Text
+              style={[styles.rightTop, { fontSize: fontSize * 0.82, color: theme?.textSecondary }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {rightTopText ?? computedRightTop}
+            </Text>
+
+            <View style={styles.rightBottomWrap}>
+              <Text
+                style={[styles.rightBottom, { fontSize: fontSize * 0.98, color: theme?.textPrimary }]}
+                numberOfLines={1}
+              >
+                {rightBottomText ?? computedRightBottom}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+    </TutorialTarget>
   );
 }
 
@@ -243,6 +260,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "stretch",
+  },
+  highlighted: {
+    borderWidth: 2,
   },
   left: { flex: 1, minWidth: 0 },
   title: { fontWeight: "800", letterSpacing: 0.2 },

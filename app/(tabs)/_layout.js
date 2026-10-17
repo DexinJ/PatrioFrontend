@@ -20,6 +20,7 @@ import EmailVerificationPrompt from "../../components/EmailVerificationPrompt";
 import { IconHeader } from "../../components/Header";
 import TabTutorialOverlay from "../../components/TabTutorialOverlay";
 import TutorialTarget from "../../components/TutorialTarget";
+import TermsAcceptanceGate from "../../components/TermsAcceptanceGate";
 import {
   AccountSessionProvider,
   useAccountSession,
@@ -33,6 +34,7 @@ import {
 import { AppleSubscriptionProvider } from "../../context/SubscriptionContext";
 import { canExposeAccountData } from "../../context/refreshPolicy";
 import { TabTutorialProvider } from "../../context/TabTutorialContext";
+import useNotificationRouting from "../../hooks/useNotificationRouting";
 import { getTabKeyForPathname } from "../../utils/tabTutorials";
 
 function ChatTabHeader() {
@@ -120,12 +122,25 @@ function SessionBackedGlobalProvider({ authUser, children }) {
     initializing,
     loading,
     error,
+    termsAcceptanceRequired,
+    termsVersion,
     refreshSession,
     beginAccountTeardown,
   } = useAccountSession();
   const { accountDeletionPending, signOut } = useAuth();
   const [actionError, setActionError] = useState("");
   const [working, setWorking] = useState(false);
+
+  // The account exists in Firebase but has no profile row yet. Nothing below
+  // this point may render until the agreement is recorded.
+  if (termsAcceptanceRequired) {
+    return (
+      <TermsAcceptanceGate
+        termsVersion={termsVersion}
+        refreshSession={refreshSession}
+      />
+    );
+  }
 
   if (!canExposeAccountData(session, accountDeletionPending)) {
     const waiting = initializing || loading || accountDeletionPending;
@@ -270,6 +285,17 @@ function SessionBackedGlobalProvider({ authUser, children }) {
       {children}
     </GlobalProvider>
   );
+}
+
+// Routes a tapped reminder after the tab tree exists and has hydrated.
+//
+// A child component rather than a hook call inside `ThemedTabs`, because
+// `ThemedTabs` returns early until storage hydration finishes: a hook called at
+// its top would consume the response before `fridgeItems` existed and route to
+// the fridge with nothing focused.
+function NotificationRouter() {
+  useNotificationRouting();
+  return null;
 }
 
 function ThemedTabs() {
@@ -593,6 +619,7 @@ function ThemedTabs() {
         />
         <TabTutorialOverlay />
         <EmailVerificationPrompt />
+        <NotificationRouter />
       </View>
     </TabTutorialProvider>
   );

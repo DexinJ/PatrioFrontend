@@ -19,6 +19,13 @@ import { isRefreshFresh } from "./refreshPolicy";
 import { useAppleSubscription } from "./SubscriptionContext";
 import { useAuth } from "../auth/useAuth";
 
+// Pure predicates only: the context has no business importing the fetch layer.
+// auth/useAuth.js pulls its accountDeletionPolicy.cjs in the same way.
+const {
+  isTermsAcceptanceRequiredResponse,
+  termsVersionFromPayload,
+} = require("../api/termsAcceptancePolicy.cjs");
+
 const {
   deletionSessionDisposition,
 } = require("../api/accountDeletionPolicy.cjs");
@@ -263,8 +270,12 @@ function mergeApplePlans(sessionPayload, storeKitProducts) {
   });
 }
 
+// Terms acceptance state. The default keeps consumers outside the provider
+// reading a defined value.
 const AccountSessionContext = createContext({
   session: null,
+  termsAcceptanceRequired: false,
+  termsVersion: null,
   entitlement: EMPTY_ENTITLEMENT,
   quota: null,
   model: null,
@@ -308,6 +319,8 @@ export function AccountSessionProvider({ authUser = null, children }) {
   const [initialized, setInitialized] = useState(!authUser);
   const [loading, setLoading] = useState(Boolean(authUser));
   const [error, setError] = useState(null);
+  const [termsAcceptanceRequired, setTermsAcceptanceRequired] = useState(false);
+  const [termsVersion, setTermsVersion] = useState(null);
   const [accountOperation, setAccountOperation] = useState(null);
   const [appleOperation, setAppleOperation] = useState(null);
   const [appleError, setAppleError] = useState(null);
@@ -601,6 +614,20 @@ export function AccountSessionProvider({ authUser = null, children }) {
                   deletionDisposition,
                 };
               }
+              // Refusing to provision is not an access failure: the account is
+              // valid, it just needs the agreement before its profile can exist.
+              if (
+                isTermsAcceptanceRequiredResponse(
+                  response.status,
+                  responsePayload
+                )
+              ) {
+                return {
+                  kind: "terms-acceptance-required",
+                  termsVersion: termsVersionFromPayload(responsePayload),
+                };
+              }
+
               throw createBackendResponseError(responsePayload, {
                 status: response.status,
                 fallbackMessage: i18next.t(
@@ -640,8 +667,19 @@ export function AccountSessionProvider({ authUser = null, children }) {
           return null;
         }
 
+        if (payload?.kind === "terms-acceptance-required") {
+          setTermsVersion(payload.termsVersion);
+          setTermsAcceptanceRequired(true);
+          setError(null);
+          setInitialized(true);
+          setLoading(false);
+          return null;
+        }
+
         applySessionPayload(payload.payload);
         setError(null);
+        setTermsAcceptanceRequired(false);
+        setTermsVersion(null);
         return payload.payload;
       } catch (nextError) {
         if (requestWasSuperseded()) {
@@ -1341,6 +1379,8 @@ export function AccountSessionProvider({ authUser = null, children }) {
       beginAccountTeardown,
       updateQuota,
       applyRealtimeState,
+      termsAcceptanceRequired,
+      termsVersion,
     }),
     [
       appleError,
@@ -1363,6 +1403,8 @@ export function AccountSessionProvider({ authUser = null, children }) {
       restoreApplePurchases,
       session,
       updateQuota,
+      termsAcceptanceRequired,
+      termsVersion,
     ]
   );
 

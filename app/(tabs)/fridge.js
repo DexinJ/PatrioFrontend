@@ -1,11 +1,11 @@
-import { router, useNavigation } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, SectionList, StyleSheet, Text, View } from "react-native";
 import { useGpt } from "../../api/gpt";
 import ActionGridPopover from "../../components/ActionGridPopover";
 import FilterTabsRow from "../../components/FilterTabsRow";
-import FloatingAddButton from "../../components/FloatingAddButton";
+import FridgeAddMenu from "../../components/FridgeAddMenu";
 import { HeaderWithButton } from "../../components/Header";
 import InventoryListItem from "../../components/InventoryListItem";
 import ItemFormModal from "../../components/ItemFormModal";
@@ -15,8 +15,18 @@ import SelectionActionBar from "../../components/SelectionActionBar";
 import SortSheetModal from "../../components/SortSheetModal";
 import TutorialTarget from "../../components/TutorialTarget";
 import { GlobalContext } from "../../context/GlobalContext";
+import { useTabTutorial } from "../../context/TabTutorialContext";
+import useAiDisclosureGate from "../../hooks/useAiDisclosureGate";
+import usePhotoCapture from "../../hooks/usePhotoCapture";
 import { buildTagMaps, makeGetTagLabelByType, makeLabelToTagId, makeLabelsFromTagIds } from "../../utils/itemTagLabels";
 import { joinList } from "../../utils/localeList.js";
+import { shouldRevealMenu } from "../../utils/tabTutorials";
+import {
+  TUTORIAL_ITEMS_NOTICE_KEY,
+  buildTutorialFridgeItems,
+  isTutorialSampleId,
+  shouldShowTabSamples,
+} from "../../utils/tutorialSamples";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
 
@@ -40,6 +50,10 @@ export default function FridgeScreen() {
   const fontSize = settings?.ux?.fontSize || 16;
   const navigation = useNavigation();
   const { streamMessage } = useGpt();
+  const { currentStep, isActive, activeTabKey } = useTabTutorial();
+  // Two actions on this screen reach a model (the recipe request and a photo), so
+  // both ask the same gate the chat composer uses: see hooks/useAiDisclosureGate.
+  const aiGate = useAiDisclosureGate();
 
   const SORT_ITEMS = useMemo(
     () => [
@@ -67,6 +81,13 @@ export default function FridgeScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editItem, setEditItem] = useState(null);
 
+  // Reminder-tap focus: the item to reveal, and the list that shows it.
+  const { focusItemId, focusNonce } = useLocalSearchParams();
+  const [focusHighlightId, setFocusHighlightId] = useState(null);
+  const [handledFocusKey, setHandledFocusKey] = useState("");
+  const [pendingScrollId, setPendingScrollId] = useState(null);
+  const listRef = useRef(null);
+
   // context menu (long press)
   const [contextItem, setContextItem] = useState(null);
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
@@ -90,6 +111,24 @@ export default function FridgeScreen() {
   const labelToTagId = useMemo(() => makeLabelToTagId(tagIdByKey), [tagIdByKey]);
   const labelsFromTagIds = useMemo(() => makeLabelsFromTagIds(tagById), [tagById]);
   const getTagLabelByType = useMemo(() => makeGetTagLabelByType(tagById), [tagById]);
+
+  // The first-run tour can land on an account that has no items yet. Without
+  // something on screen, the item steps point at nothing, so a small labelled
+  // sample set stands in for the real rows. It is render-only: see
+  // utils/tutorialSamples.js for the contract.
+  const showTutorialSamples = shouldShowTabSamples({
+    isActive,
+    activeTabKey,
+    tabKey: "fridge",
+    itemCount: fridgeItems.length,
+  });
+  const sourceItems = useMemo(
+    () =>
+      showTutorialSamples
+        ? buildTutorialFridgeItems({ now: new Date(), labelToTagId, t })
+        : fridgeItems,
+    [showTutorialSamples, labelToTagId, t, fridgeItems]
+  );
 
   // Header
   const toggleEditMode = useCallback(() => {
@@ -122,7 +161,7 @@ export default function FridgeScreen() {
 
   // Decorate items once
   const decoratedItems = useMemo(() => {
-    return (fridgeItems || []).map((it) => {
+    return (sourceItems || []).map((it) => {
       const createdAtMs = it?.createdAt ? new Date(it.createdAt).getTime() : 0;
 
       const meta = getExpiryMeta
@@ -155,7 +194,7 @@ export default function FridgeScreen() {
         _nameNorm: norm(it?.name),
       };
     });
-  }, [fridgeItems, getExpiryMeta, ALMOST_EXPIRE_DAYS, getTagLabelByType]);
+  }, [sourceItems, getExpiryMeta, ALMOST_EXPIRE_DAYS, getTagLabelByType]);
 
   // Tabs + counts
   const tabDefs = useMemo(() => {
@@ -279,6 +318,74 @@ export default function FridgeScreen() {
     return out;
   }, [expiredItems, almostExpiredItems, sortedItems, t]);
 
+  // A tapped expiration reminder arrives as route params. The request is
+  // accepted during render rather than from an effect: this repo lints against
+  // setState in an effect body, and React documents the render-phase form as
+  // the way to adjust state when a prop changes.
+  //
+  // It is accepted only once the item exists, so a tap that arrives while the
+  // storage is still settling is picked up by a later render. An item that was
+  // deleted simply never matches.
+  const focusKey =
+    typeof focusItemId === "string" && focusItemId
+      ? `${focusItemId}:${focusNonce || ""}`
+      : "";
+  if (focusKey && focusKey !== handledFocusKey) {
+    if (decoratedItems.some((it) => it.id === focusItemId)) {
+      setHandledFocusKey(focusKey);
+      setPendingScrollId(focusItemId);
+      // The row can be hidden by the search box or the storage tabs, and edit
+      // mode would turn it into a checkbox: clear all three before showing it.
+      setEditMode(false);
+      setSelectedIds(new Set());
+      setSearch("");
+      setActiveTab("All");
+      setFocusHighlightId(focusItemId);
+    }
+  }
+
+  // Scrolled from its own effect, after the filters above have rebuilt the
+  // sections: clearing them is what changes this dependency. Best effort by
+  // design - SectionList throws for a section it has not measured yet, and the
+  // row is on screen either way once the filters are gone.
+  useEffect(() => {
+    if (!pendingScrollId) return;
+
+    const sectionIndex = fridgeSections.findIndex((section) =>
+      section.data.some((it) => it.id === pendingScrollId)
+    );
+    if (sectionIndex < 0) return;
+    const itemIndex = fridgeSections[sectionIndex].data.findIndex(
+      (it) => it.id === pendingScrollId
+    );
+
+    const scrollTimeoutId = setTimeout(() => {
+      setPendingScrollId(null);
+      try {
+        listRef.current?.scrollToLocation({
+          sectionIndex,
+          itemIndex,
+          viewPosition: 0.5,
+          animated: true,
+        });
+      } catch {
+        // Not measured yet; the highlight still marks the row.
+      }
+    }, 60);
+
+    return () => clearTimeout(scrollTimeoutId);
+  }, [fridgeSections, pendingScrollId]);
+
+  // The highlight is a moment, not a mode.
+  useEffect(() => {
+    if (!focusHighlightId) return;
+    const highlightTimeoutId = setTimeout(
+      () => setFocusHighlightId(null),
+      2600
+    );
+    return () => clearTimeout(highlightTimeoutId);
+  }, [focusHighlightId]);
+
   // Selection helpers
   const toggleSelect = useCallback((id) => {
     setSelectedIds((prev) => {
@@ -291,7 +398,12 @@ export default function FridgeScreen() {
 
   const selectedCount = selectedIds.size;
 
-  const visibleIds = useMemo(() => filteredItems.map((it) => it.id), [filteredItems]);
+  // Samples flow through the same filtering pipeline as real rows, but must
+  // never become selectable: "select all" has to stay about the user's data.
+  const visibleIds = useMemo(
+    () => filteredItems.filter((it) => !isTutorialSampleId(it.id)).map((it) => it.id),
+    [filteredItems]
+  );
 
   const selectAllVisible = useCallback(() => {
     setSelectedIds(new Set(visibleIds));
@@ -316,6 +428,9 @@ export default function FridgeScreen() {
   const openRecipesForItems = useCallback(
     async (items) => {
       if (!items || items.length === 0 || recipeBusyRef.current) return;
+      // Before any state is touched: an unacknowledged account is sent to the
+      // disclosure card instead of to the model.
+      if (!aiGate.ensure()) return;
       recipeBusyRef.current = true;
       const generation = recipeGenerationRef.current + 1;
       recipeGenerationRef.current = generation;
@@ -371,8 +486,49 @@ export default function FridgeScreen() {
         }
       }
     },
-    [streamMessage, t]
+    [aiGate, streamMessage, t]
   );
+
+  // "Add from a photo": the same launch as openRecipesForItems - go to Chat,
+  // send the real prompt with the image, and let the assistant propose items
+  // through the existing add_all_to_fridge card. Deliberately no `uiAction`, so
+  // the model actually reads the image instead of being handed a canned action.
+  //
+  // The capture is local but the request is not. The menu rows ask the gate
+  // before opening the camera (see the FridgeAddMenu call below) so a blocked user
+  // does not lose the shot; this second check is the last gate before the request
+  // for any other route into `onCapture`.
+  const handlePhotoCaptured = useCallback(
+    async ({ imageUri, imageRequestUri }) => {
+      if (!imageUri) return;
+      if (!aiGate.ensure()) return;
+      try {
+        router.push("/chat");
+        await streamMessage({
+          text: t("fridge.photoPrompt"),
+          displayText: t("fridge.photoDisplayText"),
+          imageUri,
+          imageRequestUri,
+        });
+      } catch (e) {
+        if (e?.code !== "REQUEST_CANCELLED" && mountedRef.current) {
+          Alert.alert(
+            t("fridge.photoTitle"),
+            e?.message || t("fridge.photoFailed")
+          );
+        }
+      }
+    },
+    [aiGate, streamMessage, t]
+  );
+
+  const { busy: photoBusy, takePhoto, pickPhoto } = usePhotoCapture({
+    onCapture: handlePhotoCaptured,
+  });
+
+  // The fridge tour reveals the add menu the same way the chat tour reveals
+  // the attach menu.
+  const revealAddMenu = isActive && shouldRevealMenu("fridge", currentStep?.id);
 
   const addItemsToShopList = useCallback(
     (items) => {
@@ -514,29 +670,37 @@ export default function FridgeScreen() {
 
   // render item with extracted component
   const renderItem = useCallback(
-    ({ item }) => (
+    ({ item, index, section }) => (
       <InventoryListItem
         item={item}
         theme={theme}
         fontSize={fontSize}
         editMode={editMode}
+        highlighted={item.id === focusHighlightId}
         selected={selectedIds.has(item.id)}
         onToggleSelect={toggleSelect}
         onMeasuredLongPress={handleMeasuredLongPress}
+        tutorialTargetId={
+          section === fridgeSections[0] && index === 0
+            ? "fridge.items.first"
+            : undefined
+        }
       />
     ),
     [
       theme,
       fontSize,
       editMode,
+      focusHighlightId,
       selectedIds,
       toggleSelect,
       handleMeasuredLongPress,
+      fridgeSections,
     ]
   );
 
   const emptyText =
-    fridgeItems.length === 0
+    sourceItems.length === 0
       ? t("fridge.emptyFridge")
       : t("fridge.noMatches");
 
@@ -568,10 +732,24 @@ export default function FridgeScreen() {
 
       {/* List */}
       <TutorialTarget id="fridge.items" style={styles.listWrap}>
+        {showTutorialSamples ? (
+          <Text
+            style={[
+              styles.sampleNotice,
+              {
+                fontSize: Math.max(12, fontSize * 0.8),
+                color: theme.textSecondary,
+              },
+            ]}
+          >
+            {t(TUTORIAL_ITEMS_NOTICE_KEY)}
+          </Text>
+        ) : null}
         {fridgeSections.length === 0 ? (
           <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>{emptyText}</Text>
         ) : (
           <SectionList
+            ref={listRef}
             sections={fridgeSections}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
@@ -606,21 +784,25 @@ export default function FridgeScreen() {
             removeClippedSubviews={false}
             maxToRenderPerBatch={12}
             updateCellsBatchingPeriod={50}
-            extraData={{ editMode, selectedCount }}
+            extraData={{ editMode, selectedCount, focusHighlightId }}
           />
         )}
       </TutorialTarget>
 
-      {/* FAB */}
-      <FloatingAddButton
-        theme={theme}
+      {/* Add control: + button and its menu */}
+      <FridgeAddMenu
         disabled={editMode}
-        accessibilityLabel={t("common.addItem")}
-        tutorialTargetId="fridge.addButton"
-        onPress={() => {
-          if (editMode) return;
-          setAddModalVisible(true);
+        busy={photoBusy}
+        revealOptions={revealAddMenu}
+        // Gate before the camera opens: the photo is only useful once the
+        // disclosure is acknowledged, and a refusal after the shot would waste it.
+        onTakePhoto={() => {
+          if (aiGate.ensure()) takePhoto();
         }}
+        onPickPhoto={() => {
+          if (aiGate.ensure()) pickPhoto();
+        }}
+        onAddManually={() => setAddModalVisible(true)}
       />
 
       {/* Sort sheet */}
@@ -729,5 +911,6 @@ const styles = StyleSheet.create({
   topBlock: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 8 },
   listWrap: { flex: 1 },
   empty: { textAlign: "center", marginTop: 20 },
+  sampleNotice: { textAlign: "center", marginTop: 6, marginBottom: 2 },
   list: { paddingHorizontal: 14, paddingTop: 6 },
 });

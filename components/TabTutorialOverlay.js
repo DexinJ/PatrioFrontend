@@ -3,6 +3,12 @@
 // Dims the screen, cuts a spotlight around the current step's anchor (when it
 // has one), and walks the user through the page with a small card. Rendered by
 // app/(tabs)/_layout.js above the tab bar, so the whole screen is covered.
+//
+// The tour is modal and the dim is inert: taps outside the card do nothing.
+// Only Back, Skip, and Next move the tour (Android's back button dismisses it).
+// The dim was previously a full-screen "tap anywhere to continue" target, which
+// silently advanced the tour whenever the user followed the card's own advice
+// and tapped the highlighted control, or reached for the tab bar.
 
 import React, { useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -42,6 +48,7 @@ export default function TabTutorialOverlay() {
     totalSteps,
     spot,
     advance,
+    back,
     dismiss,
     isActive,
   } = useTabTutorial();
@@ -186,23 +193,49 @@ export default function TabTutorialOverlay() {
       </View>
 
       <View style={styles.actions}>
-        <Pressable
-          onPress={dismiss}
-          accessibilityRole="button"
-          accessibilityLabel={t("tutorial.a11y.skip")}
-          hitSlop={8}
-          style={({ pressed }) => [styles.skipBtn, pressed && styles.pressed]}
-        >
-          <Text
-            style={{
-              color: theme.textSecondary,
-              fontSize,
-              fontWeight: "600",
-            }}
+        <View style={styles.actionsLeft}>
+          <Pressable
+            onPress={back}
+            disabled={stepIndex === 0}
+            accessibilityRole="button"
+            accessibilityLabel={t("tutorial.a11y.back")}
+            accessibilityState={{ disabled: stepIndex === 0 }}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.skipBtn,
+              stepIndex === 0 && styles.backDisabled,
+              pressed && styles.pressed,
+            ]}
           >
-            {t("tutorial.skip")}
-          </Text>
-        </Pressable>
+            <Text
+              style={{
+                color: theme.textSecondary,
+                fontSize,
+                fontWeight: "600",
+              }}
+            >
+              {t("tutorial.back")}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={dismiss}
+            accessibilityRole="button"
+            accessibilityLabel={t("tutorial.a11y.skip")}
+            hitSlop={8}
+            style={({ pressed }) => [styles.skipBtn, pressed && styles.pressed]}
+          >
+            <Text
+              style={{
+                color: theme.textSecondary,
+                fontSize,
+                fontWeight: "600",
+              }}
+            >
+              {t("tutorial.skip")}
+            </Text>
+          </Pressable>
+        </View>
 
         <Pressable
           onPress={advance}
@@ -240,16 +273,6 @@ export default function TabTutorialOverlay() {
       supportedOrientations={["portrait", "landscape"]}
     >
       <View style={styles.root}>
-        {/* Tap anywhere outside the card to move to the next step. */}
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={advance}
-          accessibilityRole="button"
-          accessibilityLabel={
-            isLastStep ? t("tutorial.a11y.finish") : t("tutorial.a11y.next")
-          }
-        />
-
         {spotlight ? (
           <>
             <View
@@ -407,9 +430,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 14,
   },
+  actionsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
   skipBtn: {
     paddingVertical: 10,
     paddingHorizontal: 4,
+  },
+  // Kept in place rather than hidden, so the row does not shift between steps.
+  backDisabled: {
+    opacity: 0.4,
   },
   nextBtn: {
     borderRadius: 999,

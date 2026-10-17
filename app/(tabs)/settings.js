@@ -65,10 +65,17 @@ import { HeaderWithHiddenButton } from "../../components/Header";
 import TutorialTarget from "../../components/TutorialTarget";
 import { useAccountSession } from "../../context/AccountSessionContext";
 import { useEmailVerification } from "../../context/EmailVerificationContext";
+import { authErrorCodeMessageKey } from "../../auth/authErrorMessages";
 import { ChatActionsContext, GlobalContext } from "../../context/GlobalContext";
 import { useAppleSubscription } from "../../context/SubscriptionContext";
 import { useTabTutorial } from "../../context/TabTutorialContext";
 import { SUPPORTED_LANGUAGES, setAppLanguage } from "../../i18n";
+// Shared with the sign-up checkbox and the acceptance gate.
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from "../../utils/legalLinks";
+import {
+  isDiagnosticsEnabled,
+  setDiagnosticsEnabled,
+} from "../../utils/diagnostics";
 import {
   getAppleIntelligenceAvailability,
   openAppleIntelligenceSettings,
@@ -78,12 +85,6 @@ const { width } = Dimensions.get("window");
 
 const APPLE_SUBSCRIPTIONS_URL =
   "https://apps.apple.com/account/subscriptions";
-const TERMS_OF_USE_URL =
-  String(process.env.EXPO_PUBLIC_TERMS_OF_USE_URL || "").trim() ||
-  "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
-const PRIVACY_POLICY_URL = String(
-  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL || ""
-).trim();
 const LOCAL_AI_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 const AI_PROVIDER_URLS = [
@@ -520,6 +521,7 @@ export default function SettingsScreen() {
     needsVerification: emailVerificationNeeded,
     openPrompt: openVerificationPrompt,
     showEmailStatus,
+    lastSendErrorCode,
   } = useEmailVerification();
   const {
     subscription,
@@ -553,6 +555,35 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const [opened, setOpened] = useState(false);
   const { replayTutorials } = useTabTutorial();
+
+  // Diagnostics consent is device-scoped, not part of the per-account settings
+  // blob: it must be known before the account is resolved and it outlives an
+  // account. See utils/diagnostics.
+  const [diagnosticsEnabled, setDiagnosticsEnabledState] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    isDiagnosticsEnabled().then((value) => {
+      if (active) setDiagnosticsEnabledState(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleDiagnosticsToggle = (next) => {
+    const previous = diagnosticsEnabled;
+    setDiagnosticsEnabledState(next);
+    void Promise.resolve(setDiagnosticsEnabled(next)).catch(() => {
+      // Put the switch back rather than showing a preference that would not
+      // survive the next launch.
+      setDiagnosticsEnabledState(previous);
+      Alert.alert(
+        t("settings.diagnosticsTitle"),
+        t("settings.diagnosticsSaveFailed")
+      );
+    });
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -1629,15 +1660,7 @@ export default function SettingsScreen() {
 
     return (
       <View style={stylesWithFont.settingColumn}>
-        <Text
-          style={[
-            stylesWithFont.label,
-            {
-              fontWeight: "700",
-              marginBottom: 10,
-            },
-          ]}
-        >
+        <Text style={[stylesWithFont.label, { marginBottom: 10 }]}>
           {t("settings.urgencyThresholdsTitle")}
         </Text>
 
@@ -1660,7 +1683,10 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            {t("settings.eatFirstLabel")} {U.eat_first} {t("settings.daysUnit")}
+            {t("settings.eatFirstLabel")}{" "}
+            <Text style={stylesWithFont.value}>
+              {U.eat_first} {t("settings.daysUnit")}
+            </Text>
           </Text>
 
           <Slider
@@ -1683,7 +1709,10 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            {t("settings.useSoonLabel")} {U.use_soon} {t("settings.daysUnit")}
+            {t("settings.useSoonLabel")}{" "}
+            <Text style={stylesWithFont.value}>
+              {U.use_soon} {t("settings.daysUnit")}
+            </Text>
           </Text>
 
           <Slider
@@ -1706,8 +1735,10 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 12 }}>
           <Text style={stylesWithFont.label}>
-            {t("settings.lastsWhileLabel")} {U.lasts_a_while}{" "}
-            {t("settings.daysUnit")}
+            {t("settings.lastsWhileLabel")}{" "}
+            <Text style={stylesWithFont.value}>
+              {U.lasts_a_while} {t("settings.daysUnit")}
+            </Text>
           </Text>
 
           <Slider
@@ -1732,8 +1763,10 @@ export default function SettingsScreen() {
 
         <View style={{ marginBottom: 4 }}>
           <Text style={stylesWithFont.label}>
-            {t("settings.longKeeperLabel")} {U.long_keeper}{" "}
-            {t("settings.daysUnit")}
+            {t("settings.longKeeperLabel")}{" "}
+            <Text style={stylesWithFont.value}>
+              {U.long_keeper} {t("settings.daysUnit")}
+            </Text>
           </Text>
 
           <Slider
@@ -1861,6 +1894,17 @@ export default function SettingsScreen() {
                     <Text style={stylesWithFont.accountCardSubtitle}>
                       {t("settings.emailNotVerifiedBody")}
                     </Text>
+                    {lastSendErrorCode ? (
+                      <Text
+                        accessibilityRole="alert"
+                        style={[
+                          stylesWithFont.accountCardSubtitle,
+                          { color: theme.danger },
+                        ]}
+                      >
+                        {t(authErrorCodeMessageKey(lastSendErrorCode))}
+                      </Text>
+                    ) : null}
                     <CustomButton
                       title={t("settings.sendVerificationEmail")}
                       onPress={openVerificationPrompt}
@@ -2017,7 +2061,7 @@ export default function SettingsScreen() {
                       <Text style={stylesWithFont.subscriptionDetailValue}>
                         {quota.applies
                           ? t("settings.tokensLeft", {
-                              used: formatQuotaCount(quota.remaining),
+                              used: formatQuotaCount(quota.used),
                               limit: formatQuotaCount(quota.limit),
                             })
                           : t("settings.noDailyQuota")}
@@ -2845,7 +2889,10 @@ export default function SettingsScreen() {
               <View style={stylesWithFont.settingRow}>
                 <View style={stylesWithFont.sliderSetting}>
                   <Text style={stylesWithFont.label}>
-                    {t("settings.fontSizeLabel")} {displayedFontSize}
+                    {t("settings.fontSizeLabel")}{" "}
+                    <Text style={stylesWithFont.value}>
+                      {displayedFontSize}
+                    </Text>
                   </Text>
 
                   <Slider
@@ -3101,28 +3148,6 @@ export default function SettingsScreen() {
               theme={theme}
               fontSize={fontSize}
             >
-              <View style={stylesWithFont.settingRow}>
-                <Text style={stylesWithFont.label}>
-                  {t("settings.dailyReminders")}
-                </Text>
-
-                <Switch
-                  accessibilityLabel={t("settings.dailyRemindersA11y")}
-                  value={!!settings?.notifications?.dailyReminders}
-                  onValueChange={(val) =>
-                    void updateReminderToggle(
-                      "notifications",
-                      "dailyReminders",
-                      val
-                    )
-                  }
-                  trackColor={{
-                    true: theme.actionButton,
-                    false: theme.border,
-                  }}
-                />
-              </View>
-
               <Text style={stylesWithFont.menuSectionLabel}>
                 {t("settings.expirationReminders")}
               </Text>
@@ -3152,7 +3177,8 @@ export default function SettingsScreen() {
               <View style={stylesWithFont.settingRow}>
                 <View style={stylesWithFont.sliderSetting}>
                   <Text style={stylesWithFont.label}>
-                    {t("settings.notify")} {remindDays}{" "}
+                    {t("settings.notify")}{" "}
+                    <Text style={stylesWithFont.value}>{remindDays}</Text>{" "}
                     {t("settings.daysBefore")}
                   </Text>
 
@@ -3328,6 +3354,27 @@ export default function SettingsScreen() {
                     val
                   )
                 }
+                trackColor={{
+                  true: theme.actionButton,
+                  false: theme.border,
+                }}
+              />
+            </View>
+
+            <View style={stylesWithFont.settingRow}>
+              <View style={stylesWithFont.settingCopy}>
+                <Text style={stylesWithFont.label}>
+                  {t("settings.diagnosticsTitle")}
+                </Text>
+                <Text style={stylesWithFont.helpText}>
+                  {t("settings.diagnosticsBody")}
+                </Text>
+              </View>
+
+              <Switch
+                accessibilityLabel={t("settings.diagnosticsTitle")}
+                value={diagnosticsEnabled}
+                onValueChange={handleDiagnosticsToggle}
                 trackColor={{
                   true: theme.actionButton,
                   false: theme.border,
@@ -3709,7 +3756,7 @@ const dynamicStyles = (theme, fontSize) =>
     sectionTitle: {
       flex: 1,
       fontSize,
-      fontWeight: "600",
+      fontWeight: "700",
       marginLeft: 12,
       color: theme.textPrimary,
     },
@@ -3741,7 +3788,7 @@ const dynamicStyles = (theme, fontSize) =>
     sectionHeaderLabel: {
       flex: 1,
       fontSize: fontSize + 1,
-      fontWeight: "600",
+      fontWeight: "700",
       color: theme.textPrimary,
     },
 
@@ -4033,11 +4080,13 @@ const dynamicStyles = (theme, fontSize) =>
 
     label: {
       fontSize,
+      fontWeight: "700",
       color: theme.textPrimary,
     },
 
     value: {
       fontSize,
+      fontWeight: "400",
       color: theme.textSecondary,
     },
 
@@ -4085,7 +4134,7 @@ const dynamicStyles = (theme, fontSize) =>
     },
     languageOptionLabel: {
       fontSize,
-      fontWeight: "600",
+      fontWeight: "700",
       color: theme.textPrimary,
     },
 
@@ -4100,7 +4149,7 @@ const dynamicStyles = (theme, fontSize) =>
       marginTop: 14,
       marginBottom: 5,
       fontSize: Math.max(12, fontSize - 2),
-      fontWeight: "600",
+      fontWeight: "700",
       color: theme.textPrimary,
     },
     preferenceInput: {

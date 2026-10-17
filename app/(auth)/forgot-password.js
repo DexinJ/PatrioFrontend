@@ -17,11 +17,21 @@ import {
   View,
 } from "react-native";
 import { auth } from "../../auth/firebaseClient";
+import { formatAuthErrorMessage } from "../../auth/authErrorMessages";
 import { GlobalContext } from "../../context/GlobalContext";
+import { attemptAuthEmailSend } from "../../utils/authEmailSend";
 import {
   EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
   isValidEmailAddress,
 } from "../../utils/emailVerificationPolicy";
+
+// Codes that reveal whether an account exists. These keep the same
+// confirmation the success path shows.
+const RESET_MASKED_CODES = new Set([
+  "auth/user-not-found",
+  "auth/invalid-email",
+  "auth/missing-email",
+]);
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
@@ -60,22 +70,24 @@ export default function ForgotPasswordScreen() {
     setBusy(true);
     setError("");
     try {
-      await sendPasswordResetEmail(auth, normalized);
-      lastSentAtRef.current = Date.now();
-      setSent(true);
-    } catch (err) {
-      if (err?.code === "auth/too-many-requests") {
-        setError(t("auth.errorTooManyRequests"));
+      const result = await attemptAuthEmailSend({
+        scope: "password-reset",
+        send: () => sendPasswordResetEmail(auth, normalized),
+      });
+      if (result.ok || RESET_MASKED_CODES.has(result.code)) {
+        // Enumeration protection: an address with no account, or one Firebase
+        // will not even look at, must stay indistinguishable from a real one.
+        // Every other rejection is a request that never left, and the user is
+        // told so instead of being sent to an empty inbox.
+        lastSentAtRef.current = Date.now();
+        setSent(true);
         return;
       }
-      if (err?.code === "auth/network-request-failed" || !err?.code) {
-        setError(t("auth.errorNetwork"));
-        return;
-      }
-      // Identity-related codes deliberately fall through to the same
-      // confirmation the success path shows.
-      lastSentAtRef.current = Date.now();
-      setSent(true);
+      setError(
+        formatAuthErrorMessage(t(result.messageKey), result.code, {
+          isDev: __DEV__,
+        })
+      );
     } finally {
       setBusy(false);
     }

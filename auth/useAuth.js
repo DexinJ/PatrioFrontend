@@ -31,6 +31,7 @@ import {
   clearAuthProvisioningIntent,
   getAuthProvisioningIntent,
 } from "../api/authProvisioningStorage";
+import { cancelPantrioReminders } from "../api/reminderScheduler";
 import {
   clearUserDataPurgePending,
   confirmUserDataPurge,
@@ -928,6 +929,11 @@ export function AuthProvider({ children }) {
 
     await firebaseSignOut(auth);
     lastProviderIdsRef.current = [];
+    // Pending reminders belong to the account that scheduled them, and the OS
+    // notification queue outlives the session. Without this, the next account on
+    // this device inherits another user's food reminders and their taps. The
+    // next signed-in sync rebuilds this account's own schedule.
+    await cancelPantrioReminders().catch(() => {});
     return { providerCleanupError };
   }, []);
 

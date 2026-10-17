@@ -1724,6 +1724,10 @@ const useGptRuntime = () => {
     uiAction,
     selectedIngredients = [],
     displayText,
+    // A retry re-sends a turn that is already in the transcript: it supplies
+    // that history instead of appending the user message a second time.
+    appendUserMessage = true,
+    history = null,
   }) => {
     const lifecycleGeneration = lifecycleGenerationRef.current;
     const requestConversationId = activeConversationIdRef.current;
@@ -1745,7 +1749,15 @@ const useGptRuntime = () => {
     // if (normalizedImageRequestUri.length > MAX_IMAGE_REQUEST_URI_LENGTH) {
     //   throw new Error("The selected image is too large to send.");
     // }
-    if (!normalizedText.trim() && !normalizedImageUri.trim()) {
+    // The image may only be present in `imageRequestUri` (a retry re-reads the
+    // bytes from the managed attachment and leaves `imageUri` empty, and both
+    // fields fall back to each other below), so the emptiness check has to look
+    // at what would actually be sent.
+    if (
+      !normalizedText.trim() &&
+      !normalizedImageUri.trim() &&
+      !normalizedImageRequestUri.trim()
+    ) {
       throw new Error(i18next.t("chat.errors.messageEmpty"));
     }
     const recipeContext = buildRecipeContext({
@@ -1755,12 +1767,41 @@ const useGptRuntime = () => {
       language: resolvedLanguage,
     });
 
-    // 1) Add user message locally
-    const updatedMessages = await addMessage(setMessages, {
-      role: "user",
-      text: normalizedDisplayText || normalizedText,
-      imageUri: normalizedImageUri,
-    });
+    // 1) Add user message locally. On a retry the transcript already ends with
+    // the turn being re-sent, so the supplied history is used as-is.
+    let updatedMessages;
+    if (appendUserMessage) {
+      updatedMessages = await addMessage(setMessages, {
+        role: "user",
+        text: normalizedDisplayText || normalizedText,
+        imageUri: normalizedImageUri,
+      });
+    } else {
+      const previous = Array.isArray(history) ? history : [];
+      const lastMessage = previous[previous.length - 1];
+      updatedMessages =
+        lastMessage?.role === "user"
+          ? previous
+          : [
+              ...previous,
+              {
+                role: "user",
+                content: [
+                  ...(normalizedDisplayText || normalizedText
+                    ? [
+                        {
+                          type: "input_text",
+                          text: normalizedDisplayText || normalizedText,
+                        },
+                      ]
+                    : []),
+                  ...(normalizedImageUri
+                    ? [{ type: "input_image", image_url: normalizedImageUri }]
+                    : []),
+                ],
+              },
+            ];
+    }
     // Routing is server-owned now: typed text is not classified here. An
     // explicit UI action is the only thing this screen can force.
     const normalizedUiAction = normalizeRecipeUiAction(uiAction);

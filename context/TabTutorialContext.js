@@ -21,8 +21,11 @@ import {
   getTabTutorial,
   isTabTutorialSeen,
   markTabTutorialSeen,
+  nextStepIndex,
+  previousStepIndex,
 } from "../utils/tabTutorials";
 import { GlobalContext } from "./GlobalContext";
+import { useEmailVerificationPromptVisible } from "./EmailVerificationContext";
 
 const EMPTY_TUTORIAL = {
   isActive: false,
@@ -32,6 +35,7 @@ const EMPTY_TUTORIAL = {
   totalSteps: 0,
   spot: null,
   advance: () => {},
+  back: () => {},
   dismiss: () => {},
   replayTutorials: () => {},
   registerTarget: () => {},
@@ -45,11 +49,13 @@ export function useTabTutorial() {
 
 export function TabTutorialProvider({ activeTabKey, children }) {
   const { settings, storageHydrated, updateSetting } = useContext(GlobalContext);
+  const verificationPromptVisible = useEmailVerificationPromptVisible();
   const [session, setSession] = useState(null);
   const [measurement, setMeasurement] = useState({ key: null, rect: null });
   const [registryVersion, setRegistryVersion] = useState(0);
   const targetsRef = useRef(new Map());
-  const advanceLockRef = useRef(false);
+  // Guards both directions: a double tap must not skip two steps at once.
+  const navLockRef = useRef(false);
 
   const seenTabs = settings?.tutorial?.seenTabs;
 
@@ -139,13 +145,25 @@ export function TabTutorialProvider({ activeTabKey, children }) {
     if (!activeTabKey || !storageHydrated) return undefined;
     if (isTabTutorialSeen(seenTabs, activeTabKey)) return undefined;
     if (sessionTabKey === activeTabKey) return undefined;
+    // The email-verification nudge is a Modal presented from this same screen.
+    // Starting the tour while it is open mounts a second Modal at the same
+    // time; React Native only presents one modal at a time, so the tour is
+    // silently dropped and the dimmed screen looks frozen. Wait for the nudge
+    // to close, then run.
+    if (verificationPromptVisible) return undefined;
 
     const timer = setTimeout(() => {
       setSession({ tabKey: activeTabKey, index: 0 });
     }, TAB_TUTORIAL_START_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [activeTabKey, seenTabs, sessionTabKey, storageHydrated]);
+  }, [
+    activeTabKey,
+    seenTabs,
+    sessionTabKey,
+    storageHydrated,
+    verificationPromptVisible,
+  ]);
 
   const finishSession = useCallback(
     (tabKey) => {
@@ -158,20 +176,36 @@ export function TabTutorialProvider({ activeTabKey, children }) {
   );
 
   const advance = useCallback(() => {
-    if (!session || advanceLockRef.current) return;
+    if (!session || navLockRef.current) return;
 
     const steps = getTabTutorial(session.tabKey) || [];
-    if (session.index >= steps.length - 1) {
+    const next = nextStepIndex(session.index, steps.length);
+    if (next === null) {
       finishSession(session.tabKey);
       return;
     }
 
-    advanceLockRef.current = true;
-    setSession({ tabKey: session.tabKey, index: session.index + 1 });
+    navLockRef.current = true;
+    setSession({ tabKey: session.tabKey, index: next });
     setTimeout(() => {
-      advanceLockRef.current = false;
+      navLockRef.current = false;
     }, 220);
   }, [finishSession, session]);
+
+  // Back exists so a mis-advance is recoverable without abandoning the tour:
+  // before this, the only exit was Skip, which ends the tour for good.
+  const back = useCallback(() => {
+    if (!session || navLockRef.current) return;
+
+    const previous = previousStepIndex(session.index);
+    if (previous === null) return;
+
+    navLockRef.current = true;
+    setSession({ tabKey: session.tabKey, index: previous });
+    setTimeout(() => {
+      navLockRef.current = false;
+    }, 220);
+  }, [session]);
 
   const dismiss = useCallback(() => {
     if (!session) return;
@@ -195,12 +229,14 @@ export function TabTutorialProvider({ activeTabKey, children }) {
       totalSteps: sessionSteps ? sessionSteps.length : 0,
       spot,
       advance,
+      back,
       dismiss,
       replayTutorials,
       registerTarget,
     }),
     [
       advance,
+      back,
       currentStep,
       dismiss,
       registerTarget,

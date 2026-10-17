@@ -32,6 +32,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HeaderWithButton } from "../../components/Header";
 import TutorialTarget from "../../components/TutorialTarget";
 import { GlobalContext } from "../../context/GlobalContext";
+import { useTabTutorial } from "../../context/TabTutorialContext";
+import { buildTagMaps, makeLabelToTagId } from "../../utils/itemTagLabels";
+import {
+  TUTORIAL_ITEMS_NOTICE_KEY,
+  buildTutorialShoppingItems,
+  isTutorialSampleId,
+  shouldShowTabSamples,
+} from "../../utils/tutorialSamples";
 
 // ✅ pills UI
 import FilterTabsRow from "../../components/FilterTabsRow";
@@ -43,6 +51,10 @@ import SearchAndSortBar from "../../components/SearchAndSortBar";
 import SortSheetModal from "../../components/SortSheetModal";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
+
+// Sample rows are display-only, so their row handlers never fire. Passing a
+// shared no-op keeps ShoppingListRow's required props obvious.
+const noop = () => {};
 
 const ShoppingListRow = memo(function ShoppingListRow({
   item,
@@ -145,8 +157,30 @@ export default function ShoppingListScreen() {
     inferFoodTypeLabelFromName,
     streamlineLists,
   } = useContext(GlobalContext);
+  const { isActive: tutorialActive, activeTabKey: tutorialTabKey } = useTabTutorial();
 
   const fontSize = settings?.ux?.fontSize || 16;
+
+  // While this tab's first-run tour is running on an empty list, stand in a
+  // labelled sample set so the "check things off" step has rows to point at.
+  // Render-only: see utils/tutorialSamples.js.
+  const labelToTagId = useMemo(
+    () => makeLabelToTagId(buildTagMaps(tags || []).tagIdByKey),
+    [tags]
+  );
+  const showTutorialSamples = shouldShowTabSamples({
+    isActive: tutorialActive,
+    activeTabKey: tutorialTabKey,
+    tabKey: "list",
+    itemCount: shoppingListItems.length,
+  });
+  const sourceShoppingItems = useMemo(
+    () =>
+      showTutorialSamples
+        ? buildTutorialShoppingItems({ now: new Date(), labelToTagId, t })
+        : shoppingListItems,
+    [showTutorialSamples, labelToTagId, t, shoppingListItems]
+  );
 
   const [newItemName, setNewItemName] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("1");
@@ -267,10 +301,10 @@ export default function ShoppingListScreen() {
   }, [foodTypeLabelById]);
   const categoryByItemId = useMemo(
     () => new Map(
-      (Array.isArray(shoppingListItems) ? shoppingListItems : [])
+      (Array.isArray(sourceShoppingItems) ? sourceShoppingItems : [])
         .map((item) => [item?.id, deriveItemCategoryLabel(item)])
     ),
-    [deriveItemCategoryLabel, shoppingListItems]
+    [deriveItemCategoryLabel, sourceShoppingItems]
   );
   const getItemCategoryLabel = useCallback(
     (item) => categoryByItemId.get(item?.id) || deriveItemCategoryLabel(item),
@@ -278,12 +312,12 @@ export default function ShoppingListScreen() {
   );
   const categoryCounts = useMemo(() => {
     const counts = new Map();
-    for (const item of Array.isArray(shoppingListItems) ? shoppingListItems : []) {
+    for (const item of Array.isArray(sourceShoppingItems) ? sourceShoppingItems : []) {
       const category = categoryByItemId.get(item?.id) || deriveItemCategoryLabel(item);
       counts.set(category, (counts.get(category) || 0) + 1);
     }
     return counts;
-  }, [categoryByItemId, deriveItemCategoryLabel, shoppingListItems]);
+  }, [categoryByItemId, deriveItemCategoryLabel, sourceShoppingItems]);
 
   const handleAdd = () => {
     if (addLockedRef.current || !newItemName.trim()) return;
@@ -430,10 +464,10 @@ export default function ShoppingListScreen() {
             : label,
       count:
         label === "All"
-          ? shoppingListItems.length
+          ? sourceShoppingItems.length
           : categoryCounts.get(label) || 0,
     }));
-  }, [categoryCounts, categoryPills, shoppingListItems.length, t]);
+  }, [categoryCounts, categoryPills, sourceShoppingItems.length, t]);
 
   const effectiveActiveCategory = categoryPills.includes(activeCategory)
     ? activeCategory
@@ -442,7 +476,7 @@ export default function ShoppingListScreen() {
   // ✅ NEW: search + category filter (before sectioning)
   const filteredShoppingItems = useMemo(() => {
     const q = norm(search);
-    return (shoppingListItems || []).filter((it) => {
+    return (sourceShoppingItems || []).filter((it) => {
       if (q && !norm(it?.name).includes(q)) return false;
 
       const cat = getItemCategoryLabel(it);
@@ -453,7 +487,7 @@ export default function ShoppingListScreen() {
     effectiveActiveCategory,
     getItemCategoryLabel,
     search,
-    shoppingListItems,
+    sourceShoppingItems,
   ]);
 
   // ✅ NEW: sort filtered items (stable-ish)
@@ -523,7 +557,7 @@ export default function ShoppingListScreen() {
     const ids = [];
     for (const sec of sections) {
       for (const it of sec.data || []) {
-        if (it?.id) ids.push(it.id);
+        if (it?.id && !isTutorialSampleId(it.id)) ids.push(it.id);
       }
     }
     if (ids.length === 0) return;
@@ -706,43 +740,104 @@ export default function ShoppingListScreen() {
         </View>
 
         {/* List */}
-        <TutorialTarget id="list.items" style={styles.listWrap}>
-          {sortedShoppingItems.length === 0 ? (
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>
-                  {shoppingListItems.length === 0
-                    ? t("shoppingList.emptyList")
-                    : t("shoppingList.noMatches")}
+        <View style={styles.listWrap}>
+          {/*
+            The tour anchors this step. With samples the anchor wraps only the
+            example rows, so the coach card lands below them instead of over
+            them; with real data it fills the list area as it always did.
+          */}
+          <TutorialTarget
+            id="list.items"
+            style={showTutorialSamples ? undefined : styles.listWrap}
+          >
+            {showTutorialSamples ? (
+              <View>
+                <Text
+                  style={[
+                    styles.sampleNotice,
+                    {
+                      fontSize: Math.max(12, fontSize * 0.8),
+                      color: theme.textSecondary,
+                    },
+                  ]}
+                >
+                  {t(TUTORIAL_ITEMS_NOTICE_KEY)}
                 </Text>
+                {sections.map((section) => (
+                  <View key={section.title}>
+                    <View
+                      style={[
+                        styles.sectionHeaderWrap,
+                        { backgroundColor: theme.background },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.sectionHeader,
+                          {
+                            color: theme.textSecondary,
+                            fontSize: Math.max(12, fontSize * 0.8),
+                          },
+                        ]}
+                      >
+                        {(section.title === "Uncategorized"
+                          ? t("shoppingList.uncategorized")
+                          : section.title
+                        ).toUpperCase()}
+                      </Text>
+                    </View>
+                    {section.data.map((item) => (
+                      <ShoppingListRow
+                        key={item.id}
+                        item={item}
+                        isChecked={false}
+                        editMode={false}
+                        theme={theme}
+                        fontSize={fontSize}
+                        onToggle={noop}
+                        onRightAction={noop}
+                      />
+                    ))}
+                  </View>
+                ))}
               </View>
-            </TouchableWithoutFeedback>
-          ) : (
-            <SectionList
-              sections={sections}
-              keyExtractor={(item) => item.id}
-              renderItem={renderRow}
-              renderSectionHeader={({ section }) => (
-                <View style={[styles.sectionHeaderWrap, { backgroundColor: theme.background }]}>
-                  <Text
-                    style={[
-                      styles.sectionHeader,
-                      { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.8) },
-                    ]}
-                  >
-                    {(section.title === "Uncategorized"
-                      ? t("shoppingList.uncategorized")
-                      : section.title
-                    ).toUpperCase()}
+            ) : sortedShoppingItems.length === 0 ? (
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                  <Text style={[styles.empty, { fontSize, color: theme.textSecondary }]}>
+                    {shoppingListItems.length === 0
+                      ? t("shoppingList.emptyList")
+                      : t("shoppingList.noMatches")}
                   </Text>
                 </View>
-              )}
-              stickySectionHeadersEnabled
-              contentContainerStyle={styles.list}
-              keyboardShouldPersistTaps="handled"
-            />
-          )}
-        </TutorialTarget>
+              </TouchableWithoutFeedback>
+            ) : (
+              <SectionList
+                sections={sections}
+                keyExtractor={(item) => item.id}
+                renderItem={renderRow}
+                renderSectionHeader={({ section }) => (
+                  <View style={[styles.sectionHeaderWrap, { backgroundColor: theme.background }]}>
+                    <Text
+                      style={[
+                        styles.sectionHeader,
+                        { color: theme.textSecondary, fontSize: Math.max(12, fontSize * 0.8) },
+                      ]}
+                    >
+                      {(section.title === "Uncategorized"
+                        ? t("shoppingList.uncategorized")
+                        : section.title
+                      ).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                stickySectionHeadersEnabled
+                contentContainerStyle={styles.list}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+          </TutorialTarget>
+        </View>
 
         {/* Input Row */}
         <TutorialTarget id="list.inputRow" style={styles.inputRow}>
@@ -934,6 +1029,8 @@ const styles = StyleSheet.create({
   topBlock: { paddingTop: 10, paddingBottom: 8 },
 
   listWrap: { flex: 1 },
+
+  sampleNotice: { textAlign: "center", marginTop: 6, marginBottom: 2 },
 
   empty: { textAlign: "center", marginTop: 20 },
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global __dirname, Buffer */
 // Generates assets/legal/licenses.json from the installed production dependency
 // tree. The MIT, BSD, and Apache licences that cover Pantrio's dependencies all
 // require their copyright notice and licence text to travel with the shipped

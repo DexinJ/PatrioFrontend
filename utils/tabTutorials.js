@@ -6,7 +6,19 @@
 // seen once per TUTORIAL_VERSION and stays dismissed until either the version
 // is bumped or the user replays it from Settings -> Preferences.
 
-export const TAB_TUTORIAL_VERSION = 1;
+// Bumped whenever any tab's steps change.
+export const TAB_TUTORIAL_VERSION = 4;
+
+// The version each tab must reach before its tour stops replaying. Every tab is
+// listed so adding one forces a decision here, and editing a tab's steps means
+// raising its number to TAB_TUTORIAL_VERSION.
+export const TAB_TUTORIAL_TAB_VERSIONS = Object.freeze({
+  home: 1,
+  chat: 4,
+  fridge: 3,
+  list: 1,
+  settings: 1,
+});
 
 // How long to wait after a tab becomes active before showing its overlay, so
 // the screen has mounted and registered its targets.
@@ -60,6 +72,14 @@ export const TAB_TUTORIALS = Object.freeze({
       titleKey: "tutorial.tabs.chat.messages.title",
       bodyKey: "tutorial.tabs.chat.messages.body",
     },
+    // Composer before attach: components/MessageInput.js nests the attach anchor inside the
+    // composer row, so naming the row first is what keeps the spotlight moving one way.
+    {
+      id: "composer",
+      targetId: "chat.composer",
+      titleKey: "tutorial.tabs.chat.composer.title",
+      bodyKey: "tutorial.tabs.chat.composer.body",
+    },
     {
       id: "attach",
       targetId: "chat.attach",
@@ -67,10 +87,10 @@ export const TAB_TUTORIALS = Object.freeze({
       bodyKey: "tutorial.tabs.chat.attach.body",
     },
     {
-      id: "composer",
-      targetId: "chat.composer",
-      titleKey: "tutorial.tabs.chat.composer.title",
-      bodyKey: "tutorial.tabs.chat.composer.body",
+      id: "attachOptions",
+      targetId: "chat.attachOptions",
+      titleKey: "tutorial.tabs.chat.attachOptions.title",
+      bodyKey: "tutorial.tabs.chat.attachOptions.body",
     },
   ]),
   fridge: Object.freeze([
@@ -93,10 +113,22 @@ export const TAB_TUTORIALS = Object.freeze({
       bodyKey: "tutorial.tabs.fridge.items.body",
     },
     {
+      id: "itemsMenu",
+      targetId: "fridge.items.first",
+      titleKey: "tutorial.tabs.fridge.itemsMenu.title",
+      bodyKey: "tutorial.tabs.fridge.itemsMenu.body",
+    },
+    {
       id: "addButton",
       targetId: "fridge.addButton",
       titleKey: "tutorial.tabs.fridge.addButton.title",
       bodyKey: "tutorial.tabs.fridge.addButton.body",
+    },
+    {
+      id: "addOptions",
+      targetId: "fridge.addOptions",
+      titleKey: "tutorial.tabs.fridge.addOptions.title",
+      bodyKey: "tutorial.tabs.fridge.addOptions.body",
     },
     {
       id: "editButton",
@@ -182,6 +214,36 @@ export function getTabKeyForPathname(pathname) {
   return PATH_TO_TAB_KEY[value.toLowerCase()] || null;
 }
 
+// Steps whose host control has to reveal itself while the step is showing: the
+// overlay is modal and swallows the tap that would normally open it. Both are
+// dropdowns hidden behind a tap: the chat attach menu and the fridge add menu.
+export function shouldRevealMenu(tabKey, stepId) {
+  return (
+    (tabKey === "chat" && stepId === "attachOptions") ||
+    (tabKey === "fridge" && stepId === "addOptions")
+  );
+}
+
+// Tour navigation. Both return null when there is no step to move to, so the
+// caller decides what that means: advancing past the last step finishes the
+// tour, while stepping back from the first step is simply a no-op.
+export function nextStepIndex(index, totalSteps) {
+  if (!Number.isFinite(index) || !Number.isFinite(totalSteps)) return null;
+  if (index < 0 || totalSteps <= 0 || index >= totalSteps - 1) return null;
+  return index + 1;
+}
+
+export function previousStepIndex(index) {
+  if (!Number.isFinite(index) || index <= 0) return null;
+  return index - 1;
+}
+
+// The version a tab has to reach before it counts as seen.
+export function getTabTutorialVersion(tabKey) {
+  const version = TAB_TUTORIAL_TAB_VERSIONS[String(tabKey || "")];
+  return Number.isFinite(version) ? version : TAB_TUTORIAL_VERSION;
+}
+
 // Stored shape: { home: 1, fridge: 1 }. Anything unreadable is dropped so a
 // corrupt value can only cause a tab to be taught again, never crash.
 export function normalizeSeenTabs(value) {
@@ -207,7 +269,7 @@ export function getSeenTabVersion(seenTabs, tabKey) {
 export function isTabTutorialSeen(
   seenTabs,
   tabKey,
-  version = TAB_TUTORIAL_VERSION
+  version = getTabTutorialVersion(tabKey)
 ) {
   return getSeenTabVersion(seenTabs, tabKey) >= version;
 }
@@ -215,7 +277,7 @@ export function isTabTutorialSeen(
 export function hasSeenTabTutorial(
   settings,
   tabKey,
-  version = TAB_TUTORIAL_VERSION
+  version = getTabTutorialVersion(tabKey)
 ) {
   return isTabTutorialSeen(settings?.tutorial?.seenTabs, tabKey, version);
 }
@@ -223,7 +285,7 @@ export function hasSeenTabTutorial(
 export function markTabTutorialSeen(
   seenTabs,
   tabKey,
-  version = TAB_TUTORIAL_VERSION
+  version = getTabTutorialVersion(tabKey)
 ) {
   const normalized = normalizeSeenTabs(seenTabs);
   if (!getTabTutorial(tabKey)) return normalized;

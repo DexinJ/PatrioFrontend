@@ -234,6 +234,15 @@ function parseStoredSettings(value) {
   return parsedValue;
 }
 
+// `notifications.dailyReminders` was retired along with the daily summary
+// reminder. Dropping the key on read keeps older installs from carrying a
+// toggle that no screen renders and no scheduler reads.
+function withoutRetiredNotificationKeys(notifications) {
+  return Object.fromEntries(
+    Object.entries(notifications).filter(([key]) => key !== "dailyReminders")
+  );
+}
+
 function mergeStoredSettings(previousSettings, parsedSettings) {
   if (!parsedSettings) return previousSettings;
 
@@ -256,6 +265,9 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
   const storedTutorial = isPlainRecord(parsedSettings.tutorial)
     ? parsedSettings.tutorial
     : {};
+  const storedChat = isPlainRecord(parsedSettings.chat)
+    ? parsedSettings.chat
+    : {};
   const restoredAiProvider = resolveAiProvider(
     storedAdvanced.aiProvider,
     storedAdvanced.useCustomAi
@@ -273,11 +285,8 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
     ux: { ...previousSettings.ux, ...storedUx },
     notifications: {
       ...previousSettings.notifications,
-      ...storedNotifications,
+      ...withoutRetiredNotificationKeys(storedNotifications),
       reminderPermissionRequested,
-      dailyReminders: reminderPermissionRequested
-        ? storedNotifications.dailyReminders === true
-        : false,
     },
     privacy: { ...previousSettings.privacy, ...storedPrivacy },
     advanced: {
@@ -303,6 +312,10 @@ function mergeStoredSettings(previousSettings, parsedSettings) {
     recipePreferences: normalizeRecipePreferences(
       parsedSettings.recipePreferences ?? previousSettings.recipePreferences
     ),
+    // Merged explicitly like the sections above: the blanket spread of
+    // `parsedSettings` would otherwise let a stored `chat` object from an older
+    // build drop newly added keys such as the AI disclosure acknowledgement.
+    chat: { ...previousSettings.chat, ...storedChat },
     tutorial: {
       ...previousSettings.tutorial,
       ...storedTutorial,
@@ -336,7 +349,6 @@ export const GlobalProvider = ({
       },
       notifications: {
         turnOn: true,
-        dailyReminders: false,
         reminderPermissionRequested: false,
       },
       privacy: {
@@ -351,6 +363,11 @@ export const GlobalProvider = ({
       },
       chat: {
         chatgptStyle: false,
+        // One-time acknowledgement of the third-party AI data disclosure.
+        // The version rides with the flag so a material wording change can ask
+        // again; see utils/aiDisclosurePolicy.cjs.
+        aiDisclosureAcknowledged: false,
+        aiDisclosureVersion: 0,
       },
       expiration: {
         expirationAlerts: false,

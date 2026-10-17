@@ -7,35 +7,49 @@
 // auth-state reconciliation that mounts the consumer. It also means the nudge
 // is never replayed on a cold launch, which is the behaviour we want: a fresh
 // sign-in is the moment a typo is worth mentioning.
+//
+// The request also carries the code from a rejected verification send, so the
+// nudge that opens can say why no link arrived instead of appearing for no
+// visible reason.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getUserStorageKeys } from "./storageKeys";
 
-let pendingPromptUid = null;
+let pendingPrompt = null;
 
 function normalizeUid(uid) {
   return String(uid || "").trim();
 }
 
-export function requestEmailVerificationPrompt(uid) {
+function normalizeErrorCode(code) {
+  return String(code || "").trim() || null;
+}
+
+export function requestEmailVerificationPrompt(uid, { sendErrorCode = null } = {}) {
   const normalized = normalizeUid(uid);
   if (!normalized) return;
-  pendingPromptUid = normalized;
+  pendingPrompt = {
+    uid: normalized,
+    sendErrorCode: normalizeErrorCode(sendErrorCode),
+  };
 }
 
 // Consumes the request at most once, and only for the account that asked. A
 // stale flag can never prompt a different user because the uid must match.
+// Returns null when there is nothing to take, so a caller can tell "no request"
+// apart from "request with no failure attached".
 export function takeEmailVerificationPromptRequest(uid) {
   const normalized = normalizeUid(uid);
-  if (!normalized || pendingPromptUid !== normalized) return false;
-  pendingPromptUid = null;
-  return true;
+  if (!normalized || pendingPrompt?.uid !== normalized) return null;
+  const taken = pendingPrompt;
+  pendingPrompt = null;
+  return { sendErrorCode: taken.sendErrorCode };
 }
 
 export function clearEmailVerificationPromptRequest(uid) {
   const normalized = normalizeUid(uid);
   if (!normalized) return;
-  if (pendingPromptUid === normalized) pendingPromptUid = null;
+  if (pendingPrompt?.uid === normalized) pendingPrompt = null;
 }
 
 // Only the snooze persists, and it is uid-scoped.
